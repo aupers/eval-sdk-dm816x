@@ -1,0 +1,20 @@
+Index: gst-ffmpeg-0.10.13/src/ext/ffmpeg/gstffmpegenc.c
+===================================================================
+--- gst-ffmpeg-0.10.13.orig/src/ext/ffmpeg/gstffmpegenc.c	2011-10-31 04:14:03.000000000 -0600
++++ gst-ffmpeg-0.10.13/src/ext/ffmpeg/gstffmpegenc.c	2013-02-18 12:29:00.478160561 -0600
+@@ -953,6 +953,7 @@
+        * forego some timestamp perfection in favour of upstream syncing
+        * (particularly in case these do not happen to come in multiple
+        * of frame size) */
++#if 0
+       upstream_time = gst_adapter_prev_timestamp (ffmpegenc->adapter, &bytes);
+       if (GST_CLOCK_TIME_IS_VALID (upstream_time)) {
+         GstClockTimeDiff diff;
+@@ -975,6 +976,7 @@
+           ffmpegenc->discont = TRUE;
+         }
+       }
++#endif
+     }
+ 
+     GST_LOG_OBJECT (ffmpegenc, "pushing buffer in adapter");

@@ -1,0 +1,7 @@
+config FS_APPS_LIGHTTPD
+	bool "lighttpd-1.4.28"
+	select FS_APPS_PHP
+	select FS_APPS_PCRE
+	default n
+	help
+	Lighttpd is a webserver application like apache.

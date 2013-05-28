@@ -1,0 +1,1 @@
+TARGET_REQUIRED="gstreamer liboil gst-plugins-base libexif"

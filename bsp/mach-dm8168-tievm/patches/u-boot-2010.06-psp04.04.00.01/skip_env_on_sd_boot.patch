@@ -1,0 +1,55 @@
+Index: u-boot-2010.06/src/common/env_nand.c
+===================================================================
+--- u-boot-2010.06.orig/src/common/env_nand.c	2011-12-09 15:06:03.832866365 -0600
++++ u-boot-2010.06/src/common/env_nand.c	2011-12-09 15:07:17.632741907 -0600
+@@ -40,6 +40,7 @@
+ #include <nand.h>
+ #include <search.h>
+ #include <errno.h>
++#include <asm/io.h>
+ 
+ #if defined(CONFIG_CMD_SAVEENV) && defined(CONFIG_CMD_NAND)
+ #define CMD_SAVEENV
+@@ -359,11 +360,17 @@
+ 		return;
+ 	}
+ 
+-	if (readenv(CONFIG_ENV_OFFSET, (u_char *) tmp_env1))
+-		puts("No Valid Environment Area found\n");
++	/* For DM816x, if we boot from SD, do not read env from NAND */
++	int sysboot = readl(0x48140040)&0x1F;
++	if (sysboot == 0x17) {
++		set_default_env("!booting from SD");
++	} else {
++		if (readenv(CONFIG_ENV_OFFSET, (u_char *) tmp_env1))
++			puts("No Valid Environment Area found\n");
+ 
+-	if (readenv(CONFIG_ENV_OFFSET_REDUND, (u_char *) tmp_env2))
+-		puts("No Valid Redundant Environment Area found\n");
++		if (readenv(CONFIG_ENV_OFFSET_REDUND, (u_char *) tmp_env2))
++			puts("No Valid Redundant Environment Area found\n");
++	}
+ 
+ 	crc1_ok = (crc32(0, tmp_env1->data, ENV_SIZE) == tmp_env1->crc);
+ 	crc2_ok = (crc32(0, tmp_env2->data, ENV_SIZE) == tmp_env2->crc);
+@@ -432,10 +439,17 @@
+ 	}
+ #endif
+ 
+-	ret = readenv(CONFIG_ENV_OFFSET, (u_char *)buf);
+-	if (ret) {
+-		set_default_env("!readenv() failed");
++	/* For DM816x, if we boot from SD, do not read env from NAND */
++	int sysboot = readl(0x48140040)&0x1F;
++	if (sysboot == 0x17) {
++		set_default_env("!booting from SD");
+ 		return;
++	} else {
++		ret = readenv(CONFIG_ENV_OFFSET, (u_char *)buf);
++		if (ret) {
++			set_default_env("!readenv() failed");
++			return;
++		}
+ 	}
+ 
+ 	env_import(buf, 1);

@@ -1,0 +1,22 @@
+Index: gst-plugins-bad-0.10.23/src/gst/h264parse/gsth264parse.c
+===================================================================
+--- gst-plugins-bad-0.10.23.orig/src/gst/h264parse/gsth264parse.c	2013-02-22 10:02:10.850840697 -0600
++++ gst-plugins-bad-0.10.23/src/gst/h264parse/gsth264parse.c	2013-02-22 10:21:26.574838392 -0600
+@@ -1841,6 +1841,7 @@
+   /* first_mb_in_slice == 0 considered start of frame */
+   start = h264parse->picture_start && (data[nal_length + 1] & 0x80);
+   if (G_UNLIKELY (!next_nal)) {
++  	printf("Frame complete!!\n");
+     complete = TRUE;
+   } else {
+     /* consider a coded slices (IDR or not) to start a picture,
+@@ -2156,6 +2157,9 @@
+ 
+       /* packetized will have no next data, which serves fine here */
+       next_data = (guint8 *) gst_adapter_peek (h264parse->adapter, 6);
++	  GST_DEBUG("next_data:%p",next_data);
++	  if(next_data == NULL)
++	  	return GST_FLOW_OK;
+       outbuf = gst_h264_parse_push_nal (h264parse, outbuf, next_data, &start);
+       if (!outbuf) {
+         /* no complete unit yet, go for next round */

@@ -1,0 +1,150 @@
+EZSDKURL?=http://software-dl.ti.com/dsps/dsps_public_sw/ezsdk/
+EZSDK_COPY_EXCLUSIONS_PATTERNS=bin docs etc filesystem linux-devkit/environment-setup \
+linux-devkit/include linux-devkit/md5sums linux-devkit/share linux-devkit/ti-install.log \
+linux-devkit/version linux-devkit/bin linux-devkit/etc linux-devkit/lib linux-devkit/mkspecs \
+linux-devkit/site-config linux-devkit/usr usr etc board-support/board-utilities board-support/docs \
+board-support/host-tools board-support/linux-2.6.37-psp04.04.00.01 board-support/u-boot-2010.06-psp04.04.00.01 \
+setup.sh example-applications/am-benchmarks-1.1 \
+example-applications/matrix-gui-e-1.3 example-applications/am-sysinfo-1.0 \
+example-applications/linux-driver-examples-psp04.04.00.01
+
+include $(CLASSES)/common.defs
+include $(CLASSES)/ezsdk.defs
+
+ifeq ($(EZSDK_PLATFORM),)
+ $(error ====== EZSDK_PLATFORM variable isn't defined on RidgeRun's ezsdk makefile =====)
+endif
+#============================================================================================
+# Adding targets according to the configured platform
+#============================================================================================
+ifneq ($(EZSDK_TARGETS),)
+EZSDK_TARGETS+=cmem_v5
+else
+EZSDK_TARGETS=cmem_v5
+endif
+
+ifeq ($(EZSDK_PLATFORM),dm8148)
+# Linux components
+EZSDK_TARGETS+=osal_v5 syslink_linux_v5 omx_v5 media_controller_utils_v5 rpe_linux_v5
+# DSP components
+EZSDK_TARGETS+=syslink_dsp_v5 edma3lld_v5 rpe_dsp_v5
+# Apps
+EZSDK_TARGETS+=omtb_v5 rpe_app_v5
+endif
+
+ifeq ($(EZSDK_PLATFORM),dm8168)
+# Linux components
+EZSDK_TARGETS+=osal_v5 syslink_linux_v5 omx_v5 media_controller_utils_v5 rpe_linux_v5
+# DSP components
+EZSDK_TARGETS+=syslink_dsp_v5 edma3lld_v5 rpe_dsp_v5
+# Apps
+EZSDK_TARGETS+=omtb_v5 rpe_app_v5
+endif
+
+#============================================================================================
+# I2C bus 
+# 1: handled by the M3s (EVMs)
+# 0: handled by the ARM (Z3)
+# If the system is going to use V4L2 to capture we need to set it to 0
+#============================================================================================
+IC2MODE ?= 1
+V4L2_ENABLE ?= false
+
+ifeq ($(CONFIG_MACH_DM8168Z3),y)
+IC2MODE=0
+endif
+
+ifeq ($(CONFIG_PROPRIETARY_EZSDK_ENABLE_V4L2_CAPTURE),y)
+IC2MODE=0
+V4L2_ENABLE = true
+endif
+
+export BUILDING_SOFTWARE_OUTSIDE_DEVDIR=y
+
+EZSDK_TARGETS += $(EXTRA_TARGETS)
+build: ezsdk rrconfig coprocessors.init 
+	@# We re-run make since this time Rules.make exist, so we can pull his variables in
+	$(V)$(MAKE) $(EZSDK_TARGETS)
+
+#============================================================================================
+# coprocessor.init creates the init script that will be used to load all the
+# necessary modules into the target board, also a previous stage to check if the
+# parameters for CMEM has been properly configured is made
+#============================================================================================
+
+.PHONY: coprocessors.init coprocessors.init.in
+coprocessors.init: coprocessors.init.in
+
+ifneq ($(CONFIG_PROPRIETARY_EZSDK_RESERVED_MEMORY),)
+	$(V) if [ $(shell printf %d $(CONFIG_PROPRIETARY_EZSDK_MEM_VALUE)) -gt  $(shell printf %d $(CONFIG_BSP_ARCH_SDRAM_SIZE)) ] ; then \
+	    $(ECHO) "$(ERROR_COLOR)ERROR:$(NORMAL_COLOR) Amount of reserved memory for coprocessors $(CONFIG_PROPRIETARY_EZSDK_MEM_VALUE) is greater than the RAM size $(CONFIG_BSP_ARCH_SDRAM_SIZE) \nAborting.\n" ; \
+	    exit 255 ; \
+	fi
+
+	$(V) if [ $(shell printf %d $(CONFIG_PROPRIETARY_EZSDK_CMEM_RESERVED_MEMORY)) -gt $(shell printf %d $(CONFIG_PROPRIETARY_EZSDK_MEM_VALUE)) ] ; then \
+	    $(ECHO) "$(ERROR_COLOR)ERROR:$(NORMAL_COLOR) Amount of reserved memory for CMEM $(CONFIG_PROPRIETARY_EZSDK_CMEM_RESERVED_MEMORY) is greater than the reserved memory $(CONFIG_PROPRIETARY_EZSDK_MEM_VALUE) \nAborting.\n" ; \
+	    exit 255 ; \
+	fi
+endif
+ifeq ($(CONFIG_PROPRIETARY_EZSDK_AUTO_SETUP_CMEM),)
+	$(V) if [ $(shell printf %d $(CONFIG_BSP_ARCH_SDRAM_BASE)) -gt $(shell printf %d $(CONFIG_PROPRIETARY_EZSDK_CMEM_START_ADDRESS)) ] ; then \
+	    $(ECHO) "$(ERROR_COLOR)ERROR:$(NORMAL_COLOR) The CMEM start address that has been configured $(CONFIG_PROPRIETARY_EZSDK_CMEM_START_ADDRESS) is less than the RAM base address $(CONFIG_BSP_ARCH_SDRAM_BASE) \nAborting.\n" ; \
+	    exit 255 ; \
+	fi
+
+	$(V) if [ $(shell printf %d $(CONFIG_PROPRIETARY_EZSDK_CMEM_START_ADDRESS)) -gt $(shell printf %d $$(( $(CONFIG_BSP_ARCH_SDRAM_BASE) + $(CONFIG_BSP_ARCH_SDRAM_SIZE) )) ) ] ; then \
+	    $(ECHO) "$(ERROR_COLOR)ERROR:$(NORMAL_COLOR) The CMEM start address configured $(CONFIG_PROPRIETARY_EZSDK_CMEM_START_ADDRESS) is beyond the RAM end $$(( $(CONFIG_BSP_ARCH_SDRAM_BASE) + $(CONFIG_BSP_ARCH_SDRAM_SIZE) )) \nAborting.\n" ; \
+	    exit 255 ; \
+	fi
+
+	$(V)END_CMEM=$(CONFIG_PROPRIETARY_EZSDK_CMEM_START_ADDRESS)+$(CONFIG_PROPRIETARY_EZSDK_CMEM_RESERVED_MEMORY) ; \
+	if [ $(shell printf %d $(END_CMEM)) -gt $(shell printf %d $$(( $(CONFIG_BSP_ARCH_SDRAM_BASE) + $(CONFIG_BSP_ARCH_SDRAM_SIZE) ))) ] ; then \
+	    $(ECHO) "$(ERROR_COLOR)ERROR:$(NORMAL_COLOR) The CMEM end address is beyond than RAM end $$(( $(CONFIG_BSP_ARCH_SDRAM_BASE) + $(CONFIG_BSP_ARCH_SDRAM_SIZE) )) \nAborting.\n" ; \
+	    exit 255 ; \
+	fi
+endif
+
+	$(V)sed -e 's?@KERNELVERSION@?$(KERNELVERSION)?g' \
+	    -e 's?@CMEM_START@?$(CONFIG_PROPRIETARY_EZSDK_CMEM_START_ADDRESS)?g' \
+	    -e 's?@RAM_BASE@?$(CONFIG_BSP_ARCH_SDRAM_BASE)?g' \
+	    -e 's?@RAM_END@?$(shell printf '0x%x' $$(( $(CONFIG_BSP_ARCH_SDRAM_BASE) + $(CONFIG_BSP_ARCH_SDRAM_SIZE) )))?g' \
+	    -e 's?@RAM_END_INT@?$(shell printf '%d' $$(( $(CONFIG_BSP_ARCH_SDRAM_BASE) + $(CONFIG_BSP_ARCH_SDRAM_SIZE) )))?g' \
+	    -e 's?@CMEM_SIZE@?$(CONFIG_PROPRIETARY_EZSDK_CMEM_RESERVED_MEMORY)?g' \
+	    -e 's?@CMEM_TCMSETTINGS@?$(CMEM_TCMSETTINGS)?g' \
+	    -e 's?@VPSS_FIRMWARE@?$(notdir $(VPSS_FIRMWARE))?g' \
+	    -e 's?@HDVICP2_FIRMWARE@?$(notdir $(HDVICP2_FIRMWARE))?g' \
+	    -e 's?@DSP_FIRMWARE@?$(notdir $(DSP_FIRMWARE))?g' \
+	    -e 's?@I2C_MODE@?$(IC2MODE)?g' \
+	    -e 's?@V4L2_ENABLE@?$(V4L2_ENABLE)?g' \
+	    $< > $@
+
+real_clean: $(EZSDK_TARGETS:=_clean) ezsdk_clean
+	$(V) if [ -f syslink_downloaded ] ; then \
+	    rm -Rf $(subst /packages,,$(SYSLINK_INSTALL_DIR)) ; \
+	    rm syslink_downloaded ; \
+	fi
+
+
+clean:
+	$(V)if [ -e $(FETCHER_EXTRACT_DIRECTORY_NAME) ] ; then \
+	  $(MAKE) real_clean ; \
+	fi
+	$(V) rm -f coprocessors.init
+
+distclean: clean ezsdk_distclean rrfetched_clean
+
+create_tar: ezsdk_create_tar
+
+install: targets_install rrsdk_install ezsdk_cmdline
+	$(V) mkdir -p $(FSROOT)/lib/firmware
+	$(V) cp $(VPSS_FIRMWARE) $(FSROOT)/lib/firmware/
+	$(V) cp $(HDVICP2_FIRMWARE) $(FSROOT)/lib/firmware/
+	$(V) cp $(DSP_FIRMWARE) $(FSROOT)/lib/firmware/
+	$(V)$(MAKE) -C $(DEVDIR)/fs depmod
+
+targets_install: build
+	@# We re-run make since this time Rules.make exist, so we can pull his variables in
+	$(V)$(MAKE) $(EZSDK_TARGETS:=_install)
+
+uninstall: $(EZSDK_TARGETS:=_uninstall)
+

@@ -1,0 +1,46 @@
+#!/bin/sh -e
+[ -x /sbin/ifup ] || exit 1
+
+#. /etc/init-functions
+
+case "$1" in
+start)
+	echo "Configuring network interfaces"
+	if [ "$VERBOSE" != no ]; then
+	    ifdown -a;
+	    ifup -a;
+	else
+	    ifdown -a >/dev/null 2>&1;
+	    ifup -a >/dev/null 2>&1; 
+	fi
+	;;
+
+stop)
+	if sed -n 's/^[^ ]* \([^ ]*\) \([^ ]*\) .*$/\2/p' /proc/mounts | 
+		grep -qE '^(nfs[1234]?|smbfs|ncp|ncpfs|coda|cifs)$'; then
+	    echo "not deconfiguring network interfaces: network shares still mounted."
+	    exit 1
+	fi
+
+	echo "Deconfiguring network interfaces"
+	if [ "$VERBOSE" != no ]; then
+	    ifdown -a;
+	else
+	    ifdown -a >/dev/null 2>/dev/null;
+	fi
+	;;
+
+force-reload|restart)
+	echo "Reconfiguring network interfaces"
+	ifdown -a || true
+	ifup -a 
+	;;
+
+*)
+	echo "Usage: /etc/init.d/networking {start|stop|restart|force-reload}"
+	exit 1
+	;;
+esac
+
+exit 0
+

@@ -1,0 +1,33 @@
+Index: python-2.7.2/src/setup.py
+===================================================================
+--- python-2.7.2.orig/src/setup.py	2010-12-26 10:02:43.000000000 -0500
++++ python-2.7.2/src/setup.py		2010-12-26 10:12:30.920427195 -0500
+@@ -437,14 +437,11 @@
+         # lib_dirs and inc_dirs are used to search for files;
+         # if a file is found in one of those directories, it can
+         # be assumed that no additional -I,-L directives are needed.
+         lib_dirs = self.compiler.library_dirs
+         inc_dirs = self.compiler.include_dirs
++        fsdevroot = os.environ['DEVDIR'] + '/fs/fsdev/usr/'
++        inc_dirs.append(fsdevroot + 'include')
++        lib_dirs.append(fsdevroot + 'lib')
+-        if not self.cross_compile:
+-            lib_dirs += [
+-                '/lib64', '/usr/lib64',
+-                '/lib', '/usr/lib',
+-                ]
+-            inc_dirs += ['/usr/include']
+         exts = []
+         missing = []
+ 
+@@ -690,9 +690,7 @@
+                 pass # Issue 7384: Already linked against curses or tinfo.
+             elif curses_library:
+                 readline_libs.append(curses_library)
+-            elif self.compiler.find_library_file(lib_dirs +
+-                                                     ['/usr/lib/termcap'],
+-                                                     'termcap'):
++            elif self.compiler.find_library_file(lib_dirs, 'termcap'):
+                 readline_libs.append('termcap')
+             exts.append( Extension('readline', ['readline.c'],
+                                    library_dirs=['/usr/lib/termcap'],

@@ -1,0 +1,7 @@
+config FS_APPS_GSTREAMER_RTSP_SERVER
+	bool "gstreamer-rtsp-server 0.10.8"
+	select FS_APPS_GSTREAMER
+	select FS_APPS_GSTREAMER_PLUGINS_BASE
+	help
+	This option enabled a gstreamer based rtsp server
+

@@ -1,0 +1,7 @@
+config FS_APPS_JPEG
+	bool "jpeg-8c"
+	default n
+	help
+	  The ubiquitous C library for manipulating JPEG images.
+
+	  http://www.ijg.org/

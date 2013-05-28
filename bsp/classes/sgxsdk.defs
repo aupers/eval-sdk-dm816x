@@ -1,0 +1,207 @@
+#
+# Makefile rules to dealing with typical sgxsdk logic
+#
+
+#! \defgroup sgxsdk_defs SGXSDK Class
+#! \ingroup classes
+#! \section intro Introduction
+#! The SGXSDK definitions file provides logic dealing with typical sgxsdk logic.
+#!
+#! \section public_params Public Parameters
+#! The following is a list of parameters that may be set according to an application's specific requirements.
+#! <ul>
+#! <li>
+#! <b>FORCE_SGXSDK_COPY:</b> set to yes if you want to force the SDK into copying the SGXSDK inside the RidgeRun SDK.
+#! This is useful if you are sharing your SGXSDK between multiple development environments. Defaults to no.
+#!
+#! <li>
+#! <b>SGXSDK_COPY_EXCLUSIONS_PATTERNS:</b> This are the files that should not be copied from the SGXSDK to save disk space.
+#! This variable is usually defined by the SGXSDK class file for the specific files on the SGXSDK version. Only relevant
+#! if FORCE_SGXSDK_COPY=yes
+#!
+#! <li>
+#! <b>SGXSDKURL:</b> URL from which the user can obtain a copy of the required SGXSDK.
+#!
+#! <li>
+#! <b>RULES_MAKE:</b> Location of the Rules.make file within the sgxsdk directory for integrity checking.
+#!
+#! <li>
+#! <b>SGXSDK_SEARCH_PATH:</b> List of paths in which to look for a valid SGXSDK within the host machine.
+#!
+#! <li>
+#! <b>SGXSDK_VERIFICATION_FILE:</b> File within the found sgxsdk directory to check for its integrity.
+#!
+#! </ul>
+
+export BUILDING_FROM_RR_SDK=yes
+
+# Variables that control SGXSDK interaction
+#ifeq ($(SGXSDK_NAME),)
+#$(error ====== SGXSDK_NAME variable isn't defined on RidgeRun's sgxsdk makefile =====)
+#endif
+SGXSDKURL?=http://software-dl.ti.com/dsps/dsps_public_sw/sdo_sb/targetcontent/gfxsdk/
+RULES_MAKE?=sgxsdk/Rules.make
+-include $(RULES_MAKE)
+
+# Variables that control SGXSDK search
+SGXSDK_SEARCH_PATH?=/usr/local/$(SGXSDK_NAME) $(HOME)/$(SGXSDK_NAME) /usr/local/sgxsdk
+SGXSDK_VERIFICATION_FILE?=Rules.make
+
+#============================================================================================
+# Search the SGXSDK installation's path and create a symbolic link in RidgeRun SDK. Otherwise,
+# an error message is shown to the user with the URL to download the DVDSDK
+#============================================================================================
+# This variable is usually overwriten by the sgxsdk class file with the respective values for the SGXSDK version
+SGXSDK_COPY_EXCLUSIONS_PATTERNS?=
+
+TARVERBOSE=$(if $(VERBOSE:1=),,v)
+
+define sgxsdk_copy
+	cd $(1) && \
+	    find -print0 | \
+	    tar --exclude=.svn --exclude=\*~ \
+	    $(foreach exclusion,$(SGXSDK_COPY_EXCLUSIONS_PATTERNS),--exclude=$(exclusion)) \
+	    --null -T - -cf - | \
+	    tar -C $(2) -xp$(TARVERBOSE)f - || \
+	    { $(ECHO) "$(ERROR_COLOR)Error:$(NORMAL_COLOR) while copying the SGXSDK into the SDK, do you have enough free space?\n" ; echo -n "  Cleaning the mess..." ; rm -Rf $(2) ; echo "done" ; exit -1 ; } 
+endef
+
+ifeq ($(CONFIG_PROPRIETARY_FORCE_SGXSDK_COPY),y)
+FORCE_SGXSDK_COPY?=yes
+else
+FORCE_SGXSDK_COPY?=no
+endif
+
+export FORCE_SGXSDK_COPY
+
+# Let's depend on sgxsdk/rrsdk_path since the directory sgxsdk may be created and still fail
+# to complete the copy of the files. rrsdk_path is only created after successfully cloning
+# the sgxsdk
+sgxsdk: sgxsdk/rrsdk_path
+
+sgxsdk/rrsdk_path:
+	$(V)for PATH2TEST in $(SGXSDK_SEARCH_PATH); do \
+	    if [ -e $$PATH2TEST/$(SGXSDK_VERIFICATION_FILE) ] ; then  \
+	       if [ ! -w $$PATH2TEST ] && [ "$$FORCE_SGXSDK_COPY" != "yes" ] ; then \
+	          $(ECHO) "$(ERROR_COLOR)Error:$(NORMAL_COLOR) Found a sgxsdk on $$PATH2TEST, but can't write into it" ; \
+	          $(ECHO) "Please grant write permissions to the sgxsdk directory to continue.\n" ; \
+	          exit -1 ; \
+	       else \
+	          if [ -f $$PATH2TEST/rrsdk_path ] ; then \
+	             $(ECHO) "$(ERROR_COLOR)Error:$(NORMAL_COLOR) Found a sgxsdk on $$PATH2TEST, but is currently on use by another RidgeRun SDK at path:" ; \
+	             $(ECHO) "  `cat $$PATH2TEST/rrsdk_path`\n" ; \
+	             exit -1 ; \
+	          else \
+	             if [ "$$FORCE_SGXSDK_COPY" = "yes" ] ; then \
+	                 $(ECHO) "Found SGXSDK at $$PATH2TEST, copying it (this may take some minutes)..." ; \
+	                 mkdir -p sgxsdk ; \
+	                 pushd . >/dev/null ;\
+	                 $(call sgxsdk_copy,$$PATH2TEST,${shell pwd}/sgxsdk) ; \
+	                 popd > /dev/null ; \
+	             else \
+	                 $(ECHO) "Found SGXSDK at $$PATH2TEST" ; \
+	                 ln -s $$PATH2TEST sgxsdk ; \
+	             fi ; \
+	             echo $(DEVDIR) > sgxsdk/rrsdk_path ; \
+	             break ; \
+	          fi \
+	       fi \
+	    fi;  \
+	done ; \
+	if [ ! -e sgxsdk ] ; then \
+	  $(ECHO) "$(ERROR_COLOR)Error:$(NORMAL_COLOR) SGXSDK $(SGXSDK_NAME) wasn't found on the following search paths:" ; \
+	  for PATH2TEST in $(SGXSDK_SEARCH_PATH); do \
+	    $(ECHO) "* $$PATH2TEST" ; \
+	  done ; \
+	  $(ECHO) "\nThe SGXSDK should be installed in one of the previous paths.\nYou can download the SGXSDK from the following URL:" ;\
+	  $(ECHO) " $(GREEN)$(SGXSDKURL)$(NORMAL_COLOR)\n" ; \
+	  exit -1 ; \
+	fi
+
+sgxsdk_patched: custom_rules_make rrpatched
+
+custom_rules_make:
+	$(V) if ! [ -L $(RULES_MAKE) ] ; then \
+	    chmod -R +w sgxsdk ; \
+	    mv $(RULES_MAKE) $(RULES_MAKE).orig ; \
+	    ln -s $(shell pwd)/patches/arch/Rules.make.custom $(RULES_MAKE) ; \
+	fi
+
+sgxsdk_clean: remove_custom_rules_make unpatch
+
+remove_custom_rules_make:
+	$(V) if [ -L $(RULES_MAKE) ] ; then \
+	    mv $(RULES_MAKE).orig $(RULES_MAKE) ; \
+	fi
+
+sgxsdk_distclean: 
+	@#We should not clean if we are going to erase the files anyway, unlike when we are sharing the dir
+	$(V) if [ -L sgxsdk ] ; then \
+	    $(MAKE) sgxsdk_clean ; \
+	fi
+	$(V) rm -rf sgxsdk/rrsdk_path sgxsdk
+
+sgxsdk_cmdline:
+ifneq ($(SGXSDK_EXTRA_CMDLINE_ARGS),)
+	$(V) if ! grep -q $(SGXSDK_EXTRA_CMDLINE_ARGS) $(CMDLINEFILE) ; then \
+	        echo -n " $(SGXSDK_EXTRA_CMDLINE_ARGS) " >> $(CMDLINEFILE) ; \
+	     fi
+endif
+
+#============================================================================================
+# demos_sgx targets. Compile - install and uninstall the demos module into the kernel
+#============================================================================================
+
+.PHONY: demos_sgx demos_sgx_install
+demos_sgx: demos_built
+demos_sgx_install: demos_install
+demos_sgx_uninstall: demos_uninstall
+demos_sgx_clean: demos_clean
+
+.PHONY: demos_install
+
+demos_built:
+	$(MAKE) -C sgxsdk all_sdk BUILD=$(BUILD) OMAPES=$(OMAPES) $(QOUT) $(ERRQOUT)
+	$(V) touch $@
+
+demos_clean:
+	$(MAKE) -C sgxsdk clean_sdk $(QOUT) $(ERRQOUT)
+	$(V) rm -f demos_built
+
+demos_install:
+	$(V) install -d $(FSROOT)/opt/gfxsdkdemos $(QOUT) $(ERRQOUT)
+	$(MAKE) -C sgxsdk install_sdk BUILD=$(BUILD) OMAPES=$(OMAPES) $(QOUT) $(ERRQOUT)
+
+demos_uninstall:
+
+#============================================================================================
+# Targets to build, install and clean drivers_sgx
+#============================================================================================
+
+drivers_sgx: sgx_drivers_built
+drivers_sgx_install: sgx_drivers_install
+drivers_sgx_uninstall: sgx_drivers_uninstall
+drivers_sgx_clean: sgx_drivers_clean
+
+.PHONY: sgx_drivers_install
+
+sgx_drivers_built:
+	$(MAKE) -C sgxsdk BUILD=$(BUILD) OMAPES=$(OMAPES) all_km $(QOUT) $(ERRQOUT)
+	$(V) touch $@
+
+sgx_drivers_clean:
+	$(MAKE) -C sgxsdk clean_km $(QOUT) $(ERRQOUT)
+	$(V) rm -f sgx_drivers_built
+
+sgx_drivers_install:
+	$(V) install -d $(FSROOT)/opt/gfxsdkdemos $(QOUT) $(ERRQOUT)
+	$(V) if [ -e $(FSROOT)/lib/modules/$(KERNELVERSION)/kernel/drivers/dsp ] ; then \
+	       mv $(FSROOT)/lib/modules/$(KERNELVERSION)/kernel/drivers/dsp $(FSROOT)/lib/ ; \
+	fi
+	$(MAKE) -C sgxsdk install_km BUILD=$(BUILD) OMAPES=$(OMAPES) $(QOUT) $(ERRQOUT)
+	$(V) if [ -e $(FSROOT)/lib/dsp ] ; then \
+	       mv $(FSROOT)/lib/dsp $(FSROOT)/lib/modules/$(KERNELVERSION)/kernel/drivers/ ; \
+	fi
+
+sgx_drivers_uninstall:
+

@@ -1,0 +1,5 @@
+config FS_APPS_LRZSZ
+	bool "lrzsz-0.12.20"
+	default n
+	help
+	  Portable and fast implementation of the X/Y/Zmodem protocols.

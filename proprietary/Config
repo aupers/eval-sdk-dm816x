@@ -1,0 +1,10 @@
+#
+# Proprietary configuration files
+# all definitions on this subtree must prefix with PROPRIETARY_
+#
+
+menu "Proprietary software"
+
+source proprietary/ConfigExtra
+
+endmenu

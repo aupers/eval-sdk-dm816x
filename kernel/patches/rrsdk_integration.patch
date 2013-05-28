@@ -1,0 +1,110 @@
+Index: kernel/linux-2.6.37-psp04.04.00.01/drivers/net/tokenring/Kconfig
+===================================================================
+--- kernel.orig/linux-2.6.37-psp04.04.00.01/drivers/net/tokenring/Kconfig	2011-07-07 09:20:16.000000000 -0600
++++ kernel/linux-2.6.37-psp04.04.00.01/drivers/net/tokenring/Kconfig	2011-08-16 13:27:33.038220909 -0600
+@@ -3,7 +3,7 @@
+ #
+ 
+ # So far, we only have PCI, ISA, and MCA token ring devices
+-menuconfig TR
++menuconfig TOKENRING
+ 	tristate "Token Ring driver support"
+ 	depends on NETDEVICES && !UML
+ 	depends on (PCI || ISA || MCA || CCW)
+@@ -18,7 +18,7 @@
+ 	  from <http://www.tldp.org/docs.html#howto>. Most people can
+ 	  say N here.
+ 
+-if TR
++if TOKENRING
+ 
+ config IBMTR
+ 	tristate "IBM Tropic chipset based adapter support"
+@@ -182,4 +182,4 @@
+ 	  To compile this driver as a module, choose M here: the module will be
+ 	  called smctr.
+ 
+-endif # TR
++endif # TOKENRING
+Index: kernel/linux-2.6.37-psp04.04.00.01/drivers/staging/echo/Makefile
+===================================================================
+--- kernel.orig/linux-2.6.37-psp04.04.00.01/drivers/staging/echo/Makefile	2011-07-07 09:20:16.000000000 -0600
++++ kernel/linux-2.6.37-psp04.04.00.01/drivers/staging/echo/Makefile	2011-08-16 13:27:33.038220909 -0600
+@@ -1 +1 @@
+-obj-$(CONFIG_ECHO) += echo.o
++obj-$(CONFIG_ECHOLINE) += echo.o
+Index: kernel/linux-2.6.37-psp04.04.00.01/Makefile
+===================================================================
+--- kernel.orig/linux-2.6.37-psp04.04.00.01/Makefile	2011-07-07 09:20:16.000000000 -0600
++++ kernel/linux-2.6.37-psp04.04.00.01/Makefile	2011-08-16 13:27:33.106205249 -0600
+@@ -1,7 +1,7 @@
+ VERSION = 2
+ PATCHLEVEL = 6
+ SUBLEVEL = 37
+-EXTRAVERSION =
++EXTRAVERSION =-ridgerun
+ NAME = Flesh-Eating Bats with Fangs
+ 
+ # *DOCUMENTATION*
+Index: kernel/linux-2.6.37-psp04.04.00.01/drivers/staging/echo/Kconfig
+===================================================================
+--- kernel.orig/linux-2.6.37-psp04.04.00.01/drivers/staging/echo/Kconfig	2011-07-07 09:20:16.000000000 -0600
++++ kernel/linux-2.6.37-psp04.04.00.01/drivers/staging/echo/Kconfig	2011-08-16 13:27:33.106205249 -0600
+@@ -1,4 +1,4 @@
+-config ECHO
++config ECHOLINE
+ 	tristate "Line Echo Canceller support"
+ 	default n
+ 	---help---
+Index: kernel/linux-2.6.37-psp04.04.00.01/drivers/i2c/algos/Kconfig
+===================================================================
+--- kernel.orig/linux-2.6.37-psp04.04.00.01/drivers/i2c/algos/Kconfig	2011-07-07 09:20:16.000000000 -0600
++++ kernel/linux-2.6.37-psp04.04.00.01/drivers/i2c/algos/Kconfig	2011-08-16 13:27:33.106205249 -0600
+@@ -3,7 +3,7 @@
+ #
+ 
+ menu "I2C Algorithms"
+-	visible if !I2C_HELPER_AUTO
++	depends on !I2C_HELPER_AUTO
+ 
+ config I2C_ALGOBIT
+ 	tristate "I2C bit-banging interfaces"
+Index: kernel/linux-2.6.37-psp04.04.00.01/drivers/media/common/tuners/Kconfig
+===================================================================
+--- kernel.orig/linux-2.6.37-psp04.04.00.01/drivers/media/common/tuners/Kconfig	2011-07-07 09:20:16.000000000 -0600
++++ kernel/linux-2.6.37-psp04.04.00.01/drivers/media/common/tuners/Kconfig	2011-08-16 13:27:33.106205249 -0600
+@@ -45,7 +45,7 @@
+ 	  If unsure say N.
+ 
+ menu "Customize TV tuners"
+-	visible if MEDIA_TUNER_CUSTOMISE
++	depends on MEDIA_TUNER_CUSTOMISE
+ 
+ config MEDIA_TUNER_SIMPLE
+ 	tristate "Simple tuner support"
+Index: kernel/linux-2.6.37-psp04.04.00.01/drivers/media/dvb/frontends/Kconfig
+===================================================================
+--- kernel.orig/linux-2.6.37-psp04.04.00.01/drivers/media/dvb/frontends/Kconfig	2011-07-07 09:20:16.000000000 -0600
++++ kernel/linux-2.6.37-psp04.04.00.01/drivers/media/dvb/frontends/Kconfig	2011-08-16 13:27:33.106205249 -0600
+@@ -13,7 +13,7 @@
+ 	  If unsure say N.
+ 
+ menu "Customise DVB Frontends"
+-	visible if DVB_FE_CUSTOMISE
++	depends on DVB_FE_CUSTOMISE
+ 
+ comment "Multistandard (satellite) frontends"
+ 	depends on DVB_CORE
+Index: kernel/linux-2.6.37-psp04.04.00.01/drivers/media/video/Kconfig
+===================================================================
+--- kernel.orig/linux-2.6.37-psp04.04.00.01/drivers/media/video/Kconfig	2011-07-07 09:20:16.000000000 -0600
++++ kernel/linux-2.6.37-psp04.04.00.01/drivers/media/video/Kconfig	2011-08-16 13:27:33.106205249 -0600
+@@ -116,7 +116,7 @@
+ #
+ 
+ menu "Encoders/decoders and other helper chips"
+-	visible if !VIDEO_HELPER_CHIPS_AUTO
++	depends on !VIDEO_HELPER_CHIPS_AUTO
+ 
+ comment "Audio decoders"
+ 

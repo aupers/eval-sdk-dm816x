@@ -1,0 +1,12 @@
+Index: gst-plugins-good-0.10.31/src/gst/isomp4/qtdemux.h
+===================================================================
+--- gst-plugins-good-0.10.31.orig/src/gst/isomp4/qtdemux.h	2011-12-30 07:59:09.000000000 -0600
++++ gst-plugins-good-0.10.31/src/gst/isomp4/qtdemux.h	2013-02-25 08:04:49.901971894 -0600
+@@ -23,6 +23,7 @@
+ 
+ #include <gst/gst.h>
+ #include <gst/base/gstadapter.h>
++#include <gst/video/video.h>
+ 
+ G_BEGIN_DECLS
+ 

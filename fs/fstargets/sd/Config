@@ -1,0 +1,10 @@
+#
+# Ridgerun target configuration
+#
+
+config FS_TARGET_SD
+	bool "Secure Digital Card"
+	depends on !INSTALLER_MODE_SD_CARD_INSTALLER
+	help
+	    Put root file system into an SD card. See installer configuration for details
+

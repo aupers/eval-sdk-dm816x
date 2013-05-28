@@ -1,0 +1,14 @@
+config FS_APPS_IPERF
+	bool "Iperf-2.0.5"
+	default n
+	select TOOLCHAIN_INSTALL_CPP_SUPPORT
+	help
+	  Iperf was developed as a modern alternative for measuring TCP
+          and UDP bandwidth performance.
+
+	  Iperf is a tool to measure maximum TCP bandwidth, allowing the
+          tuning of various parameters and UDP characteristics. Iperf 
+          reports bandwidth, delay jitter, datagram loss.
+
+	  For further informations visit
+                           http://dast.nlanr.net/Projects/Iperf/

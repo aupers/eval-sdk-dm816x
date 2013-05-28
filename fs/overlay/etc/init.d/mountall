@@ -1,0 +1,32 @@
+#!/bin/sh
+#
+# Mount points from /etc/fstab
+
+set -e
+
+mount_overlay ()
+{
+    src=$1
+    dst=/tmp$1
+
+    if [ $1 == "/dev" ] && grep -q devtmpfs /proc/mounts ; then
+        return;
+    fi
+
+    cp -dR $src /tmp/
+    /bin/mount $src
+    mv $dst/* $src/
+    rmdir $dst
+}
+
+/bin/mount /proc
+/bin/mount /sys
+/bin/mount /tmp
+
+# To minimize writes to the root file system, disable
+# tracking access times
+/bin/mount -o remount,noatime,nodiratime /dev/root /
+
+mount_overlay /var
+mount_overlay /dev
+

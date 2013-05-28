@@ -1,0 +1,8 @@
+0001-freeze-Add-timeout-property.patch
+0003-ugly-hack-to-avoid-a-memcpy.patch
+0004-h264parse-Add-workaround-for-separate-codec_config-a.patch
+0005-jpegparse-ignore-unhandled-application-markers.patch
+0006-mpegvideoparse-merge-sequence-header.patch
+0007-h264parse-fix-boundary-condition.patch
+0008-h264parse-modifications-for-playbin.patch
+0010-mpegtsdemux-picking-up-a-fix-to-genrate-no-more-pads.patch

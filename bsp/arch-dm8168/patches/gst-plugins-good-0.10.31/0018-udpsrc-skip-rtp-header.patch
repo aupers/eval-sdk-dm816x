@@ -1,0 +1,354 @@
+diff -Npru gst-plugins-good-0.10.28.orig/src/gst/udp/gstudpsrc.c gst-plugins-good-0.10.28/src/gst/udp/gstudpsrc.c
+--- gst-plugins-good-0.10.28.orig/src/gst/udp/gstudpsrc.c	2011-03-08 19:26:07.000000000 +0530
++++ gst-plugins-good-0.10.28/src/gst/udp/gstudpsrc.c	2012-06-29 01:05:29.717233763 +0530
+@@ -111,6 +111,7 @@
+ #include <unistd.h>
+ #endif
+ #include <stdlib.h>
++#include <stdio.h>
+ 
+ #if defined _MSC_VER && (_MSC_VER >= 1400)
+ #include <io.h>
+@@ -125,6 +126,13 @@ typedef int socklen_t;
+ #include <sys/filio.h>
+ #endif
+ 
++#define CLOCK_BASE 9LL
++#define CLOCK_FREQ CLOCK_BASE * 10000
++
++#define MPEGTIME_TO_GSTTIME(time) (gst_util_uint64_scale ((time), \
++            GST_MSECOND/10, CLOCK_BASE))
++
++
+ GST_DEBUG_CATEGORY_STATIC (udpsrc_debug);
+ #define GST_CAT_DEFAULT (udpsrc_debug)
+ 
+@@ -146,6 +154,8 @@ static GstStaticPadTemplate src_template
+ #define UDP_DEFAULT_SOCK                -1
+ #define UDP_DEFAULT_AUTO_MULTICAST     TRUE
+ #define UDP_DEFAULT_REUSE              TRUE
++#define UDP_DEFAULT_SKIP_RTP_HEADER    FALSE
++
+ 
+ enum
+ {
+@@ -164,7 +174,7 @@ enum
+   PROP_SOCK,
+   PROP_AUTO_MULTICAST,
+   PROP_REUSE,
+-
++  PROP_SKIP_RTP_HEADER,
+   PROP_LAST
+ };
+ 
+@@ -184,6 +194,9 @@ static GstCaps *gst_udpsrc_getcaps (GstB
+ 
+ static GstFlowReturn gst_udpsrc_create (GstPushSrc * psrc, GstBuffer ** buf);
+ 
++static GstFlowReturn gst_udpsrc_create1 (GstPushSrc * psrc, GstBuffer ** buf);
++
++
+ static gboolean gst_udpsrc_start (GstBaseSrc * bsrc);
+ 
+ static gboolean gst_udpsrc_stop (GstBaseSrc * bsrc);
+@@ -199,6 +212,18 @@ static void gst_udpsrc_set_property (GOb
+ static void gst_udpsrc_get_property (GObject * object, guint prop_id,
+     GValue * value, GParamSpec * pspec);
+ 
++static gboolean gst_udpsrc_event(GstBaseSrc *src, GstEvent *event);
++
++
++guint gst_udpsrc_get_rtp_header_len (guint8 *data)
++{
++	guint len;
++	len = 12 + ((data[0] & 0xF) << 2);
++	if (data[0] & 0x10)
++		len += GST_READ_UINT16_BE (data + len + 2) * 4 + 4;
++	return len;
++}
++
+ static void
+ _do_init (GType type)
+ {
+@@ -303,13 +328,17 @@ gst_udpsrc_class_init (GstUDPSrcClass * 
+   g_object_class_install_property (gobject_class, PROP_REUSE,
+       g_param_spec_boolean ("reuse", "Reuse", "Enable reuse of the port",
+           UDP_DEFAULT_REUSE, G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
++  g_object_class_install_property (gobject_class, PROP_SKIP_RTP_HEADER,
++      g_param_spec_boolean ("skip-rtp-header", "Skip RTP Header",
++          "Skip RTP Header in the UDP packets",
++          UDP_DEFAULT_SKIP_FIRST_BYTES, G_PARAM_READWRITE));
+ 
+   gstbasesrc_class->start = gst_udpsrc_start;
+   gstbasesrc_class->stop = gst_udpsrc_stop;
+   gstbasesrc_class->unlock = gst_udpsrc_unlock;
+   gstbasesrc_class->unlock_stop = gst_udpsrc_unlock_stop;
+   gstbasesrc_class->get_caps = gst_udpsrc_getcaps;
+-
++  //gstbasesrc_class->event = gst_udpsrc_event;
+   gstpushsrc_class->create = gst_udpsrc_create;
+ }
+ 
+@@ -329,6 +358,7 @@ gst_udpsrc_init (GstUDPSrc * udpsrc, Gst
+   udpsrc->closefd = UDP_DEFAULT_CLOSEFD;
+   udpsrc->externalfd = (udpsrc->sockfd != -1);
+   udpsrc->auto_multicast = UDP_DEFAULT_AUTO_MULTICAST;
++  udpsrc->skip_rtp_header = UDP_DEFAULT_SKIP_RTP_HEADER;
+   udpsrc->sock.fd = UDP_DEFAULT_SOCK;
+   udpsrc->reuse = UDP_DEFAULT_REUSE;
+ 
+@@ -341,6 +371,25 @@ gst_udpsrc_init (GstUDPSrc * udpsrc, Gst
+   gst_base_src_set_do_timestamp (GST_BASE_SRC (udpsrc), TRUE);
+ }
+ 
++static gboolean gst_udpsrc_event(GstBaseSrc *src, GstEvent *event)
++{
++  GstUDPSrc *udpsrc;
++
++  udpsrc = GST_UDPSRC (src);
++  guint ret;
++  guint readsize = 0;
++  switch (GST_EVENT_TYPE (event))
++    {
++      case GST_EVENT_CUSTOM_UPSTREAM:
++	  	ret =
++              IOCTL_SOCKET (udpsrc->sock.fd, FIONREAD, &readsize);
++		printf("readsize:%d\n",readsize);
++	  default:
++	  	gst_event_unref(event);
++	  	break;
++  	}
++}
++
+ static void
+ gst_udpsrc_finalize (GObject * object)
+ {
+@@ -408,6 +457,86 @@ clear_error (GstUDPSrc * udpsrc)
+ #endif
+ }
+ 
++#define VIDEO_PID 0x1011
++
++int udp_parse(unsigned char * ptr, int len, guint64 * PTS)
++{
++	int i = 0;
++	int af_len = 0;
++	
++
++	// Find TS start
++	for (i = 0 ; i < (len -188); i++)
++	{
++		if( ptr[i] == 0x47 && ptr[i+188] ==0x47 )
++		{
++			break;
++		}
++	}
++	
++
++	//For all TS packet in the buffer 
++	for (; i < (len -188); i+=188)
++	{
++		// If this is Video PID and PUSI is on 
++		//printf( "PID - %d \n" , ((ptr[i+1] & 0x1f) << 8) | ptr[i+2]);
++	
++		if( (  ( (  (ptr[i+1] & 0x1f) << 8) | ptr[i+2])  == VIDEO_PID)  &&  (ptr[i+1] & 0x40) )
++		{
++			af_len = 0;
++			//AF exists??
++			if(ptr[i+3] & 0x10)
++			{
++				af_len = ptr[i+4] + 1;
++			}
++
++
++			//if PTS exists
++			if( ptr[i +  4 + af_len + 7] & 0x80)
++			{
++				
++
++			/*	    target  = ((guint64) (*data++ & 0x0E)) << 29;    \
++					target |= ((guint64) (*data++       )) << 22;         \
++					if ((*data & 0x01) != 0x01) goto lost_sync_label;   \
++					target |= ((guint64) (*data++ & 0xFE)) << 14;    \
++					target |= ((guint64) (*data++       )) << 7;          \
++					if ((*data & 0x01) != 0x01) goto lost_sync_label;   \
++					target |= ((guint64) (*data++ & 0xFE)) >> 1;
++
++			*/
++
++				*PTS = ((guint64) ( ptr[i +  4 + af_len + 9] & 0x0E )) << 29;
++				*PTS |= ((guint64) ( ptr[i +  4 + af_len + 10]       )) << 22;
++				*PTS |= ((guint64) ( ptr[i +  4 + af_len + 11]  & 0xFE     )) << 14;
++				*PTS |= ((guint64) ( ptr[i +  4 + af_len + 12]       )) << 7;
++				*PTS |= ((guint64) ( ptr[i +  4 + af_len + 13]  & 0xFE     )) >>1 ;
++
++				return i+188;
++			}
++
++
++		}
++		
++		
++	
++	}
++
++
++	return 0;
++}
++
++static GstFlowReturn
++gst_udpsrc_create1 (GstPushSrc * psrc, GstBuffer ** buf)
++{
++ static int i=1000;
++ while(i-- > 0) {
++ 	gst_udpsrc_create (psrc, buf);
++	gst_buffer_unref(*buf);
++ }
++ return gst_udpsrc_create (psrc, buf);
++}
++#include <sched.h>
+ static GstFlowReturn
+ gst_udpsrc_create (GstPushSrc * psrc, GstBuffer ** buf)
+ {
+@@ -431,8 +560,19 @@ gst_udpsrc_create (GstPushSrc * psrc, Gs
+   GstClockTime timeout;
+   gint ret;
+   gboolean try_again;
++  guint64 pts;
++  //static int flag = 1;
+ 
+   udpsrc = GST_UDPSRC_CAST (psrc);
++  /*if(flag) {
++  	pthread_attr_t         attr;
++	struct sched_param     schedParam;
++  	schedParam.sched_priority = 20;
++    if (sched_setscheduler (0, SCHED_RR, &schedParam) == -1) {
++		 printf("Error setting scheduler\n");
++	}
++	flag=0;
++  }*/
+ 
+ retry:
+   /* quick check, avoid going in select when we already have data */
+@@ -441,6 +581,8 @@ retry:
+               IOCTL_SOCKET (udpsrc->sock.fd, FIONREAD, &readsize)) < 0))
+     goto ioctl_failed;
+ 
++  // fprintf(stderr, "udpsrc: holding %d bytes in the network buffers\n", readsize);
++
+   if (readsize > 0)
+     goto no_select;
+ 
+@@ -449,13 +591,13 @@ retry:
+   } else {
+     timeout = GST_CLOCK_TIME_NONE;
+   }
+-
++  //printf("select!!\n");
+   do {
+     try_again = FALSE;
+ 
+     GST_LOG_OBJECT (udpsrc, "doing select, timeout %" G_GUINT64_FORMAT,
+         udpsrc->timeout);
+-
++	//usleep(10000);
+     ret = gst_poll_wait (udpsrc->fdset, timeout);
+     GST_LOG_OBJECT (udpsrc, "select returned %d", ret);
+     if (G_UNLIKELY (ret < 0)) {
+@@ -496,6 +638,8 @@ retry:
+     goto retry;
+   }
+ 
++	// readsize = GST_BASE_SRC_CAST(psrc)->blocksize;
++
+ no_select:
+   GST_LOG_OBJECT (udpsrc, "ioctl says %d bytes available", (int) readsize);
+ 
+@@ -503,12 +647,13 @@ no_select:
+   pktsize = readsize;
+ 
+   while (TRUE) {
+-    slen = sizeof (sa);
++    //slen = sizeof (sa);
++	slen = 0;
+ #ifdef G_OS_WIN32
+     ret = recvfrom (udpsrc->sock.fd, (char *) pktdata, pktsize, 0, &sa.sa,
+         &slen);
+ #else
+-    ret = recvfrom (udpsrc->sock.fd, pktdata, pktsize, 0, &sa.sa, &slen);
++    ret = recvfrom (udpsrc->sock.fd, pktdata, pktsize, 0, NULL, &slen);
+ #endif
+     if (G_UNLIKELY (ret < 0)) {
+ #ifdef G_OS_WIN32
+@@ -531,7 +676,8 @@ no_select:
+   }
+ 
+   /* special case buffer so receivers can also track the address */
+-  outbuf = gst_netbuffer_new ();
++  // outbuf = gst_netbuffer_new ();
++  outbuf = gst_buffer_new ();
+   GST_BUFFER_MALLOCDATA (outbuf) = pktdata;
+ 
+   /* patch pktdata and len when stripping off the headers */
+@@ -542,9 +688,21 @@ no_select:
+     pktdata += udpsrc->skip_first_bytes;
+     ret -= udpsrc->skip_first_bytes;
+   }
++  if (udpsrc->skip_rtp_header != FALSE) {
++  	guint rtp_header_len;
++	rtp_header_len = gst_udpsrc_get_rtp_header_len(pktdata);
++    if (G_UNLIKELY (readsize <= rtp_header_len))
++      goto skip_error;
++
++    pktdata += rtp_header_len;
++    ret -= rtp_header_len;
++  }
+   GST_BUFFER_DATA (outbuf) = pktdata;
+   GST_BUFFER_SIZE (outbuf) = ret;
+-
++  
++  if(udp_parse(pktdata,ret,&pts))
++  	printf("ts received:%"GST_TIME_FORMAT "at time:%"GST_TIME_FORMAT "\n",GST_TIME_ARGS(MPEGTIME_TO_GSTTIME(pts)),GST_TIME_ARGS(gst_util_get_timestamp ()));
++#if 0
+   switch (sa.sa.sa_family) {
+     case AF_INET:
+     {
+@@ -568,6 +726,7 @@ no_select:
+ #endif
+       goto receive_error;
+   }
++#endif
+   GST_LOG_OBJECT (udpsrc, "read %d bytes", (int) readsize);
+ 
+   *buf = GST_BUFFER_CAST (outbuf);
+@@ -709,6 +868,9 @@ gst_udpsrc_set_property (GObject * objec
+     case PROP_REUSE:
+       udpsrc->reuse = g_value_get_boolean (value);
+       break;
++    case PROP_SKIP_RTP_HEADER:
++      udpsrc->skip_rtp_header = g_value_get_boolean (value);
++      break;
+     default:
+       break;
+   }
+@@ -760,6 +922,9 @@ gst_udpsrc_get_property (GObject * objec
+     case PROP_REUSE:
+       g_value_set_boolean (value, udpsrc->reuse);
+       break;
++    case PROP_SKIP_RTP_HEADER:
++      g_value_set_boolean (value, udpsrc->skip_rtp_header);
++      break;
+     default:
+       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+       break;
+diff -Npru gst-plugins-good-0.10.28.orig/src/gst/udp/gstudpsrc.h gst-plugins-good-0.10.28/src/gst/udp/gstudpsrc.h
+--- gst-plugins-good-0.10.28.orig/src/gst/udp/gstudpsrc.h	2010-09-02 23:52:25.000000000 +0530
++++ gst-plugins-good-0.10.28/src/gst/udp/gstudpsrc.h	2012-06-29 01:05:29.725258879 +0530
+@@ -64,6 +64,7 @@ struct _GstUDPSrc {
+   gboolean   closefd;
+   gboolean   auto_multicast;
+   gboolean   reuse;
++  gboolean   skip_rtp_header;
+ 
+   /* our sockets */
+   GstPollFD  sock;

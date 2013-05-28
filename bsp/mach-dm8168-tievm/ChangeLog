@@ -1,0 +1,27 @@
+2008-06-10  Miguel Aguilar <miguel.aguilar@ridgerun.com>
+
+	* bsp/mach-tievm/ConfigToolchain: Change default toolchain
+	arch flags to armv7.
+	* bsp/mach-tievm/bspconfig.default: Set default OMAP3503
+	SDK config values.
+
+2008-06-10  Miguel Aguilar <miguel.aguilar@ridgerun.com>
+
+	* bsp/mach-tievm/Make.conf: Change EXTRAVERSION.
+
+2008-06-09  Miguel Aguilar <miguel.aguilar@ridgerun.com>
+
+	* bsp/mach-tievm/Make.conf: Change to linux-2.6.26 kernel version.
+
+2008-06-06  Miguel Aguilar <miguel.aguilar@ridgerun.com>
+
+	* bsp/mach-tievm/Make.conf: Change kernel and u-boot versions.
+	* bsp/mach-tievm/apps/base/Makefile: Update old DM355 definitions
+	to omap, and add support for jffs2.
+	* bsp/mach-tievm/u-boot/Makefile.rules: Add build and clean rules
+	for mach.
+	* bsp/mach-tievm/Config: Update to omap.
+
+2008-05-07  Diego Dompe <diego.dompe@ridgerun.com>
+	* bsp/mach/apps/targets,fstargets: rename directory for machine
+	specific file systems

@@ -1,0 +1,179 @@
+#! \defgroup common_class Common Class
+#! \ingroup classes
+#! \section intro Introduction
+#! RidgeRun SDK variable definitions which can be used in any Makefile that includes $(DEVDIR)/bsp/classes/rrsdk.class.
+#!
+#! \section readonly_params Public Read-only Variables
+#! The following is a list of parameters for use in Makefiles.  Their value should not be modified.
+#! <ul>
+#! <li> <b>SHELL</b>: Shell's executable location. Use when a make target needs to run a host shell script.  Typical use would be with autotools based packages. <br>Value: "/bin/bash."</li> 
+#!
+#! <li> <b>ECHO</b>: Variable storing the echo command for console printing with automatic indentation.  Intended to provide the user with brief status on the progress of the build.  <br>Value: "echo -e "$(TABINDEX)""</li> 
+#!
+#! <li> <b>MAKE</b>: Make command for the rest of the RidgeRun SDK.  Enables verbose output.  <br>Value: "$(MAKE) $(if $(VERBOSE:1=),-s)"</li> 
+#!
+#! <li> <b>MAKE_CALL_PARAMS</b>: SDK parameters for the make command. Typically only needed when a Makefile calls another Makefile lower in its directory tree.  <br>Value: "DEVDIR=$(DEVDIR) TABINDEX="$(TABINDEX)\040\040" $(EXTRA_PARAMS)"</li> 
+#! 
+#! <li> <b>V</b>: Variable to control if a command in a make target is echoed to the user.  Typically all target commands start with $(V) and end with $(QOUT).  <br>Value: "$(if $(VERBOSE:1=),@)"
+#!
+#! <li> <b>QOUT</b>: Variable to control if the output from a command in a make target is sent to the log file.  <br>Value: "$(if $(VERBOSE:1=), >> $(LOGFILE) )"
+#!
+#! <li> <b>ERRQOUT</b>: Variable to control if the error output from a command in a make target is sent to the log file.  <br>Value: "$(if $(VERBOSE:1=), 2>> $(LOGFILE) )"</li> 
+#!
+#! <li> <b>HOST_ARCH</b>: Identifier value for the host machine's architecture.  Only used when the built steps vary based on develop workstation machine architecture.  <br>Value: "${shell uname -m}"</li> 
+#!
+#! <li> <b>PATH</b>: PATH variable to be used during the SDK building and installation process. <br>Value: "$(DEVDIR)/bsp/local/bin:$(DEVDIR)/bsp/local/sbin:$(DEVDIR)/bsp/tools:$(PATH))"</li> 
+#! 
+#! <li> <b>SUDO</b>: Command for running a host application with super-user rights.  Typical use would be to make target file system device files or mount and unmount loopback devices.  <br>Value: "sudo"</li> 
+#!
+#! <li> <b>KERNELDIR</b>: SDK kernel directory. <br>Value: "$(DEVDIR)/kernel/$(KERNEL)"</li> 
+#!
+#! <li> <b>BOOTLOADERDIR</b>: SDK bootloader directory. <br>Value: "$(DEVDIR)/bootloader/$(BOOTLOADER)"</li> 
+#!
+#! <li> <b>FSROOT</b>: Directory location for the target's filesystem's root. <br>Value: "$(DEVDIR)/fs/fs"</li> 
+#! 
+#! <li> <b>FSDEVROOT</b>: Directory location holding the cross compiled application and libraries output.  Typically when cross compiling a package, man pages, statically linked libraries, etc get included when running the packages install make target.  To keep the target file system $(FSROOT) from containing unnecessary files, packages that support their own install make target use $(FSDEVROOT) for the location of their install.  Then the RidgeRun integration Makefile copies just the needed files from $(FSDEVROOT) to $(FSROOT) using its install make target. <br>Value: "$(DEVDIR)/fs/fsdev"</li> 
+#! 
+#! <li> <b>SIMROOT</b>: Directory location for the simulator's filesystem's root. <br>Value: "$(DEVDIR)/fs/simulator"</li> 
+#!
+#! <li> <b>HOSTAPPSDIR</b>: Directory location for the host application directory.  A host application is an application or library that gets built for execution on the host.  Host applications are used when a specific version of an application or library is required for the SDK to build properly.  <br>Value: "$(DEVDIR)/fs/host-apps"</li> 
+#! 
+#! <li> <b>LOCALDIR</b>: Directory location where host applications get installed.  <br>Value: "$(DEVDIR)/bsp/local"</li> 
+#! 
+#! <li> <b>CLASSESDIR</b>: Directory location for the RidgeRun SDK helper classes. <br>Value: "$(DEVDIR)/bsp/classes"</li> 
+#!
+#! <li> <b>IMAGEDIR</b>: Directory location where the top level 'make install' created images are stored.  These images are typically transferred to the target device.  <br>Value: "$(DEVDIR)/images"</li> 
+#! 
+#! <li> <b>FSIMAGE</b>: Variable that holds the location of the filesystem's image file. <br>Value: "$(IMAGEDIR)/fsimage".</li> 
+#! 
+#! <li> <b>KERNELIMAGE</b>: Variable that holds the location of the kernel's image file. <br>Value: "$(IMAGEDIR)/kernel".</li> 
+#! 
+#! <li> <b>BOOTLOADERIMAGE </b>: Variable that holds the location of the bootloader's image file. Value "$(IMAGEDIR)/bootloader".</li> 
+#! 
+#! <li> <b>BSPCONFIGFILE</b>: Variable that holds the location of the BSP configuration file. <br>Value: "$(IMAGEDIR)/bspconfig".</li> 
+#! 
+#! <li> <b>TFTPIMGSUFFIX</b>: This is a prefix that is appended to every image that is copied into the host's tftp directory. Is useful to prevent conflicts when several developers or several development directories are used the same build server.  Value (simplified): "$USER.$DEVDIR.$MACH"</li> 
+#!
+#! <li> <b>KFLAGS</b>: Parameters passed to on the kernel make invocation command line.  <br>Value: "$(if $(VERBOSE:2=),KBUILD_VERBOSE=1) CROSS_COMPILE=$(TOOLCHAIN_PREFIX)-"</li> 
+#!
+#! <li> <b>KERNEL_INCLUDE</b>: Path to kernel header files needed by some applications and libraries.  Typical use would be APPS_CFLAGS+=-I$(KINCLUDE) to allow applications and libraries to access the public kernel header files.  <br>Value: "$(FSDEVROOT)/usr/include"</li>
+#!
+#! \section readwrite_params Public Read-Write Variables
+#! The following is a list of read-write parameters for use in Makefiles.  If you modify the value, do so before including any other files.
+#! <ul>
+#! <li> <b>DOWNLOADS</b>: Variable that has a list of directories to check for downloads separated by spaces. <br>Default: "/opt/ridgerun/downloads $(DEVDIR)/downloads"</li> 
+#!
+#! <li> <b>DOWNLOAD_SERVER</b>: Download server from which to download missing packages within apps. Default "https://www.ridgerun.com/packages"</li> 
+#!
+#! <li> <b>APPS_CFLAGS</b>: Flags passed to the compiler. <br>Default: "$(CFLAGS) -I$(FSDEVROOT)/usr/include -I$(FSDEVROOT)/include"</li> 
+#!
+#! <li> <b>APPS_LDFLAGS</b>: Flags passed to the linker. <br>Default: "$(LDFLAGS) -L$(FSDEVROOT)/usr/lib -L$(FSDEVROOT)/lib"</li> 
+#!
+#! <li> <b>LOGFILE</b>: Logfile location for all Makefile related output. <br>Default: "/dev/null"</li> 
+#!
+#! <li> <b>LDCONFIG</b>: Host dynamic linker configuration tool. When building certian packages, the host ldconfig tool can not be used.  These packages can override the LDCONFIG setting.  <br>Default: "/sbin/ldconfig"</li> 
+#! </ul>
+
+# Check that you aren't shooting yourself on the foot
+ifeq (,$(findstring $(DEVDIR),$(PWD)))
+ ifneq ($(BUILDING_SOFTWARE_OUTSIDE_DEVDIR),y)
+    $(error Your DEVDIR environment variable is pointing towards $(DEVDIR), but you are working on a different devdir. Aborting)
+ endif
+endif
+
+-include $(DEVDIR)/bsp/mach/bspconfig
+
+SHELL = /bin/bash
+ECHO = echo -e "$(TABINDEX)"
+MAKE := $(MAKE) $(if $(VERBOSE:1=),-s)
+MAKE_CALL_PARAMS = DEVDIR=$(DEVDIR) TABINDEX="$(TABINDEX)\040\040" $(EXTRA_PARAMS)
+LOGFILE?=/dev/null
+V       = $(if $(VERBOSE:1=),@)
+QOUT    = $(if $(VERBOSE:1=), >> $(LOGFILE) )
+ERRQOUT = $(if $(VERBOSE:1=), 2>> $(LOGFILE) )
+
+# In some platforms we cannot use the host ldconfig tool, 
+# so the arch definitions can replace it by a custom written 
+# script to do the ldconfig's job
+LDCONFIG?=/sbin/ldconfig
+
+HOST_ARCH=${shell uname -m}
+PATH:=$(if $(findstring $(DEVDIR)/bsp/local/bin,$(PATH)),$(PATH),$(DEVDIR)/bsp/local/bin:$(DEVDIR)/bsp/local/sbin:$(DEVDIR)/bsp/tools:$(PATH))
+SUDO = sudo
+
+#Directory alias
+KERNELDIR := $(DEVDIR)/kernel/$(KERNEL)
+BOOTLOADERDIR := $(DEVDIR)/bootloader/$(BOOTLOADER)
+ifeq ($(CONFIG_FS_FSROOT),"")
+FSROOT	:= $(DEVDIR)/fs/fs
+else
+ifeq ($(CONFIG_FS_FSROOT),)
+FSROOT	:= $(DEVDIR)/fs/fs
+else
+FSROOT := $(CONFIG_FS_FSROOT)/$(notdir $(DEVDIR))/fs
+endif
+endif
+FSDEVROOT := $(DEVDIR)/fs/fsdev
+SIMROOT	:= $(DEVDIR)/fs/simulator
+HOSTAPPSDIR := $(DEVDIR)/fs/host-apps
+LOCALDIR := $(DEVDIR)/bsp/local
+CLASSES=$(DEVDIR)/bsp/classes
+
+BSPC_SRCTREE:="$(DEVDIR)/kernel/$(KERNEL);$(DEVDIR)/fs/apps/busybox/src"
+
+#Target images
+IMAGEDIR = $(DEVDIR)/images
+FSIMAGE = $(IMAGEDIR)/fsimage
+KERNELIMAGE = $(IMAGEDIR)/kernel
+BOOTLOADERIMAGE = $(IMAGEDIR)/bootloader
+CMDLINEFILE = $(IMAGEDIR)/cmdline
+BSPCONFIGFILE = $(IMAGEDIR)/bspconfig
+TFTPIMGSUFFIX=.$(USER).${shell basename $(DEVDIR)}.${shell basename `readlink $(DEVDIR)/bsp/mach | cut -d'-' -f2`}
+
+# Kernel flags
+KFLAGS = $(if $(VERBOSE:2=),KBUILD_VERBOSE=1) CROSS_COMPILE="$(CCACHE) $(TOOLCHAIN_PREFIX)"-
+KERNEL_INCLUDE=$(FSDEVROOT)/usr/include
+
+# APPS flags
+APPS_CFLAGS?=$(CFLAGS) -I$(FSDEVROOT)/usr/include -I$(FSDEVROOT)/include
+APPS_LDFLAGS?=$(LDFLAGS) -L$(FSDEVROOT)/usr/lib -L$(FSDEVROOT)/lib
+
+#Download logic
+# DOWNLOADS has a list of directories to check for downloads separated by spaces
+DOWNLOADS ?= /opt/ridgerun/downloads $(DEVDIR)/downloads
+DOWNLOAD_SERVER = https://www.ridgerun.com/packages
+
+#########################################################
+# Private variables, do not include in user documentation
+#########################################################
+
+#COLOR CODING MAKEFILE OUTPUT
+export WHITE=\033[m
+export RED=\033[31m
+export BLUE=\033[1;34m
+export ORANGE=\033[33m
+export GREEN=\033[32m
+export NORMAL_COLOR=\033[39m
+export ERROR_COLOR:=$(RED)
+export WARN_COLOR:=$(ORANGE)
+
+# Number of cores to use
+ifeq ($(CONFIG_BSP_MAX_CPU_USAGE),)
+  CONFIG_BSP_MAX_CPU_USAGE=50
+endif
+BSP_NCPU_TOTAL=${shell echo $$(( `grep 'processor.*:' /proc/cpuinfo | tail -n 1 | awk '{ print $$3 }'` + 1 ))}
+BSP_NCPU=${shell echo $$(( (`grep 'processor.*:' /proc/cpuinfo | tail -n 1 | awk '{ print $$3 }'` + 1) * $(CONFIG_BSP_MAX_CPU_USAGE) / 100 ))}
+ifeq ($(BSP_NCPU),)
+  BSP_NCPU=1
+endif
+ifeq ($(BSP_NCPU),0)
+  BSP_NCPU=1
+endif
+
+# We set the pkg-config libdir to avoid getting pkgconfig definitions
+# from the host
+export PKG_CONFIG_LIBDIR=$(FSDEVROOT)/usr/lib/pkgconfig:$(FSDEVROOT)/lib/pkgconfig:$(FSDEVROOT)/usr/share/pkgconfig
+
+# But we also set the pkg-config path, to avoid any env var to
+# mess up our build system
+export PKG_CONFIG_PATH=$(FSDEVROOT)/usr/lib/pkgconfig:$(FSDEVROOT)/lib/pkgconfig

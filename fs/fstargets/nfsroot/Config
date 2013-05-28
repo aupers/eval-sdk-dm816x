@@ -1,0 +1,15 @@
+#
+# Ridgerun NFS root target configuration
+#
+
+config FS_TARGET_NFSROOT
+	bool "NFS root file system"
+	depends on BSP_NET_HAS_NET && !INSTALLER_MODE_SD_CARD_INSTALLER
+	select IP_PNP
+	select IP_PNP_DHCP
+	select NETWORK_FILESYSTEMS
+	select NFS_FS
+	select ROOT_NFS
+	help
+	    Use the $FSROOT target file system directory over NFS as 
+	    root file system.

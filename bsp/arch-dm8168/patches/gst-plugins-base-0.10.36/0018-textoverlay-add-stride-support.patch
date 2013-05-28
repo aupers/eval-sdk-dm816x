@@ -1,0 +1,383 @@
+Index: gst-plugins-base-0.10.36/src/ext/pango/gsttextoverlay.c
+===================================================================
+--- gst-plugins-base-0.10.36.orig/src/ext/pango/gsttextoverlay.c	2013-02-21 16:32:51.776963786 -0600
++++ gst-plugins-base-0.10.36/src/ext/pango/gsttextoverlay.c	2013-02-21 16:49:19.444963668 -0600
+@@ -189,9 +189,9 @@
+         GST_VIDEO_CAPS_ARGB ";"
+         GST_VIDEO_CAPS_ABGR ";"
+         "video/x-surface;"
+-        GST_VIDEO_CAPS_YUV ("{I420, YV12, AYUV, YUY2, UYVY, v308, v210,"
++        GST_VIDEO_CAPS_YUV_STRIDED ("{I420, YV12, AYUV, YUY2, UYVY, v308, v210,"
+             " v216, Y41B, Y42B, Y444, Y800, Y16, NV12, NV21, UYVP, A420,"
+-            " YUV9, IYU1}"))
++            " YUV9, IYU1}", "[0, max]"))
+     );
+ 
+ static GstStaticPadTemplate video_sink_template_factory =
+@@ -209,9 +209,9 @@
+         GST_VIDEO_CAPS_ARGB ";"
+         GST_VIDEO_CAPS_ABGR ";"
+         "video/x-surface;"
+-        GST_VIDEO_CAPS_YUV ("{I420, YV12, AYUV, YUY2, UYVY, v308, v210,"
++        GST_VIDEO_CAPS_YUV_STRIDED ("{I420, YV12, AYUV, YUY2, UYVY, v308, v210,"
+             " v216, Y41B, Y42B, Y444, Y800, Y16, NV12, NV21, UYVP, A420,"
+-            " YUV9, IYU1}"))
++            " YUV9, IYU1}", "[0, max]"))
+     );
+ 
+ static GstStaticPadTemplate text_sink_template_factory =
+@@ -787,12 +787,13 @@
+ 
+   overlay->width = 0;
+   overlay->height = 0;
++  overlay->rowstride = 0;
+   structure = gst_caps_get_structure (caps, 0);
+   fps = gst_structure_get_value (structure, "framerate");
+ 
+   if (fps
+-      && gst_video_format_parse_caps (caps, &overlay->format, &overlay->width,
+-          &overlay->height)) {
++      && gst_video_format_parse_caps_strided (caps, &overlay->format, &overlay->width,
++          &overlay->height, &overlay->rowstride)) {
+     ret = gst_pad_set_caps (overlay->srcpad, caps);
+   }
+ 
+@@ -1446,14 +1447,21 @@
+ #define BOX_XPAD         6
+ #define BOX_YPAD         6
+ 
++static gint
++gst_text_overlay_get_stride (GstTextOverlay * overlay, gint component)
++{
++  if (overlay->rowstride)
++    return overlay->rowstride;
++  return gst_video_format_get_row_stride (overlay->format, 0, overlay->width);
++}
++
+ static inline void
+ gst_text_overlay_shade_planar_Y (GstTextOverlay * overlay, guchar * dest,
+     gint x0, gint x1, gint y0, gint y1)
+ {
+   gint i, j, dest_stride;
+ 
+-  dest_stride = gst_video_format_get_row_stride (overlay->format, 0,
+-      overlay->width);
++  dest_stride = gst_text_overlay_get_stride (overlay, 0);
+ 
+   x0 = CLAMP (x0 - BOX_XPAD, 0, overlay->width);
+   x1 = CLAMP (x1 + BOX_XPAD, 0, overlay->width);
+@@ -1520,7 +1528,9 @@
+ gst_text_overlay_shade_xRGB (GstTextOverlay * overlay, guchar * dest,
+     gint x0, gint x1, gint y0, gint y1)
+ {
+-  gint i, j;
++  gint i, j, dest_stride;
++
++  dest_stride = gst_text_overlay_get_stride (overlay, 0);
+ 
+   x0 = CLAMP (x0 - BOX_XPAD, 0, overlay->width);
+   x1 = CLAMP (x1 + BOX_XPAD, 0, overlay->width);
+@@ -1532,7 +1542,7 @@
+     for (j = x0; j < x1; j++) {
+       gint y, y_pos, k;
+ 
+-      y_pos = (i * 4 * overlay->width) + j * 4;
++      y_pos = (i * dest_stride) + j * 4;
+       for (k = 0; k < 4; k++) {
+         y = dest[y_pos + k] + overlay->shading_value;
+         dest[y_pos + k] = CLAMP (y, 0, 255);
+@@ -1541,6 +1551,259 @@
+   }
+ }
+ 
++/* FIXME:
++ *  - use proper strides and offset for I420
++ *  - don't draw over the edge of the picture (try a longer
++ *    text with a huge font size)
++ */
++
++static inline void
++gst_text_overlay_blit_NV12_NV21 (GstTextOverlay * overlay,
++    guint8 * yuv_pixels, gint xpos, gint ypos)
++{
++  int y_stride, uv_stride;
++  int u_offset, v_offset;
++  int h, w;
++
++  /* because U/V is 2x2 subsampled, we need to round, either up or down,
++   * to a boundary of integer number of U/V pixels:
++   */
++  xpos = GST_ROUND_UP_2 (xpos);
++  ypos = GST_ROUND_UP_2 (ypos);
++
++  w = overlay->width;
++  h = overlay->height;
++
++  y_stride = gst_text_overlay_get_stride (overlay, 0);
++  uv_stride = gst_text_overlay_get_stride (overlay, 1);
++  u_offset = gst_video_format_get_component_offset (overlay->format, 1, y_stride, h);
++  v_offset = gst_video_format_get_component_offset (overlay->format, 2, y_stride, h);
++
++  gst_text_overlay_blit_1 (overlay, yuv_pixels, xpos, ypos, overlay->text_image,
++      y_stride);
++  gst_text_overlay_blit_sub2x2cbcr (overlay, yuv_pixels + u_offset,
++      yuv_pixels + v_offset, xpos, ypos, overlay->text_image, uv_stride,
++      uv_stride, 2);
++}
++
++static inline void
++gst_text_overlay_blit_I420 (GstTextOverlay * overlay,
++    guint8 * yuv_pixels, gint xpos, gint ypos)
++{
++  int y_stride, u_stride, v_stride;
++  int u_offset, v_offset;
++  int h, w;
++
++  /* because U/V is 2x2 subsampled, we need to round, either up or down,
++   * to a boundary of integer number of U/V pixels:
++   */
++  xpos = GST_ROUND_UP_2 (xpos);
++  ypos = GST_ROUND_UP_2 (ypos);
++
++  w = overlay->width;
++  h = overlay->height;
++
++  /* XXX this is not updated for rowstride.. but rowstride could be
++   * ambiguous for I420.. is the U and V plane rowstride or rowstride/2?
++   */
++  y_stride = gst_video_format_get_row_stride (GST_VIDEO_FORMAT_I420, 0, w);
++  u_stride = gst_video_format_get_row_stride (GST_VIDEO_FORMAT_I420, 1, w);
++  v_stride = gst_video_format_get_row_stride (GST_VIDEO_FORMAT_I420, 2, w);
++  u_offset =
++      gst_video_format_get_component_offset (GST_VIDEO_FORMAT_I420, 1, w, h);
++  v_offset =
++      gst_video_format_get_component_offset (GST_VIDEO_FORMAT_I420, 2, w, h);
++
++  gst_text_overlay_blit_1 (overlay, yuv_pixels, xpos, ypos, overlay->text_image,
++      y_stride);
++  gst_text_overlay_blit_sub2x2cbcr (overlay, yuv_pixels + u_offset,
++      yuv_pixels + v_offset, xpos, ypos, overlay->text_image, u_stride,
++      v_stride, 1);
++}
++
++static inline void
++gst_text_overlay_blit_UYVY (GstTextOverlay * overlay,
++    guint8 * yuv_pixels, gint xpos, gint ypos)
++{
++  int a0, r0, g0, b0;
++  int a1, r1, g1, b1;
++  int y0, y1, u, v;
++  int i, j;
++  int h, w;
++  guchar *pimage, *dest;
++
++  /* because U/V is 2x horizontally subsampled, we need to round to a
++   * boundary of integer number of U/V pixels in x dimension:
++   */
++  xpos = GST_ROUND_UP_2 (xpos);
++
++  w = overlay->image_width - 2;
++  h = overlay->image_height - 2;
++
++  if (xpos < 0) {
++    xpos = 0;
++  }
++
++  if (xpos + w > overlay->width) {
++    w = overlay->width - xpos;
++  }
++
++  if (ypos + h > overlay->height) {
++    h = overlay->height - ypos;
++  }
++
++  for (i = 0; i < h; i++) {
++    pimage = overlay->text_image + i * overlay->image_width * 4;
++    dest = yuv_pixels + (i + ypos) * overlay->width * 2 + xpos * 2;
++    for (j = 0; j < w; j += 2) {
++      b0 = pimage[CAIRO_ARGB_B];
++      g0 = pimage[CAIRO_ARGB_G];
++      r0 = pimage[CAIRO_ARGB_R];
++      a0 = pimage[CAIRO_ARGB_A];
++      CAIRO_UNPREMULTIPLY (a0, r0, g0, b0);
++      pimage += 4;
++
++      b1 = pimage[CAIRO_ARGB_B];
++      g1 = pimage[CAIRO_ARGB_G];
++      r1 = pimage[CAIRO_ARGB_R];
++      a1 = pimage[CAIRO_ARGB_A];
++      CAIRO_UNPREMULTIPLY (a1, r1, g1, b1);
++      pimage += 4;
++
++      a0 += a1 + 2;
++      a0 /= 2;
++      if (a0 == 0) {
++        dest += 4;
++        continue;
++      }
++
++      COMP_Y (y0, r0, g0, b0);
++      COMP_Y (y1, r1, g1, b1);
++
++      b0 += b1 + 2;
++      g0 += g1 + 2;
++      r0 += r1 + 2;
++
++      b0 /= 2;
++      g0 /= 2;
++      r0 /= 2;
++
++      COMP_U (u, r0, g0, b0);
++      COMP_V (v, r0, g0, b0);
++
++      BLEND (*dest, a0, u, *dest);
++      dest++;
++      BLEND (*dest, a0, y0, *dest);
++      dest++;
++      BLEND (*dest, a0, v, *dest);
++      dest++;
++      BLEND (*dest, a0, y1, *dest);
++      dest++;
++    }
++  }
++}
++
++static inline void
++gst_text_overlay_blit_AYUV (GstTextOverlay * overlay,
++    guint8 * rgb_pixels, gint xpos, gint ypos)
++{
++  int a, r, g, b;
++  int y, u, v;
++  int i, j;
++  int h, w;
++  guchar *pimage, *dest;
++
++  w = overlay->image_width;
++  h = overlay->image_height;
++
++  if (xpos < 0) {
++    xpos = 0;
++  }
++
++  if (xpos + w > overlay->width) {
++    w = overlay->width - xpos;
++  }
++
++  if (ypos + h > overlay->height) {
++    h = overlay->height - ypos;
++  }
++
++  for (i = 0; i < h; i++) {
++    pimage = overlay->text_image + i * overlay->image_width * 4;
++    dest = rgb_pixels + (i + ypos) * 4 * overlay->width + xpos * 4;
++    for (j = 0; j < w; j++) {
++      a = pimage[CAIRO_ARGB_A];
++      b = pimage[CAIRO_ARGB_B];
++      g = pimage[CAIRO_ARGB_G];
++      r = pimage[CAIRO_ARGB_R];
++
++      CAIRO_UNPREMULTIPLY (a, r, g, b);
++
++      COMP_Y (y, r, g, b);
++      COMP_U (u, r, g, b);
++      COMP_V (v, r, g, b);
++
++      a = (a * dest[0] + 128) >> 8;
++      BLEND (dest[1], a, y, dest[1]);
++      BLEND (dest[2], a, u, dest[2]);
++      BLEND (dest[3], a, v, dest[3]);
++
++      pimage += 4;
++      dest += 4;
++    }
++  }
++}
++
++#define xRGB_BLIT_FUNCTION(name, R, G, B) \
++static inline void \
++gst_text_overlay_blit_##name (GstTextOverlay * overlay, \
++    guint8 * rgb_pixels, gint xpos, gint ypos) \
++{ \
++  int a, r, g, b; \
++  int i, j; \
++  int h, w; \
++  guchar *pimage, *dest; \
++  \
++  w = overlay->image_width; \
++  h = overlay->image_height; \
++  \
++  if (xpos < 0) { \
++    xpos = 0; \
++  } \
++  \
++  if (xpos + w > overlay->width) { \
++    w = overlay->width - xpos; \
++  } \
++  \
++  if (ypos + h > overlay->height) { \
++    h = overlay->height - ypos; \
++  } \
++  \
++  for (i = 0; i < h; i++) { \
++    pimage = overlay->text_image + i * overlay->image_width * 4; \
++    dest = rgb_pixels + (i + ypos) * 4 * overlay->width + xpos * 4; \
++    for (j = 0; j < w; j++) { \
++      a = pimage[CAIRO_ARGB_A]; \
++      b = pimage[CAIRO_ARGB_B]; \
++      g = pimage[CAIRO_ARGB_G]; \
++      r = pimage[CAIRO_ARGB_R]; \
++      CAIRO_UNPREMULTIPLY (a, r, g, b); \
++      b = (b*a + dest[B] * (255-a)) / 255; \
++      g = (g*a + dest[G] * (255-a)) / 255; \
++      r = (r*a + dest[R] * (255-a)) / 255; \
++      \
++      dest[B] = b; \
++      dest[G] = g; \
++      dest[R] = r; \
++      pimage += 4; \
++      dest += 4; \
++    } \
++  } \
++}
++xRGB_BLIT_FUNCTION (xRGB, 1, 2, 3);
++xRGB_BLIT_FUNCTION (BGRx, 2, 1, 0);
++
++
+ #define ARGB_SHADE_FUNCTION(name, OFFSET)	\
+ static inline void \
+ gst_text_overlay_shade_##name (GstTextOverlay * overlay, guchar * dest, \
+@@ -1609,6 +1872,12 @@
+ gst_text_overlay_push_frame (GstTextOverlay * overlay, GstBuffer * video_frame)
+ {
+   gint xpos, ypos;
++  gint width, height;
++  GstTextOverlayVAlign valign;
++  GstTextOverlayHAlign halign;
++
++  width = overlay->image_width;
++  height = overlay->image_height;
+ 
+   video_frame = gst_buffer_make_writable (video_frame);
+ 
+Index: gst-plugins-base-0.10.36/src/ext/pango/gsttextoverlay.h
+===================================================================
+--- gst-plugins-base-0.10.36.orig/src/ext/pango/gsttextoverlay.h	2013-02-21 16:32:51.788963786 -0600
++++ gst-plugins-base-0.10.36/src/ext/pango/gsttextoverlay.h	2013-02-21 16:49:19.444963668 -0600
+@@ -116,11 +116,12 @@
+                                      * a text segment update, or a change
+                                      * in status (e.g. shutdown, flushing) */
+ 
+-    gint                        width;
+-    gint                        height;
+-    gint                        fps_n;
+-    gint                        fps_d;
+-    GstVideoFormat              format;
++    gint                     width;
++    gint                     height;
++    gint                     rowstride;
++    gint                     fps_n;
++    gint                     fps_d;
++    GstVideoFormat           format;
+ 
+     GstTextOverlayVAlign        valign;
+     GstTextOverlayHAlign        halign;

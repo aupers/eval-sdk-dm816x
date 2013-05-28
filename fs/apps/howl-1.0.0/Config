@@ -1,0 +1,8 @@
+config FS_APPS_HOWL
+	bool "Howl-1.0.0"
+	default n
+	select PACKET
+	select UNIX
+	select IP_MULTICAST
+	help
+	  Howl is an implementation of the Zeroconf networking standard

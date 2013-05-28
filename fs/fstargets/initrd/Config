@@ -1,0 +1,12 @@
+#
+# Ridgerun initrd target configuration
+#
+
+config FS_TARGET_INITRD
+	bool "Initial Ram Disk image"
+	select BLK_DEV_INITRD
+	depends on INSTALLER_MODE_ATTACHED_BOARD
+	depends on BSP_ARCH_SUPPORTS_INITRD && !INSTALLER_MODE_SD_CARD_INSTALLER
+	help
+	    Use a initial ramdisk image
+

@@ -1,0 +1,5 @@
+config PROPRIETARY_LIBOMX_DM81XX
+	bool "libomx-dm81xx"
+	depends on PROPRIETARY_TI_CODECENGINE_DM8168 || PROPRIETARY_TI_CODECENGINE_DM8148
+	help
+	    Shared library OpenMax components for dm81xx platform

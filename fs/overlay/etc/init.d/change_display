@@ -1,0 +1,44 @@
+#!/bin/sh
+
+if [ $# -ne 1 ]
+then
+        echo "Usage ./change_display <lcd|hdmi>"
+        exit 1;
+fi
+
+case $1 in
+        lcd )
+             echo "Changing default display to LCD..."
+             echo 0 > /sys/devices/platform/vpss/graphics0/enabled
+             echo 1:dvo2 > /sys/devices/platform/vpss/graphics0/nodes
+             echo 0 > /sys/devices/platform/vpss/display1/enabled
+             echo 33500,800/164/89/10,480/10/23/10,1 > /sys/devices/platform/vpss/display1/timings
+             echo triplediscrete,rgb888 > /sys/devices/platform/vpss/display1/output
+             echo 1 > /sys/devices/platform/vpss/display1/enabled
+             fbset -xres 800 -yres 480 -vxres 800 -vyres 480
+             cat /dev/zero > /dev/fb0 2> /dev/null
+             cat /dev/zero > /dev/fb1 2> /dev/null
+             echo 1 > /sys/devices/platform/vpss/graphics0/enabled
+             /etc/init.d/psplash
+             ;;
+        hdmi )
+             echo "Changing default display to HDMI..."
+             echo 0 > /sys/devices/platform/vpss/graphics0/enabled
+             echo 1:hdmi > /sys/devices/platform/vpss/graphics0/nodes
+             echo 0 > /sys/devices/platform/vpss/display1/enabled
+             echo 148500,1920/88/148/44,1080/4/36/5,1 > /sys/devices/platform/vpss/display1/timings
+             echo triplediscrete,rgb888,0/0/0/0 > /sys/devices/platform/vpss/display1/output
+             echo 1 > /sys/devices/platform/vpss/display1/enabled
+             fbset -xres 1920 -yres 1080 -vxres 1920 -vyres 1080
+             cat /dev/zero > /dev/fb0 2> /dev/null
+             cat /dev/zero > /dev/fb1 2> /dev/null
+             echo 1 > /sys/devices/platform/vpss/graphics0/enabled
+             /etc/init.d/psplash
+             ;;
+        * )
+                echo "Error: Unsupported Display"
+                echo "Usage ./change_display <lcd|hdmi>"
+                exit -1;;
+esac
+
+sync

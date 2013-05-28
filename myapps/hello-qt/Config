@@ -1,0 +1,7 @@
+config FS_APPS_QT_HELLO_WORLD
+	bool "QT Hello World application"
+	default n
+	select FS_APPS_QT
+	help
+		This is an example of QT.
+

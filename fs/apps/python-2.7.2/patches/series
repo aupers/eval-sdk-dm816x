@@ -1,0 +1,11 @@
+Python-2.7.2-xcompile.patch
+01-fix-have-long-long-format.patch
+02-remove-test-for-cross.patch
+03-fix-tkinter-detection.patch
+04-default-is-optimized.patch
+06-ctypes-libffi-fix-configure.patch
+10-distutils-fix-swig-parameter.patch
+11-distutils-never-modify-shebang-line.patch
+12-distutils-prefix-is-inside-staging-area.patch
+debug.patch
+nohostlibs.patch

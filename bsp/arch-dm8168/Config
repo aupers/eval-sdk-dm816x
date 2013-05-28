@@ -1,0 +1,135 @@
+#
+# Ridgerun BSP Configuration file for DM8168
+#
+
+menu "Architecture configurations"
+
+# Let the system know that we are a DM8168
+config BSP_ARCH_DM8168
+	bool
+	default y
+
+comment "SDRAM Definitions"
+
+config BSP_ARCH_SDRAM_BASE
+	hex "SDRAM Base address"
+	default "0x80000000"
+	help
+	    Physical address of the start of SDRAM
+
+config BSP_ARCH_SDRAM_SIZE
+	hex "SDRAM size"
+	default "0x10000000"
+	help	
+	    Size of SDRAM
+
+comment "SDRAM Memory map"
+
+config BSP_ARCH_KERNEL_ATAGS_ADDRESS
+	hex "Kernel ATAGS parameter address"
+	default 0x80000100 
+	help
+	    This is the address where the ATAGS parameters for the ARM  kernel 
+	    will reside. It's used by the bootloader and the kernel. Don't change
+	    unless you know what are you doing.
+
+config BSP_ARCH_KERNEL_LOAD_ADDRESS
+	hex "Kernel physical start address (multiple of 4096 bytes)"
+	default 0x80008000 
+	help
+	    This is the default kernel load address. However this value can be
+	    change at runtime since the kernel entry is position independent
+
+config BSP_ARCH_KERNEL_ENTRY_ADDRESS
+	hex "Kernel entry physical address"
+	default 0x80008000 
+	help
+	    This is the default kernel load address. However this value can be
+	    change at runtime since the kernel entry is position independent
+
+config BSP_ARCH_KERNEL_COMPRESS
+	bool "Use kernel compression"
+	default y
+	help
+	Compress the kernel image in flash and decompress it when booting.
+
+config BSP_ARCH_KERNEL_ZTEXTADDR
+	depends on BSP_ARCH_KERNEL_COMPRESS
+	hex "Decompressor start address"
+	default "0x81E00000"
+	help
+	Start address of decompressor from the SDRAM base.
+       	
+	You normally call the kernel at this address to start it booting.
+	
+	This address will hold the decompressor logic that will extract the
+	compressed kernel. For this decompression a work area is going to be used
+	and the extracted kernel is going to be let at the SDRAM base address.
+	
+config BSP_ARCH_KERNEL_ZBSSADDR
+	depends on BSP_ARCH_KERNEL_COMPRESS
+        hex "Decompressor working area start address"
+        default "0x81F00000"
+        help
+	Start address of zero-initialised work area for the decompressor.
+
+	This work area is going to be used just for the decompression steps,
+	then it will be free.
+
+# This arch supports SD card boot mode
+config BSP_ARCH_SUPPORTS_SD_CARD_INSTALLER_MODE
+	bool
+	default y
+
+config BSP_ARCH_SUPPORTS_JFFS2FS
+	bool
+	default y
+
+config BSP_ARCH_SUPPORTS_UBIFS
+	bool
+	default y
+
+config BSP_ARCH_SUPPORTS_NAND_SUBPAGES
+	bool
+	default y
+
+config BSP_ARCH_SD_CARD_INSTALLER_UBL
+	string
+	default "MLO"
+
+comment "Configuration of the boot method"
+
+choice
+	prompt "Boot method menu"
+	default BSP_ARCH_NAND
+
+config BSP_ARCH_NAND
+	bool "NAND"
+	select UBOOT_NAND_FLASH_MEMORY
+	help
+	  Say Y if you want to use uboot and its environment in NAND flash.
+
+config BSP_ARCH_SPI
+	bool "SPI"
+	select UBOOT_SPI_FLASH_MEMORY
+	help
+	  Say Y if you want to use uboot and its environment in SPI flash. Please remember
+	  to set up your hardware properly to use this method
+
+endchoice
+
+config BSP_ARCH_INSTALLER_IPL_GENERATION_TARGET
+	string
+	default "gen_ipl"
+
+config BSP_ARCH_INSTALLER_UBOOT_FLASH_GENERATION_TARGET
+	string
+	default "gen_uboot_flashbin"
+
+config BSP_ARCH_SUPPORTS_LTT_CONTROL_0_89
+	bool
+	default y
+
+source bsp/mach/Config
+
+endmenu

@@ -1,0 +1,9 @@
+#!/bin/sh
+
+if [ ! -c /dev/fb0 ] ; then
+	mknod /dev/fb0 c 29 0
+fi
+
+if [ -f /usr/bin/psplash ] ; then
+    /usr/bin/psplash -n &
+fi

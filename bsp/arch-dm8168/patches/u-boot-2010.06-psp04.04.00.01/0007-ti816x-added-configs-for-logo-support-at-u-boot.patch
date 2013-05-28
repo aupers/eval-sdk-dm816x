@@ -1,0 +1,36 @@
+From ec7c804255020f8c7709a9734aecbe24281658a1 Mon Sep 17 00:00:00 2001
+From: Amarinder Bindra <a-bindra@ti.com>
+Date: Tue, 13 Mar 2012 11:37:06 +0530
+Subject: [PATCH 7/7] ti816x: added configs for logo support at u-boot
+
+
+Signed-off-by: Amarinder Bindra <a-bindra@ti.com>
+---
+ include/configs/ti8168_evm.h |   11 +++++++++++
+ 1 files changed, 11 insertions(+), 0 deletions(-)
+
+diff --git a/src/include/configs/ti8168_evm.h b/src/include/configs/ti8168_evm.h
+index b2618a0..7ea530f 100644
+--- a/src/include/configs/ti8168_evm.h
++++ b/src/include/configs/ti8168_evm.h
+@@ -293,6 +293,17 @@ extern unsigned int boot_flash_type;
+ # define CONFIG_MTD_DEVICE
+ #endif	/* NOR support */
+ 
++/* Boot Logo support */
++#ifdef CONFIG_TI81XX_VIDEO
++# define CONFIG_VIDEO
++# define CONFIG_CFB_CONSOLE
++# define CONFIG_VIDEO_LOGO
++# define CONFIG_VGA_AS_SINGLE_DEVICE
++# define CONFIG_SYS_CONSOLE_IS_IN_ENV
++# define CONFIG_CMD_BMP
++# define VIDEO_FB_LITTLE_ENDIAN
++#endif
++
+ /* I2C support */
+ #ifdef CONFIG_I2C
+ # define CONFIG_CMD_I2C
+-- 
+1.7.1
+

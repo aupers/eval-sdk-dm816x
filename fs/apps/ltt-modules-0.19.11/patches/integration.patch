@@ -1,0 +1,15 @@
+Index: ltt-modules-0.19.11/src/ltt-tracer.c
+===================================================================
+--- ltt-modules-0.19.11.orig/src/ltt-tracer.c	2011-10-10 16:58:43.945932527 -0600
++++ ltt-modules-0.19.11/src/ltt-tracer.c	2011-10-10 16:58:51.205990352 -0600
+@@ -782,9 +782,7 @@
+ 	kref_init(&trace->kref);
+ 	init_waitqueue_head(&trace->kref_wq);
+ 	trace->active = 0;
+-	err = get_trace_clock();
+-	if (err)
+-		goto traces_error;
++	get_trace_clock();
+ 	trace->freq_scale = trace_clock_freq_scale();
+ 
+ 	if (!trace->transport) {

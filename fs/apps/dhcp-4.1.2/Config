@@ -1,0 +1,13 @@
+config FS_APPS_DHCP
+	bool
+	default y
+
+config FS_APPS_DHCP_SERVER
+	bool "dhcp-4.1.2 server (ISC)"
+	select FS_APPS_DHCP
+	default n
+
+config FS_APPS_DHCP_CLIENT
+	bool "dhcp-4.1.2 client (ISC)"
+	select FS_APPS_DHCP
+	default y

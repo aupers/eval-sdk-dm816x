@@ -1,0 +1,66 @@
+Index: ezsdk-5_05_02_00/ezsdk/component-sources/omx_05_02_00_48/examples/ti/omx/demos/dm81xx/DspAppMain.cfg
+===================================================================
+--- ezsdk-5_05_02_00.orig/ezsdk/component-sources/omx_05_02_00_48/examples/ti/omx/demos/dm81xx/DspAppMain.cfg	2011-12-06 10:25:47.455204382 -0600
++++ ezsdk-5_05_02_00/ezsdk/component-sources/omx_05_02_00_48/examples/ti/omx/demos/dm81xx/DspAppMain.cfg	2011-12-06 10:27:19.277089667 -0600
+@@ -134,7 +134,7 @@
+   var RMAN = xdc.useModule('ti.sdo.fc.rman.RMAN');
+ 
+   // use mp3dec
+-  // var mp3dec         = xdc.useModule('ti.sdo.codecs.mp3dec.ce.MP3DEC');
++  var mp3dec         = xdc.useModule('ti.sdo.codecs.mp3dec.ce.MP3DEC');
+   
+   // use aacdec
+   var aaclcdec         = xdc.useModule('ti.sdo.codecs.aaclcdec.ce.AACLCDEC');
+@@ -153,11 +153,11 @@
+   
+   var Engine = xdc.useModule('ti.sdo.ce.Engine');
+   var myEngine = Engine.create("adec", [
+-      //{
+-      //    name : "mp3dec",
+-      //    mod  : mp3dec,
+-      //    local: true
+-      //},
++      {
++          name : "mp3dec",
++          mod  : mp3dec,
++          local: true
++      },
+       {
+                 name : "aaclcdec",
+                 mod  : aaclcdec,
+Index: ezsdk-5_05_02_00/ezsdk/component-sources/omx_05_02_00_48/examples/ti/omx/demos/adec_snt/app_properties.mk
+===================================================================
+--- ezsdk-5_05_02_00.orig/ezsdk/component-sources/omx_05_02_00_48/examples/ti/omx/demos/adec_snt/app_properties.mk	2011-12-06 10:33:40.199148261 -0600
++++ ezsdk-5_05_02_00/ezsdk/component-sources/omx_05_02_00_48/examples/ti/omx/demos/adec_snt/app_properties.mk	2011-12-06 10:33:52.851328022 -0600
+@@ -8,6 +8,6 @@
+ 
+ # Codecs required for this demo:
+ #     Eg: mp3dec aaclcdec...
+-CODECS_IN_APP = aaclcdec
++CODECS_IN_APP = aaclcdec mp3dec
+ 
+ # Nothing beyond this point
+Index: ezsdk-5_05_02_00/ezsdk/component-sources/omx_05_02_00_48/examples/ti/omx/demos/dm81xx/app_properties.mk
+===================================================================
+--- ezsdk-5_05_02_00.orig/ezsdk/component-sources/omx_05_02_00_48/examples/ti/omx/demos/dm81xx/app_properties.mk	2011-12-06 10:28:55.271516423 -0600
++++ ezsdk-5_05_02_00/ezsdk/component-sources/omx_05_02_00_48/examples/ti/omx/demos/dm81xx/app_properties.mk	2011-12-06 10:29:09.463210940 -0600
+@@ -8,5 +8,5 @@
+ 
+ # Codecs required for this demo:
+ #     Eg: mp3dec aaclcdec...
+-CODECS_IN_APP = aaclcdec aaclcenc
++CODECS_IN_APP = aaclcdec aaclcenc mp3dec
+ # Nothing beyond this point
+Index: ezsdk-5_05_02_00/ezsdk/component-sources/omx_05_02_00_48/src/ti/omx/comp/aenc/makefile
+===================================================================
+--- ezsdk-5_05_02_00.orig/ezsdk/component-sources/omx_05_02_00_48/src/ti/omx/comp/aenc/makefile	2011-12-06 10:29:49.432580039 -0600
++++ ezsdk-5_05_02_00/ezsdk/component-sources/omx_05_02_00_48/src/ti/omx/comp/aenc/makefile	2011-12-06 10:32:58.083215231 -0600
+@@ -8,7 +8,7 @@
+ # List all the external components/interfaces, whose interface header files 
+ #  need to be included for this component
+ INCLUDE_EXERNAL_INTERFACES = bios xdc omx omxcore omxbase timmosal fc xdais \
+-                             ce aaclcenc aaclcdec
++                             ce aaclcenc aaclcdec mp3dec
+ 
+ # Common source files and CFLAGS across all platforms and cores
+ SRCS_COMMON = omx_aenc.c omx_aenc_util.c

@@ -1,0 +1,16 @@
+fix_int-ll64_path.patch
+quiet-hdmi-driver.patch
+0002-mmc-skip-detection-of-nonremovable-cards-on-rescan.patch
+0003-mmc-sdio-don-t-reinitialize-nonremovable-powered-res.patch
+0004-mmc-sdio-don-t-power-up-cards-on-system-suspend.patch
+0005-mmc-fix-division-by-zero-in-MMC-core.patch
+0006-wl12xx-Backport-wl12xx-platform-data.patch
+0007-wl12xx-Fix-out-of-tree-build-issues.patch
+0008-ARM-ti81xx-Fix-ti8148-s-mmc-indices.patch
+0009-omap_hsmmc-Work-around-lack-of-mmc0-card-detection-p.patch
+0010-TI81xx-Capture-IR-Kernel-dump-is-seen-on-starting-ca.patch
+0011-TI81xx-Video-Proxy-Same-containers-are-used-for-Queu.patch
+0012-TI81xx-V4L2-capture-Change-filter-mode-based-on-pres.patch
+0013-TI81xx-v4l2-capture-v4l2-capture-crashed-solved.patch
+0014-TI81xx-capture-Changed-return-value-to-Ve-for-error.patch
+0015-Set-Ecc-Software-Mode.patch

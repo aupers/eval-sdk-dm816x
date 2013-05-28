@@ -1,0 +1,9 @@
+#
+# Ridgerun BSP Configuration file for Centaurus board
+#
+
+config BSP_NET_HAS_ETH0
+	bool
+	select BSP_NET_HAS_NET
+	default y
+

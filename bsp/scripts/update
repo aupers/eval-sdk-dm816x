@@ -1,0 +1,141 @@
+#!/bin/bash
+#
+#RidgeRun Copyright 2010
+#
+#Author: Pablo Barrantes <pablo.barrantes@ridgerun.com>
+#
+#All directories in the development directory treethat have 
+#a "patches" folder are processed.  Each such directory has
+# - all patches removed
+# - entire development directory tree is updated to latest
+#   code from subversion (svn)
+# - patches are applied
+
+#Store the current working directory
+CWD=`pwd`
+
+#Some global variables
+PATCH_DIR_FILE=/tmp/patches_dirs.tmp.$$
+PATCH_FILE_STATUS=/tmp/deleted_files.tmp.$$
+RED_FONT=$(tput setaf 1)
+GREEN_FONT=$(tput setaf 2)
+NORMAL_FONT=$(tput sgr0)
+
+usage()
+{
+    echo -e "\nUsage: $1 [-h] [-d]
+Finds all the directories inside current working directory that have
+a patches folder, remove applied patches and update BASE_DIRECTORY
+to the latest code from subversion.
+\t-d\tWrite a trace to each command on the standard output
+\t-h\tShows this menu\n"
+}
+
+cleanup() {
+    rm -f $PATCH_DIR_FILE
+    rm -f $PATCH_FILE_STATUS
+    cd $CWD
+    # normal font (in case we were interrupted when the color was changed)
+    echo -e $NORMAL_FONT
+}
+
+int_exit() {
+    cleanup
+    exit -1
+}
+
+error_exit() {
+    echo -e "\n${RED_FONT}ERROR: aborting\n"
+    cleanup
+    exit -1
+}
+
+# rrun - run a command with output redirected to
+# bit bucket unless debug is enabled
+rrun()
+{
+    if [ -z "$DBG" ] ; then
+	$* > /dev/null
+    else
+	$*
+    fi
+}
+
+trap "int_exit" INT
+
+while getopts “hd” OPTION
+do
+     case $OPTION in
+         h)
+             usage $0
+             exit 1
+             ;;
+         d)
+             set -x
+             DBG="VERBOSE=1"
+             ;;
+         ?)
+             usage $0
+             exit 1
+             ;;
+     esac
+done
+
+#Check if we have the required environment variables set
+if [ -z "$DEVDIR" ]; then
+	echo "DEVDIR variable is empty, try using 'make env' on SDK root directory before executing make update"
+	exit -1
+fi
+
+#Find all directories with patches, remember the directory, and
+#remove the patches
+rm -f $PATCH_DIR_FILE
+touch $PATCH_DIR_FILE
+for DIR in $(find $CWD -depth -iname patches); do 
+	cd $DIR/..
+	if [ -d patches ] ; then
+		echo "   Removing patches from $PWD"
+		if [ -f rrsdk_patched ]; then
+			echo `pwd`:rrsdk_patched >> $PATCH_DIR_FILE
+			make rrsdk_unpatch $DBG || error_exit
+			#This is required to force the SDK to recompile the package
+			if [ -e autotools_built ]; then
+				rm -f autotools_built autotools_installed
+			fi
+			rrun ls *_build
+			if [ $? -eq 0 ]; then
+				rm -f *_build
+			fi
+		elif [ -f .pc/applied-patches ] ; then 
+			echo `pwd`:quilt >> $PATCH_DIR_FILE
+			rrun quilt pop -a || error_exit
+		fi
+	fi 
+done
+
+#Update the base directory.
+cd $CWD
+echo -e "\n${GREEN_FONT}Updating $BDIR from subversion"
+svn update || error_exit
+echo -e "${NORMAL_FONT}\n"
+
+#Apply updated patches
+rm -f $PATCH_FILE_STATUS
+while read LINE; do
+	cd `echo ${LINE%:*}`
+	svn status patches > $PATCH_FILE_STATUS
+	MODIFIED_FILES=`awk '/!/ {print $2}' $PATCH_FILE_STATUS | xargs echo -n`
+	if [ -n "$MODIFIED_FILES" ]; then
+		echo "${RED_FONT}Files were deleted at $LINE/patches prior the update call."
+		echo "Please verify this modifications were intentional.${NORMAL_FONT}"
+	fi
+	echo "   Applying patches to $PWD"
+	METHOD=`echo ${LINE#*:}`
+	if [ $METHOD = "quilt" ]; then
+		rrun quilt push -a || error_exit
+	elif [ $METHOD = "rrsdk_patched" ]; then
+		make rrsdk_patched $DBG || error_exit
+	fi
+done < $PATCH_DIR_FILE
+
+cleanup

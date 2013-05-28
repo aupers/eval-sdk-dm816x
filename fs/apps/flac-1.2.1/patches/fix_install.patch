@@ -1,0 +1,30 @@
+Index: flac-1.2.1/src/doc/html/Makefile.am
+===================================================================
+--- flac-1.2.1.orig/src/doc/html/Makefile.am	2011-03-23 17:05:28.787224660 -0600
++++ flac-1.2.1/src/doc/html/Makefile.am	2011-03-23 17:05:52.895399987 -0600
+@@ -72,8 +72,8 @@
+ # The install targets don't copy whole directories so we have to
+ # handle 'api/' specially:
+ install-data-local:
+-	$(mkinstalldirs) $(DESTDIR)$(docdir)/api
+-	(cd api && $(INSTALL_DATA) * $(DESTDIR)$(docdir)/api)
++	#$(mkinstalldirs) $(DESTDIR)$(docdir)/api
++	#(cd api && $(INSTALL_DATA) * $(DESTDIR)$(docdir)/api)
+ uninstall-local:
+ 	rm -rf $(DESTDIR)$(docdir)/api
+ maintainer-clean-local:
+Index: flac-1.2.1/src/doc/html/Makefile.in
+===================================================================
+--- flac-1.2.1.orig/src/doc/html/Makefile.in	2011-03-23 17:05:32.759390082 -0600
++++ flac-1.2.1/src/doc/html/Makefile.in	2011-03-23 17:05:44.799019150 -0600
+@@ -596,8 +596,8 @@
+ # The install targets don't copy whole directories so we have to
+ # handle 'api/' specially:
+ install-data-local:
+-	$(mkinstalldirs) $(DESTDIR)$(docdir)/api
+-	(cd api && $(INSTALL_DATA) * $(DESTDIR)$(docdir)/api)
++	#$(mkinstalldirs) $(DESTDIR)$(docdir)/api
++	#(cd api && $(INSTALL_DATA) * $(DESTDIR)$(docdir)/api)
+ uninstall-local:
+ 	rm -rf $(DESTDIR)$(docdir)/api
+ maintainer-clean-local:

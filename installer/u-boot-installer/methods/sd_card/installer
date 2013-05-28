@@ -1,0 +1,397 @@
+#!/usr/bin/perl
+use integer;
+
+require "lib/common.pl";
+
+# ==============================================================================
+# Environment variables
+# ==============================================================================
+
+my $SD_DEVICE=$CONFIG_INSTALLER_SD_DEVICE;
+my $DEVICEP1;
+my $DEVICEP2;
+if ($SD_DEVICE =~ m/mmcblk/){
+    $DEVICEP1="${SD_DEVICE}p1";
+    $DEVICEP2="${SD_DEVICE}p2";
+} else {
+    $DEVICEP1="${SD_DEVICE}1";
+    $DEVICEP2="${SD_DEVICE}2";
+}
+my $SDIMG="$IMAGEDIR/sdcard.img";
+my $BOOTLOADER_OUT_OF_FS=$CONFIG_BSP_ARCH_SD_CARD_INSTALLER_BOOTLOADER_OUT_OF_FS;
+my $UFLASH="$DEVDIR/bootloader/$BOOTLOADER/src/tools/uflash/uflash";
+my $SDCARD_UBL=$CONFIG_BSP_ARCH_SD_CARD_INSTALLER_UBL;
+my $PREBOOTLOADER;
+my $boot_mounted = 0;
+my $rootfs_mounted = 0;
+my $in_cleanup = 0;
+my $GENERATE_INSTALLER = $CONFIG_INSTALLER_MODE_SD_CARD_INSTALLER;
+my $MIN_NAME;
+
+# Pre-Bootloader type (some platforms use UBL and others X-LOADER)
+if ($CONFIG_UBOOT_USE_XLOADER){
+    $PREBOOTLOADER="XLoader";
+} else {
+    if($CONFIG_UBOOT_USE_MIN){
+        $PREBOOTLOADER="UBOOT_MIN";
+        $MIN_NAME="u-boot.min.sd";
+    }
+    else {
+        if($CONFIG_UBOOT_USE_MLO){
+            $PREBOOTLOADER="UBOOT_MLO";
+            $MIN_NAME="MLO";
+        }
+        else {
+          $PREBOOTLOADER="UBL";
+        }
+    }
+}
+
+
+# ==============================================================================
+# Parameters
+# ==============================================================================
+my $INSTALLATION_MODE = @ARGV[0];
+
+if ($CONFIG_INSTALLER_SD_DEVICE_LOOPBACK eq "y"){
+    $SD_DEVICE=$SDIMG;
+} else {
+	print YELLOW BLINK "  WARNING!!!\n";
+	print "  You are about to format and partition your device ";
+	print BOLD BLUE "$SD_DEVICE";
+	print ", please enter 'yes' to continue\n  ";
+	my $ANSWER = <STDIN>;
+	chomp($ANSWER);
+	if ($ANSWER ne "yes") {
+	    print "Aborting installation.\n\n";
+	    exit -1;
+	}
+	print "\n";
+}
+
+format_sd();
+
+if ($GENERATE_INSTALLER eq "y") {
+    mount($DEVICEP1,"$IMAGEDIR/boot");
+    $boot_mounted = 1;
+    sd_install_bootloader();
+    install_installer();
+    umount("$IMAGEDIR/boot");
+    $boot_mounted = 0;
+    sd_cleanup();
+    return 1;
+}
+
+if (($INSTALLATION_MODE ne "fs") && !($BOOTLOADER_OUT_OF_FS eq "y")) {
+    mount($DEVICEP1,"$IMAGEDIR/boot");
+    $boot_mounted = 1;
+}
+
+if (($INSTALLATION_MODE eq "bootloader") || ($INSTALLATION_MODE eq "all")) {
+    sd_install_bootloader();
+}
+
+# Now is time to mount if the bootloader is out of fs
+if (($INSTALLATION_MODE ne "fs") && ($BOOTLOADER_OUT_OF_FS eq "y")) {
+    mount($DEVICEP1,"$IMAGEDIR/boot");
+    $boot_mounted = 1;
+}
+
+if (($INSTALLATION_MODE eq "cmdline") || ($INSTALLATION_MODE eq "bootcmd") || ($INSTALLATION_MODE eq "all")) {
+    install_ubootEnv();
+}
+
+if (($INSTALLATION_MODE eq "kernel") || ($INSTALLATION_MODE eq "all")) {
+   install_kernel();
+}
+
+if ($INSTALLATION_MODE ne "fs") {
+    umount("$IMAGEDIR/boot");
+    $boot_mounted = 0;
+}
+
+if (($INSTALLATION_MODE eq "fs") || ($INSTALLATION_MODE eq "all")) {
+    install_filesystem();
+}
+
+sd_cleanup();
+
+# ==============================================================================
+# Cleanup routine
+# ==============================================================================
+sub sd_cleanup{
+    if ($in_cleanup){
+        # We want to avoid looping eternally in case of failure during cleanup
+        return;
+    }
+
+    $in_cleanup = 1;
+
+    if ($CONFIG_INSTALLER_SD_DEVICE_LOOPBACK eq "y"){
+        print BOLD BLUE "  Detaching any loopback device... \n";
+        print("    for dev in `sudo losetup -j $SDIMG | cut -f1 -d:` ; do sudo losetup -d \$dev ; done");
+        system("for dev in `sudo losetup -j $SDIMG | cut -f1 -d:` ; do sudo losetup -d \$dev ; done");
+        print "\n\n";
+    }
+    if ($boot_mounted) {
+        cmd_echo("sudo umount $IMAGEDIR/boot");
+    }
+    if ($rootfs_mounted) {
+        cmd_echo("sudo umount $IMAGEDIR/rootfs");
+    }
+
+    print BOLD BLUE "  Image creation clean up complete\n";
+}
+
+# ==============================================================================
+# Create SD partitions
+# ==============================================================================
+sub format_sd{
+    my $USER=$ENV{'USER'};
+    my $DEVICE;
+    my $FIRST_CYLINDER=0;
+    my $FIRST_PART_SIZE=$CONFIG_INSTALLER_UBOOT_PARTITION_SIZE * 1024 * 1024 / 8225280 + 1;
+    my $SECOND_PART_SIZE="";
+    my $STARTP2=$FIRST_PART_SIZE;
+    my $MIN_CYLINDERS=0;
+
+    if ($GENERATE_INSTALLER eq "y") {
+        # Use the full FAT partition for the installer
+        $FIRST_PART_SIZE="-";
+    }
+
+    if ($CONFIG_INSTALLER_SD_DEVICE_LOOPBACK eq "y"){
+        print BOLD BLUE "  Creating and attaching the loopback devices... \n";
+        $SD_DEVICE=`sudo losetup -f`;
+        chop($SD_DEVICE);
+        cmd_echo("dd if=/dev/zero of=${SDIMG} bs=1M count=$CONFIG_INSTALLER_SD_DEVICE_LOOPBACK_SIZE");
+        cmd_echo("sudo losetup $SD_DEVICE ${SDIMG} ");
+    }
+
+    $DEVICE=$SD_DEVICE;
+    $DEVICE =~ s?/dev/??;
+
+    my $FORMAT_DATA=`sudo fdisk -l $SD_DEVICE 2>/dev/null`;
+    if ($FORMAT_DATA eq "") {
+        print RED "  Error: ";
+        print "No valid disk is available on $SD_DEVICE. Try inserting the SD card again and umounting the partitions.\n\n";
+        sd_cleanup();
+        exit -1;
+    }
+
+    check_device_is_not_mounted($DEVICE);
+
+    print BOLD BLUE "  Creating SD partitions on the device $SD_DEVICE... \n";
+    print "    Calculating the partitions...\n";
+    if ($BOOTLOADER_OUT_OF_FS eq "y") {
+        # We assume (because we just format this way) 255 heads, 63 sectors per track, 512 bytes sector = 8225280 bytes per cylinder
+        $FIRST_CYLINDER = 1;
+    }
+    $STARTP2=$FIRST_CYLINDER + $FIRST_PART_SIZE;
+    $MIN_CYLINDERS += $FIRST_PART_SIZE;
+
+    open (PARTS_SPECS, ">/tmp/$DEVICE.$USER.part.specs");
+    open (PARTS_DESC, ">/tmp/$DEVICE.$USER.part.desc");
+
+    if ($BOOTLOADER_OUT_OF_FS eq "y") {
+      printf PARTS_DESC "    - Bootloader stored after MBR\n";
+    } else {
+      printf PARTS_DESC "    - Bootloader stored on FAT partition\n";
+    }
+
+    if ($FIRST_PART_SIZE eq "-") {
+        printf PARTS_DESC "    - First partition from cylinder ${FIRST_CYLINDER} and a size of the full disk, type FAT32\n";
+    } else {
+        printf PARTS_DESC "    - First partition from cylinder ${FIRST_CYLINDER} and a size of ${FIRST_PART_SIZE} cylinders, type FAT32\n";
+    }
+    print PARTS_SPECS "${FIRST_CYLINDER},${FIRST_PART_SIZE},0xc,*\n";
+
+    if ($CONFIG_FS_TARGET_SD eq "y") {
+      my $FSTYPESTRING = "unknown";
+      my $FSPARTTYPE="L";
+      if ($CONFIG_INSTALLER_SD_ROOTFS_TYPE_EXT3 eq "y") {
+        $FSTYPESTRING="ext3";
+        $FSPARTTYPE="L";
+      }
+      if ($CONFIG_INSTALLER_SD_ROOTFS_SIZE eq "-") {
+          printf PARTS_DESC "    - Second partition from cylinder ${STARTP2} and a size of the rest of the disk, type ${FSTYPESTRING}\n";
+      } else {
+          $SECOND_PART_SIZE = ($CONFIG_INSTALLER_SD_ROOTFS_SIZE * 1024 * 1024 / 255 / 63 / 512) - 2;
+          $MIN_CYLINDERS +=  $SECOND_PART_SIZE;
+          printf PARTS_DESC "    - Second partition from cylinder ${STARTP2} and a size of ${SECOND_PART_SIZE} cylinders, type ${FSTYPESTRING}\n";
+      }
+      print PARTS_SPECS "${STARTP2},${SECOND_PART_SIZE},${FSPARTTYPE}\n";
+    }
+
+    close(PARTS_SPECS);
+    close(PARTS_DESC);
+    
+    system("chmod 777 /tmp/$DEVICE.$USER.part.desc");
+    system("chmod 777 /tmp/$DEVICE.$USER.part.specs");
+    system("cat /tmp/$DEVICE.$USER.part.desc");
+    {
+	use bignum;
+        # Creating partitions
+        # See also http://processors.wiki.ti.com/index.php?title=MMC_Boot_Format
+        print "\n    Creating the partitions...\n";
+	$DISK_SIZE_BYTES = `sudo fdisk -l $SD_DEVICE 2>/dev/null | grep $SD_DEVICE | grep Disk | cut -f 5 -d' '`;
+	chomp($DISK_SIZE_BYTES);
+	$DISK_SIZE_CYL = int($DISK_SIZE_BYTES / 8225280);
+
+	if ($DISK_SIZE_CYL <= ($MIN_CYLINDERS + 2)) {
+	    print RED "  Error: ";
+	    print "Size of partitions is too large to fit in loopback file size or SD card.\n";
+	    print "Increase loopback file size or SD card.\n\n";
+	    sd_cleanup();
+	    exit -1;
+	}
+#       print "disk size in cylinders: $DISK_SIZE_CYL\n";
+#       print "sudo sfdisk -D -C$DISK_SIZE_CYL -H255 -S63 $SD_DEVICE < /tmp/$DEVICE.$USER.part.specs\n";
+	system("sudo sfdisk -D -C$DISK_SIZE_CYL -H255 -S63 $SD_DEVICE >/dev/null 2>/tmp/$DEVICE.$USER.errlog < /tmp/$DEVICE.$USER.part.specs\n") &&
+        ( sd_cleanup() | die "Failed to create partitions (see error log at /tmp/$DEVICE.errlog)" ) ;
+    }
+    if ($CONFIG_INSTALLER_SD_DEVICE_LOOPBACK eq "y"){
+        print "    Mounting loopback partitions...\n";
+        my $next_loop_device=`sudo losetup -f`;
+        chop($next_loop_device);
+        my $partoffset = ${FIRST_CYLINDER} * 255 * 63 * 512;
+        my $partsize = ${FIRST_PART_SIZE} * 255 * 63 * 512;
+        # The -d on sfdisk will push the first partition by 32k if the first partition starts at 0
+        if ($partoffset == 0) {
+            $partoffset = 32256;
+            $partsize = $partsize - 32256;
+        }
+        $DEVICEP1="${SD_DEVICE}p1";
+        cmd_echo("sudo ln -sf $next_loop_device $DEVICEP1");
+        cmd_echo("sudo losetup -o $partoffset --sizelimit $partsize $next_loop_device ${SDIMG}");
+        if ($CONFIG_FS_TARGET_SD eq "y") {
+            $next_loop_device=`sudo losetup -f`;
+            chop($next_loop_device);
+            $partoffset = ${STARTP2} * 255 * 63 * 512;
+            $DEVICEP2="${SD_DEVICE}p2";
+            cmd_echo("sudo ln -sf $next_loop_device $DEVICEP2");
+            if ($CONFIG_INSTALLER_SD_ROOTFS_SIZE eq "-") {
+                cmd_echo("sudo losetup -o $partoffset $next_loop_device ${SDIMG}");
+            } else {
+                $partsize = ${SECOND_PART_SIZE} * 255 * 63 * 512;
+                cmd_echo("sudo losetup -o $partoffset --sizelimit $partsize $next_loop_device ${SDIMG}");
+            }
+        }
+    }
+
+    # Formating partitions
+    print "    Formating partitions...\n";
+    cmd_echo("sudo mkfs.vfat -F 32 ${DEVICEP1} -n boot"," > /dev/null");
+    if ($CONFIG_INSTALLER_SD_ROOTFS_TYPE_EXT3 eq "y") {
+      cmd_echo("sudo mkfs.ext3 ${DEVICEP2} -L rootfs","2> /dev/null > /dev/null");
+    }
+    cmd_echo("sync");
+}
+
+# First parameter: device
+# Second parameter: mount point
+sub mount {
+    print BOLD BLUE "  Mounting $_[1] partition\n";
+    cmd_echo("mkdir -p $_[1]");
+    cmd_echo("sudo mount $_[0] $_[1]");
+}
+
+# First parameter: mount point
+sub umount {
+    print BOLD BLUE "  Unmounting $_[0] partition\n";
+    cmd_echo("sync");
+    cmd_echo("sudo umount $_[0]");
+}
+
+# ==============================================================================
+# Install bootloader to SD
+# ==============================================================================
+sub sd_install_bootloader {
+    if ($BOOTLOADER_OUT_OF_FS eq "y") {
+        print BOLD BLUE "  Flashing bootloader and UBL to SD...\n";
+        print "    Embedding the UBL and U-boot image into the SD after the MBR...\n";
+        cmd_echo("sudo $UFLASH -d ${SD_DEVICE} -u ${IMAGEDIR}/${SDCARD_UBL} -b ${IMAGEDIR}/bootloader -e ${CONFIG_UBOOT_RAM_ADDRS} -l ${CONFIG_UBOOT_RAM_ADDRS}");
+    } else {
+        print BOLD BLUE "  Flashing bootloader to SD boot partition\n";
+        if ($PREBOOTLOADER eq "XLoader") {
+            print "    Copying the X-Loader image into the SD...\n";
+            cmd_echo("sudo cp $IMAGEDIR/x-load.bin.ift $IMAGEDIR/boot/MLO");
+        }
+        if (($PREBOOTLOADER eq "UBOOT_MIN") || ($PREBOOTLOADER eq "UBOOT_MLO")) {
+            print "    Copying the $MIN_NAME image into the SD...\n";
+            cmd_echo("sudo cp $IMAGEDIR/$MIN_NAME $IMAGEDIR/boot/MLO");
+        }
+        print "    Copying the U-boot image into the SD...\n";
+        if ($PREBOOTLOADER eq "UBOOT_MLO") {
+          cmd_echo("sudo cp $IMAGEDIR/bootloader $IMAGEDIR/boot/u-boot.img");
+        }
+        else {
+          cmd_echo("sudo cp $IMAGEDIR/bootloader $IMAGEDIR/boot/u-boot.bin");
+        }
+
+    }
+}
+
+
+# ==============================================================================
+# Install Installer
+# ==============================================================================
+sub install_installer {
+    print BOLD BLUE "  Copying installer into the SD...\n";
+    cmd_echo("sudo cp $IMAGEDIR/installer/* $IMAGEDIR/boot");
+}
+
+# ==============================================================================
+# Kernel download
+# ==============================================================================
+sub install_kernel {
+    print BOLD BLUE "  Flashing Kernel image to SD...\n";
+    print "    Copying the kernel into the SD...\n";
+    cmd_echo("sudo cp $IMAGEDIR/kernel.uImage $IMAGEDIR/boot/uImage");
+}
+
+# ==============================================================================
+# File system installation
+# ==============================================================================
+sub install_filesystem {
+    if($TARGET_FS_TYPE eq "noinstall") {
+        print BOLD BLUE "  File system doesn't needs to be installed\n";
+        return;
+    }
+    print BOLD BLUE "  Flashing File System to SD...\n";
+    print "    Mounting rootfs partition...\n";
+    if ($CONFIG_INSTALLER_SD_ROOTFS_TYPE_EXT3 eq "y") {
+      cmd_echo("mkdir -p $IMAGEDIR/rootfs ; sudo mount -t ext3 ${DEVICEP2} $IMAGEDIR/rootfs");
+    }
+    $rootfs_mounted = 1;
+    print "    Copying the File System into the SD...\n";
+    cmd_echo("cd $DEVDIR/fs/fs ; find . | sudo cpio -pdum $IMAGEDIR/rootfs");
+#    cmd_echo("cd $DEVDIR/fs/fs ; tar -cf - . | ( cd $IMAGEDIR/rootfs ; sudo tar -xf - )");
+    cmd_echo("sleep 2");
+    cmd_echo("sudo du -hs  $IMAGEDIR/rootfs");
+    cmd_echo("sync");
+    print "    Unmounting the rootfs partition...\n";
+    cmd_echo("sudo umount $IMAGEDIR/rootfs");
+    $rootfs_mounted = 0;
+    print "    Verifying integrity of the fs...\n";
+    if ($CONFIG_INSTALLER_SD_ROOTFS_TYPE_EXT3 eq "y") {
+      cmd_echo("sudo fsck.ext3 ${DEVICEP2}");
+    }
+}
+
+sub install_ubootEnv {
+    print BOLD BLUE "  Flashing boot script to SD...\n";
+    open (ARGS, "<$IMAGEDIR/cmdline");
+    my $BOOTARGS = <ARGS>;
+    close(ARGS);
+    open (CMD, ">$IMAGEDIR/uEnv.txt");
+    print CMD "bootargs=$BOOTARGS\n";
+    print CMD "uenvcmd=echo Running uenvcmd ...; run loaduimage;bootm $CONFIG_INSTALLER_LOAD_ADDRS\n";
+    close(CMD);
+    system("mkdir -p $LOG_DIRECTORY");
+    print "    Flashing uEnv.txt to SD boot partition\n";
+    print "    Copying the uEnv.txt into the SD...\n";
+    cmd_echo("sudo cp $IMAGEDIR/uEnv.txt $IMAGEDIR/boot/uEnv.txt");
+}
+
+1;

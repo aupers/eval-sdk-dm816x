@@ -1,0 +1,4 @@
+config FS_APPS_LTT_MODULES
+	bool "ltt-modules-0.19.11"
+	help
+	    LTTng modules

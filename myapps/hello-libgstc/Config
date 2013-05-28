@@ -1,0 +1,5 @@
+config FS_APPS_HELLO_LIBGSTC
+	bool "GST Daemon Client Library Example Application"
+	default n
+	help
+	    Example application for libgstc usage.

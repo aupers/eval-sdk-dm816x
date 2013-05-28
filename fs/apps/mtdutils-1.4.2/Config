@@ -1,0 +1,10 @@
+
+config FS_APPS_MTDUTILS
+	bool "mtdutils-1.4.2"
+	select FS_APPS_ZLIB
+	select FS_APPS_LZO
+	select FS_APPS_UTILS_LINUX
+	default n
+	help
+	    mtdutils is a package with tools to handle MTD devices of the kernel
+

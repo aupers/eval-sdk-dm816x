@@ -1,0 +1,13 @@
+Index: kernel/linux-2.6.37-psp04.04.00.01/drivers/video/ti81xx/ti81xxhdmi/hdmi.c
+===================================================================
+--- kernel.orig/linux-2.6.37-psp04.04.00.01/drivers/video/ti81xx/ti81xxhdmi/hdmi.c	2012-03-22 23:13:01.000000000 -0600
++++ kernel/linux-2.6.37-psp04.04.00.01/drivers/video/ti81xx/ti81xxhdmi/hdmi.c	2012-05-10 22:24:24.554476620 -0600
+@@ -680,7 +680,7 @@
+ 				cm.mode = code < 14;
+ 				THDMIDBG("Hdmi_code = %d mode = %d\n",
+ 					cm.code, cm.mode);
+-				print_omap_video_timings(&temp);
++//				print_omap_video_timings(&temp);
+ 				break;
+ 			}
+ 		}

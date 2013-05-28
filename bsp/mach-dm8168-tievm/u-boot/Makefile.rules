@@ -1,0 +1,41 @@
+#$L$
+# Copyright (C) 2011 Ridgerun (http://www.ridgerun.com). 
+#
+#$L$
+
+ifeq ($(DEVDIR),)
+$(error ====== DEVDIR variable is empty, invoke this Makefile from the BSP root, or provide the path to it =====)
+endif
+include $(DEVDIR)/bsp/mach/Make.conf
+
+ifeq ($(CONFIG_BSP_ARCH_SPI),y)
+  UBOOT_BOARD_CONFIG = ti8168_evm_config_spi
+else
+ifeq ($(CONFIG_BSP_ARCH_NAND),y)
+  UBOOT_BOARD_CONFIG = ti8168_evm_config_nand
+endif
+endif
+
+#If all the firmware is going to be downloaded to a SD card then create the correct IPL
+ifeq ($(CONFIG_INSTALLER_MODE_SD_CARD),y)
+ifeq ($(CONFIG_UBOOT_QUICK_BOOT),y)
+  IPL_BOARD_CONFIG = ti8168_evm_config_quick_mmc_min
+  UBOOT_BOARD_CONFIG = ti8168_evm_config_quick_mmc
+else
+  IPL_BOARD_CONFIG = ti8168_evm_min_sd
+endif
+endif
+
+#Uboot name
+TI_NAME= u-boot.ti
+
+.PHONY: mach_build mach_clean 
+
+ipl_configured:
+	$(V) $(MAKE) -C src $(IPL_BOARD_CONFIG) CROSS_COMPILE=$(TOOLCHAIN_PREFIX)- RELFLAGS="$(CFLAGS)"
+
+mach_post_build: 
+
+mach_build: 
+
+mach_clean: 

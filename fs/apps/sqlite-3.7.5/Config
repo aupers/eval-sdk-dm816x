@@ -1,0 +1,8 @@
+config FS_APPS_SQLITE
+	bool "sqlite-3.7.5"
+	default n
+	help
+	    SQLite is a small C library that implements a self-contained, 
+	    embeddable, zero-configuration SQL database engine.
+	    Install the cli interface.
+

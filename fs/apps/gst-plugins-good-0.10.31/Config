@@ -1,0 +1,25 @@
+config FS_APPS_GSTREAMER_PLUGINS_GOOD_0_10_31
+	bool "gstreamer-plugins-good 0.10.31"
+        select FS_APPS_GSTREAMER
+        select FS_APPS_GLIB
+        select FS_APPS_LIBOIL
+        select FS_APPS_LIBXML2
+        select FS_APPS_GETTEXT
+	help
+	This option enabled the core good plugins for gstreamer that
+	doesn't have external dependencies on other libraries
+
+config FS_APPS_GSTREAMER_PLUGINS_GOOD_V4L2
+	bool "enable video4linux2"
+	depends on FS_APPS_GSTREAMER_PLUGINS_GOOD_0_10_31
+	help
+	Compile gst plugin for video4linux 2
+
+config FS_APPS_GSTREAMER_PLUGINS_GOOD_FLAC
+	bool "enable flac support"
+	default n
+	depends on FS_APPS_GSTREAMER_PLUGINS_GOOD_0_10_31
+	select FS_APPS_FLAC
+	help
+	Compile gst plugin for flac codec
+	

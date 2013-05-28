@@ -1,0 +1,5 @@
+config FS_APPS_LIBTIFF
+	bool "libtiff-3.9.4"
+	default n
+	help
+	  The C library for manipulating TIFF images.

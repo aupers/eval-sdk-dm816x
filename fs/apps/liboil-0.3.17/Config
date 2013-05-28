@@ -1,0 +1,5 @@
+config FS_APPS_LIBOIL
+	bool "liboil 0.3.17"
+	help
+        Liboil is a library of simple functions that are optimized for 
+        various CPUs.

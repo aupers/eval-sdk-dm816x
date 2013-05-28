@@ -1,0 +1,8 @@
+config FS_APPS_LIBID3TAG
+        bool "libid3tag-0.15.1.b"
+        select FS_APPS_LIBMAD
+        select FS_APPS_ZLIB
+        default n
+        help
+	Reads tags from the MP3 files that holds the description, 
+        like group, artist name, song name, and comments. 

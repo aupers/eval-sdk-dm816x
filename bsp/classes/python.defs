@@ -1,0 +1,53 @@
+#! \defgroup python_class Python Class
+#! \ingroup classes
+#! \section intro Introduction
+#! The Python class provides logic for installing Python-based packages.
+#!
+#! \section public_params Public Parameters
+#! The following is a list of parameters that may be used to install Python packages.
+#! <ul>
+#! <li>
+#! <b>PYTHON_PKG:</b> Name of the Python package. This is the name that is used with the Python import statement.
+#!
+#! <li>
+#! <b>PYTHON_PKG_FILES:</b> List of package files to be installed in the target file system python site-packages PYTHON_PKG directory.
+#!
+#! <B>PYTHON_PKG_FILES_DIR:</b> Directory where the PYTHON_PKG_FILES are found. Defaults to FETCHER_EXTRACT_DIRECTORY_NAME.
+#!
+#! <b>PYTHON_EXE_FILES:</b> List of files to be installed in the target file system usr binaries directory.
+#!
+#! \section p_params Private Parameters
+#! The following is a list of private parameters that are recommended not to be modified.
+#!
+#! <ul>
+#!
+#! <li>
+#! <b>PYTHON_SITE_PACKAGES:</b> The directory on the host computer where site packages are to be installed.
+#!
+#! <b>PYTHON_SCRIPT_DIR:</b> The directory on the host computer where executable files are installed. Typically it is /usr/bin in the target file system.
+#!
+
+.PHONY: python_install
+
+PYTHON_SITE_PACKAGES?=$(FSROOT)/usr/lib/python$(PYTHON_VERSION)/site-packages
+PYTHON_SCRIPT_DIR?=$(FSROOT)/usr/bin
+PYTHON_PKG_FILES_DIR?=$(FETCHER_EXTRACT_DIRECTORY_NAME)
+
+python_install:
+ifneq ($(PYTHON_PKG_FILES),)
+	
+	@#Collecting all the files specified in PYTHON_PKG_FILES and extracting them in PYTHON_SITE_PACKAGES. 
+	$(V) cd $(PYTHON_PKG_FILES_DIR) ; \
+	tar cf - $(PYTHON_PKG_FILES) | (cd $(PYTHON_SITE_PACKAGES) && tar xBf -) ; 
+	
+endif
+ifneq ($(PYTHON_EXE_FILES),)
+	$(V) mkdir -p $(PYTHON_SCRIPT_DIR) || \
+	{ echo "Failed to create dir $(PYTHON_SCRIPT_DIR)" ; \
+	exit -1 ; } ;
+	cd $(FETCHER_EXTRACT_DIRECTORY_NAME) ; \
+	cd $(PYTHON_PKG) ; \
+	for file in $(PYTHON_EXE_FILES) ; do \
+		install -m 755 $$file $(PYTHON_SCRIPT_DIR) ; \
+	done ;
+endif

@@ -1,0 +1,82 @@
+Index: gst-plugins-bad-0.10.23/src/gst/h264parse/gsth264parse.c
+===================================================================
+--- gst-plugins-bad-0.10.23.orig/src/gst/h264parse/gsth264parse.c	2013-02-22 10:22:07.914838310 -0600
++++ gst-plugins-bad-0.10.23/src/gst/h264parse/gsth264parse.c	2013-02-22 10:22:07.926838310 -0600
+@@ -38,19 +38,21 @@
+ static GstStaticPadTemplate sinktemplate = GST_STATIC_PAD_TEMPLATE ("sink",
+     GST_PAD_SINK,
+     GST_PAD_ALWAYS,
+-    GST_STATIC_CAPS ("video/x-h264"));
++    GST_STATIC_CAPS ("video/x-h264,"
++                     "framed = (boolean)false"));
+ 
+ static GstStaticPadTemplate srctemplate = GST_STATIC_PAD_TEMPLATE ("src",
+     GST_PAD_SRC,
+     GST_PAD_ALWAYS,
+-    GST_STATIC_CAPS ("video/x-h264"));
++    GST_STATIC_CAPS ("video/x-h264,"
++                     "framed = (boolean)true"));
+ 
+ GST_DEBUG_CATEGORY_STATIC (h264_parse_debug);
+ #define GST_CAT_DEFAULT h264_parse_debug
+ 
+-#define DEFAULT_SPLIT_PACKETIZED     FALSE
+-#define DEFAULT_ACCESS_UNIT          FALSE
+-#define DEFAULT_OUTPUT_FORMAT        GST_H264_PARSE_FORMAT_INPUT
++#define DEFAULT_SPLIT_PACKETIZED     TRUE
++#define DEFAULT_ACCESS_UNIT          TRUE
++#define DEFAULT_OUTPUT_FORMAT        GST_H264_PARSE_FORMAT_BYTE
+ #define DEFAULT_CONFIG_INTERVAL      (0)
+ 
+ enum
+@@ -970,7 +972,7 @@
+   h264parse->interval = DEFAULT_CONFIG_INTERVAL;
+   h264parse->last_report = GST_CLOCK_TIME_NONE;
+ 
+-  h264parse->format = GST_H264_PARSE_FORMAT_INPUT;
++  h264parse->format = DEFAULT_OUTPUT_FORMAT;
+ 
+   gst_h264_parse_reset (h264parse);
+ }
+@@ -1841,7 +1843,6 @@
+   /* first_mb_in_slice == 0 considered start of frame */
+   start = h264parse->picture_start && (data[nal_length + 1] & 0x80);
+   if (G_UNLIKELY (!next_nal)) {
+-  	printf("Frame complete!!\n");
+     complete = TRUE;
+   } else {
+     /* consider a coded slices (IDR or not) to start a picture,
+@@ -2157,9 +2158,6 @@
+ 
+       /* packetized will have no next data, which serves fine here */
+       next_data = (guint8 *) gst_adapter_peek (h264parse->adapter, 6);
+-	  GST_DEBUG("next_data:%p",next_data);
+-	  if(next_data == NULL)
+-	  	return GST_FLOW_OK;
+       outbuf = gst_h264_parse_push_nal (h264parse, outbuf, next_data, &start);
+       if (!outbuf) {
+         /* no complete unit yet, go for next round */
+@@ -2169,10 +2167,10 @@
+       /* Ignore upstream dts that stalls or goes backward. Upstream elements
+        * like filesrc would keep on writing timestamp=0.  XXX: is this correct?
+        * TODO: better way to detect whether upstream timstamps are useful */
+-      if (h264parse->last_outbuf_dts != GST_CLOCK_TIME_NONE
++     /* if (h264parse->last_outbuf_dts != GST_CLOCK_TIME_NONE
+           && outbuf_dts != GST_CLOCK_TIME_NONE
+           && outbuf_dts <= h264parse->last_outbuf_dts)
+-        outbuf_dts = GST_CLOCK_TIME_NONE;
++        outbuf_dts = GST_CLOCK_TIME_NONE;*/
+ 
+       if ((got_frame || delta_unit) && start) {
+         GstH264Sps *sps = h264parse->sps;
+@@ -2757,8 +2755,8 @@
+ static gboolean
+ plugin_init (GstPlugin * plugin)
+ {
+-  return gst_element_register (plugin, "legacyh264parse",
+-      GST_RANK_NONE, GST_TYPE_H264PARSE);
++  return gst_element_register (plugin, "h264parse",
++      (GST_RANK_PRIMARY + 1), GST_TYPE_H264PARSE);
+ }
+ 
+ GST_PLUGIN_DEFINE (GST_VERSION_MAJOR,

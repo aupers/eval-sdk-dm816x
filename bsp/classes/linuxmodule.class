@@ -1,0 +1,15 @@
+#$L$
+# Copyright (C) 2011 Ridgerun (http://www.ridgerun.com).
+##$L$
+
+build: $(FETCHED_FLAG) $(PATCHED_FLAG) mod_build
+
+clean: mod_clean unpatch
+
+distclean: clean rrfetched_clean
+
+install: mod_install
+
+uninstall: mod_uninstall
+
+include $(CLASSES)/linuxmodule.defs

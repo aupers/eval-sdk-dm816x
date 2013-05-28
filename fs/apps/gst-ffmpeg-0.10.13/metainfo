@@ -1,0 +1,2 @@
+NAME="GST_PLUGINS_FFMPEG"
+TARGET_REQUIRED="gstreamer gst-plugins-base"

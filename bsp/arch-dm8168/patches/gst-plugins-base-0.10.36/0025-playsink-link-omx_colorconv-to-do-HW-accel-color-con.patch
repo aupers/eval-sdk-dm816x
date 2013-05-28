@@ -1,0 +1,63 @@
+Index: gst-plugins-base-0.10.36/src/gst/playback/gstplaysink.c
+===================================================================
+--- gst-plugins-base-0.10.36.orig/src/gst/playback/gstplaysink.c	2013-02-21 15:33:21.836964212 -0600
++++ gst-plugins-base-0.10.36/src/gst/playback/gstplaysink.c	2013-02-21 15:35:28.768964197 -0600
+@@ -65,6 +65,7 @@
+   GstPad *sinkpad;
+   GstElement *queue;
+   GstElement *conv;
++  GstElement *resample;
+   GstElement *volume;           /* element with the volume property */
+   gboolean sink_volume;         /* if the volume was provided by the sink */
+   GstElement *mute;             /* element with the mute property */
+@@ -86,6 +87,8 @@
+   GstPad *sinkpad;
+   GstElement *queue;
+   GstElement *conv;
++  GstElement *scale;
++  GstElement *ctrl;
+   GstElement *sink;
+   gboolean async;
+   GstElement *ts_offset;
+@@ -1338,14 +1341,37 @@
+     head = prev = chain->queue;
+   }
+ 
++  {
++    GST_DEBUG_OBJECT (playsink, "creating omx_ctrl");
++    chain->ctrl = gst_element_factory_make ("omx_ctrl", "omxctrl");
++
++    if (chain->ctrl == NULL) {
++      post_missing_element_message (playsink, "omx_ctrl");
++      GST_ELEMENT_WARNING (playsink, CORE, MISSING_PLUGIN,
++          (_("Missing element '%s' - check your GStreamer installation."),
++              "omx_ctrl"), ("video rendering might fail"));
++    } else {
++      gst_bin_add (bin, chain->ctrl);
++      g_object_set(G_OBJECT(chain->ctrl), "display-mode", "OMX_DC_MODE_1080P_60"  ,NULL);
++      if (prev) {
++        if (!gst_element_link_pads_full (prev, "src", chain->ctrl, "sink",
++              GST_PAD_LINK_CHECK_TEMPLATE_CAPS))
++            goto link_failed;
++        } else {
++            head = chain->ctrl;
++    }
++     prev = chain->ctrl;
++    }
++  }
++
+   if (raw && !(playsink->flags & GST_PLAY_FLAG_NATIVE_VIDEO)) {
+-    GST_DEBUG_OBJECT (playsink, "creating stridetransform");
+-    chain->conv = gst_element_factory_make ("stridetransform", "vconv");
++    GST_DEBUG_OBJECT (playsink, "creating omx_scaler");
++    chain->conv = gst_element_factory_make ("omx_scaler", "vconv");
+     if (chain->conv == NULL) {
+-      post_missing_element_message (playsink, "stridetransform");
++      post_missing_element_message (playsink, "omx_scaler");
+       GST_ELEMENT_WARNING (playsink, CORE, MISSING_PLUGIN,
+           (_("Missing element '%s' - check your GStreamer installation."),
+-              "stridetransform"), ("video rendering might fail"));
++              "omx_scaler"), ("video rendering might fail"));
+     } else {
+       gst_bin_add (bin, chain->conv);
+       if (prev) {

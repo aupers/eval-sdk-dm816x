@@ -1,0 +1,5 @@
+config FS_APPS_PHP
+	bool "php-5.3.4"
+	help
+	PHP iF a widely-used general-purpose scripting language that is 
+	especially suited for Web development and can be embedded into HTML.

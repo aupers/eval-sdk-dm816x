@@ -1,0 +1,18 @@
+Index: graphics-sdk-4_04_00_02/sgxsdk/Makefile
+===================================================================
+--- graphics-sdk-4_04_00_02.orig/sgxsdk/Makefile	2011-06-22 06:11:58.000000000 -0600
++++ graphics-sdk-4_04_00_02/sgxsdk/Makefile	2012-12-03 14:44:04.229035363 -0600
+@@ -1,3 +1,13 @@
++ifneq ($(BUILDING_FROM_RR_SDK),yes)
++$(error ERROR: This SGXSDK is currently being used by the RidgeRun SDK at \
++"$(shell cat rrsdk_path)". RidgeRun SDK modifies the standard SGXSDK, so it \
++cannot longer be used from the ezsdk main makefile. To revert this changes \
++you need to run the command: "make -C $(shell cat rrsdk_path) clean", or to \
++remove and re-install this sgxsdk if the original RidgeRun SDK is not longer \
++available. \
++)
++endif
++
+ include Rules.make
+ include Makefile.KM
+ include Makefile.SDK

@@ -1,0 +1,105 @@
+if INSTALLER_MODE_ATTACHED_BOARD || INSTALLER_MODE_SD_CARD_INSTALLER
+comment "Installer to U-boot communication options"
+
+choice
+    prompt "Communication method with the target board"
+
+config INSTALLER_SERIAL_COM
+	bool "Serial port"
+	
+config INSTALLER_TELNET_COM
+	bool "Telnet-serial adaptor"
+
+endchoice
+
+config INSTALLER_TELNET_COM_IP
+	string "IP address of telnet-serial adaptor"
+	depends on INSTALLER_TELNET_COM
+
+config INSTALLER_TELNET_COM_PORT
+	string "Network port of telnet-serial adaptor"
+	depends on INSTALLER_TELNET_COM
+	
+config INSTALLER_SERIAL_COM_PORT
+	string "Serial port for target communication"
+	default "/dev/ttyS0"
+	depends on INSTALLER_SERIAL_COM
+
+if !INSTALLER_MODE_SD_CARD_INSTALLER
+comment "Transfer options for installation"
+choice 
+    prompt "Protocol for transfering images to the target"
+
+config INSTALLER_TFTP_METHOD
+	bool "TFTP"
+	depends on UBOOT_NETWORKING
+
+config INSTALLER_DFU_METHOD
+	bool "USB DFU"
+	depends on UBOOT_USBD
+
+config INSTALLER_SERIAL_METHOD
+	bool "Serial"
+
+endchoice
+
+config INSTALLER_TFTP_SERVER_DIRECTORY
+	string "TFTP server path"
+	depends on INSTALLER_TFTP_METHOD
+	default "/srv/tftp"
+
+if INSTALLER_TFTP_METHOD
+comment "Network options for installation"
+
+choice 
+        prompt "U-boot IP address"
+
+config INSTALLER_DHCP
+	bool "DHCP"
+
+config INSTALLER_STATIC_IP
+	bool "Static IP address"
+		
+endchoice
+
+config INSTALLER_IPADDR 
+	string "Static IP"
+	default "192.168.1.2"
+	depends on INSTALLER_STATIC_IP
+	 
+config INSTALLER_MSKADDR
+	string "Static mask"
+	default "255.255.255.0"
+	depends on INSTALLER_STATIC_IP
+endif
+endif # !INSTALLER_MODE_SD_CARD_INSTALLER
+
+config INSTALLER_IPL_MULTI_COPY
+	bool "Install Multiple copies of the IPL"
+	default n
+	depends on ARCH_SUPPORTS_MULTI_IPL
+	help
+		Choose if you want the IPL to be installed multiple times
+		on different blocks of the NAND device. The number of times
+		it's installed will depend on INSTALLER_MIN_IPL_BLOCK and
+		INSTALLER_MAX_IPL_BLOCK
+
+config INSTALLER_MIN_IPL_BLOCK
+	string "Min NAND block where the ROM code will look for the IPL"
+	default 0
+	depends on INSTALLER_IPL_MULTI_COPY
+	help
+		The ROM code inside a SoC will look for the IPL on certain
+		blocks of the NAND. This parameter indicates the minimum block
+		to look for the IPL
+
+config INSTALLER_MAX_IPL_BLOCK
+	string "Max NAND block where the ROM code will look for the IPL"
+	default 24
+	depends on INSTALLER_IPL_MULTI_COPY
+	help
+		The ROM code inside a SoC will look for the IPL on certain
+		blocks of the NAND. This parameter indicates the maximum block
+		to look for the IPL
+
+endif #INSTALLER_MODE_ATTACHED_BOARD || INSTALLER_MODE_SD_CARD_INSTALLER

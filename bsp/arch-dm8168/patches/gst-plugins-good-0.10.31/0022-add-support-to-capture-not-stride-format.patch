@@ -1,0 +1,16 @@
+Index: gst-plugins-good-0.10.31/src/sys/v4l2/gstv4l2object.c
+===================================================================
+--- gst-plugins-good-0.10.31.orig/src/sys/v4l2/gstv4l2object.c	2013-04-18 13:12:04.671784206 -0600
++++ gst-plugins-good-0.10.31/src/sys/v4l2/gstv4l2object.c	2013-04-18 13:16:02.747782851 -0600
+@@ -1626,10 +1626,7 @@
+   structure = gst_caps_get_structure (caps, 0);
+   mimetype = gst_structure_get_name (structure);
+ 
+-  if (!strcmp (mimetype, "video/x-raw-yuv")) {
+-    mimetype = "video/x-raw-yuv-strided";
+-    gst_structure_set_name (structure, mimetype);
+-  } else if (!strcmp (mimetype, "video/x-raw-rgb")) {
++  if (!strcmp (mimetype, "video/x-raw-rgb")) {
+     mimetype = "video/x-raw-rgb-strided";
+     gst_structure_set_name (structure, mimetype);
+   }

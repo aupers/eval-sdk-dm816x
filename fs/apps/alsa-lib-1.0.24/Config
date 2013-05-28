@@ -1,0 +1,4 @@
+config FS_APPS_ALSALIB
+	bool "alsa-lib-1.0.24"
+	help
+	 Standard Linux library for using the sound APIS

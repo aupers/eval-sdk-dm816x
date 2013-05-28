@@ -1,0 +1,74 @@
+From f392c3f35052b57343e814d8f2d52b4f788d5d45 Mon Sep 17 00:00:00 2001
+From: Rob Clark <rob@ti.com>
+Date: Fri, 20 Nov 2009 18:43:12 -0600
+Subject: [PATCH 07/24] Add NV12 support in stridetransform
+
+---
+ gst-libs/gst/video/video.c      |    3 +++
+ gst/stride/gststridetransform.c |   12 ++++--------
+ 2 files changed, 7 insertions(+), 8 deletions(-)
+
+Index: gst-plugins-base-0.10.36/src/gst-libs/gst/video/video.c
+===================================================================
+--- gst-plugins-base-0.10.36.orig/src/gst-libs/gst/video/video.c	2013-02-21 15:33:21.452964212 -0600
++++ gst-plugins-base-0.10.36/src/gst-libs/gst/video/video.c	2013-02-21 15:38:45.164964174 -0600
+@@ -2221,6 +2221,9 @@
+     case GST_VIDEO_FORMAT_Y42B:
+     case GST_VIDEO_FORMAT_Y444:
+       return GST_ROUND_UP_4 (3 * rowstride * height);
++    case GST_VIDEO_FORMAT_NV12:
++    case GST_VIDEO_FORMAT_NV21:
++      return GST_ROUND_UP_4 (rowstride) * GST_ROUND_UP_2 (height) * 3 / 2;
+     default:
+       return 0;
+   }
+Index: gst-plugins-base-0.10.36/src/gst/stride/gststridetransform.c
+===================================================================
+--- gst-plugins-base-0.10.36.orig/src/gst/stride/gststridetransform.c	2013-02-21 15:33:21.600964212 -0600
++++ gst-plugins-base-0.10.36/src/gst/stride/gststridetransform.c	2013-02-21 15:38:47.688964176 -0600
+@@ -2,7 +2,7 @@
+  *
+  * Copyright (C) 2009 Texas Instruments, Inc - http://www.ti.com/
+  *
+- * Description: V4L2 sink element
++ * Description: stride transform element
+  *  Created on: Jul 30, 2009
+  *      Author: Rob Clark <rob@ti.com>
+  *
+@@ -62,7 +62,7 @@
+ 
+ /* TODO: add rgb formats too! */
+ #define SUPPORTED_CAPS                                                        \
+-  GST_VIDEO_CAPS_YUV_STRIDED ("{ I420, YV12, YUY2, UYVY }", "[ 0, max ]")
++  GST_VIDEO_CAPS_YUV_STRIDED ("{ I420, YV12, YUY2, UYVY, NV12 }", "[ 0, max ]")
+ 
+ 
+ static GstStaticPadTemplate src_template =
+@@ -357,12 +357,10 @@
+   gint stride = self->out_rowstride;
+ 
+   switch (self->format) {
+-#if 0 /* TODO */
+     case GST_VIDEO_FORMAT_NV12:
+       g_return_val_if_fail (stride >= width, GST_FLOW_ERROR);
+-      stridemove (strided, unstrided, stride, width, height * 1.5);
++      stridemove (strided, unstrided, stride, width, (GST_ROUND_UP_2 (height) * 3) / 2);
+       return GST_FLOW_OK;
+-#endif
+     case GST_VIDEO_FORMAT_I420:
+     case GST_VIDEO_FORMAT_YV12:
+       g_return_val_if_fail (stride >= width, GST_FLOW_ERROR);
+@@ -403,12 +401,10 @@
+   gint stride = self->in_rowstride;
+ 
+   switch (self->format) {
+-#if 0 /* TODO */
+     case GST_VIDEO_FORMAT_NV12:
+       g_return_val_if_fail (stride >= width, GST_FLOW_ERROR);
+-      stridemove (unstrided, strided, width, stride, height * 1.5);
++      stridemove (unstrided, strided, width, stride, (GST_ROUND_UP_2 (height) * 3) / 2);
+       return GST_FLOW_OK;
+-#endif
+     case GST_VIDEO_FORMAT_I420:
+     case GST_VIDEO_FORMAT_YV12:
+       g_return_val_if_fail (stride >= width, GST_FLOW_ERROR);

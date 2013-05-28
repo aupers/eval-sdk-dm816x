@@ -1,0 +1,24 @@
+Index: u-boot-2010.06/src/include/configs/ti8168_evm.h
+===================================================================
+--- u-boot-2010.06.orig/src/include/configs/ti8168_evm.h	2011-11-03 06:36:46.000000000 -0600
++++ u-boot-2010.06/src/include/configs/ti8168_evm.h	2011-12-09 16:18:32.797026524 -0600
+@@ -83,7 +83,7 @@
+ #else
+ # define CONFIG_SYS_HUSH_PARSER		/* Use HUSH parser to allow command parsing */
+ # define CONFIG_SYS_PROMPT_HUSH_PS2	"> "
+-# define CONFIG_BOOTDELAY		3	/* set to negative value for no autoboot */
++# define CONFIG_BOOTDELAY		0	/* set to negative value for no autoboot */
+ # define CONFIG_SYS_AUTOLOAD		"no"
+ # define CONFIG_EXTRA_ENV_SETTINGS \
+ 	"verify=yes\0" \
+@@ -139,6 +139,10 @@
+ #define CONFIG_SYS_LOAD_ADDR		0x81000000	/* Default load address */
+ #define CONFIG_SYS_HZ			1000	/* 1ms clock */
+ 
++#define CONFIG_CMD_ENV                 /*Enable env command    */
++#define CONFIG_CMD_ASKENV              /*Enable askenv command */
++#define CONFIG_CMD_CACHE
++
+ /* Hardware related */
+ 
+ /**

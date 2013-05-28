@@ -1,0 +1,5 @@
+#!/bin/sh
+
+if [ -x /bin/hostname -a -f /etc/hostname ] ; then
+    /bin/hostname -F /etc/hostname
+fi

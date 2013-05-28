@@ -1,0 +1,6 @@
+config FS_APPS_GSTREAMER_PLUGINS_FFMPEG
+	bool "gstreamer-plugins-ffmpeg 0.10.13"
+	select FS_APPS_GSTREAMER_PLUGINS_BASE
+	help
+	This option enabled the ffmpeg plugin for gstreamer
+

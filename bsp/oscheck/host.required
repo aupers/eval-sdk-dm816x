@@ -1,0 +1,17 @@
+curl
+buildsystem
+libtool
+make
+ncurses
+texinfo
+minicom
+perl
+quilt
+dc
+subversion
+git
+automake
+autoconf
+crypt-ssleay
+xz
+ccache

@@ -1,0 +1,5 @@
+config FS_APPS_GNUTLS
+	bool "gnutls-2.8.6"
+	select FS_APPS_LIBGERROR
+	select FS_APPS_LIBGCRYPT
+	help

@@ -1,0 +1,6 @@
+
+config USER_APPS_HELLO_VALA
+	bool "Hello World example in Vala"
+	default n
+	help
+	    Example application to show the bsp usage.

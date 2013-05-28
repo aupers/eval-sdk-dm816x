@@ -1,0 +1,31 @@
+<RCC>
+    <qresource prefix="/">
+        <file alias="toggleInfoMessage">qml/ridgerun-ui-demo/ToggleInfoMessage.qml</file>
+        <file alias="toggleButton">qml/ridgerun-ui-demo/ToggleButton.qml</file>
+        <file alias="tabButton">qml/ridgerun-ui-demo/TabButton.qml</file>
+        <file alias="statusBar">qml/ridgerun-ui-demo/StatusBar.qml</file>
+        <file alias="slider">qml/ridgerun-ui-demo/Slider.qml</file>
+        <file alias="sideBar">qml/ridgerun-ui-demo/SideBar.qml</file>
+        <file alias="mainPane">qml/ridgerun-ui-demo/MainPane.qml</file>
+        <file alias="main">qml/ridgerun-ui-demo/main.qml</file>
+        <file alias="infoMessage">qml/ridgerun-ui-demo/InfoMessage.qml</file>
+        <file alias="customRadioButton">qml/ridgerun-ui-demo/CustomRadioButton.qml</file>
+        <file alias="configPane">qml/ridgerun-ui-demo/ConfigPane.qml</file>
+        <file alias="button">qml/ridgerun-ui-demo/Button.qml</file>
+        <file alias="signal_4">qml/ridgerun-ui-demo/images/signal_4.png</file>
+        <file alias="signal_3">qml/ridgerun-ui-demo/images/signal_3.png</file>
+        <file alias="signal_2">qml/ridgerun-ui-demo/images/signal_2.png</file>
+        <file alias="signal_1">qml/ridgerun-ui-demo/images/signal_1.png</file>
+        <file alias="signal_0">qml/ridgerun-ui-demo/images/signal_0.png</file>
+        <file alias="sidebar">qml/ridgerun-ui-demo/images/sidebar.png</file>
+        <file alias="selected">qml/ridgerun-ui-demo/images/selected.png</file>
+        <file alias="notSelected">qml/ridgerun-ui-demo/images/notSelected.png</file>
+        <file alias="logo">qml/ridgerun-ui-demo/images/logosmall.png</file>
+        <file alias="battery_4">qml/ridgerun-ui-demo/images/battery_4.png</file>
+        <file alias="battery_3">qml/ridgerun-ui-demo/images/battery_3.png</file>
+        <file alias="battery_2">qml/ridgerun-ui-demo/images/battery_2.png</file>
+        <file alias="battery_1">qml/ridgerun-ui-demo/images/battery_1.png</file>
+        <file alias="battery_0">qml/ridgerun-ui-demo/images/battery_0.png</file>
+        <file alias="bar">qml/ridgerun-ui-demo/images/bar.png</file>
+    </qresource>
+</RCC>

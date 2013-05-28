@@ -1,0 +1,11 @@
+--- gst-plugins-good-0.10.28/src/sys/v4l2/gstv4l2sink.c	2012-02-03 16:23:29.025525873 +0530
++++ gst-plugins-good-0.10.28.new/sys/v4l2/gstv4l2sink.c	2012-02-03 12:39:36.841523418 +0530
+@@ -70,7 +70,7 @@ GST_DEBUG_CATEGORY (v4l2sink_debug);
+ #define GST_CAT_DEFAULT v4l2sink_debug
+ 
+ #define PROP_DEF_QUEUE_SIZE         12
+-#define PROP_DEF_MIN_QUEUED_BUFS    1
++#define PROP_DEF_MIN_QUEUED_BUFS    2
+ #define DEFAULT_PROP_DEVICE   "/dev/video1"
+ 
+ #define MIN_ROTATION_ANGLE 0

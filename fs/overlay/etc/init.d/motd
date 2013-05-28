@@ -1,0 +1,4 @@
+#!/bin/sh
+
+[ -e /etc/motd ] && cat /etc/motd
+[ -e /etc/version ] && cat /etc/version

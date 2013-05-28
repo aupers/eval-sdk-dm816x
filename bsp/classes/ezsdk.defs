@@ -1,0 +1,792 @@
+#
+# Makefile rules to dealing with typical ezsdk logic
+#
+
+#! \defgroup ezsdk_defs EZSDK Class
+#! \ingroup classes
+#! \section intro Introduction
+#! The EZSDK definitions file provides logic dealing with typical ezsdk logic.
+#!
+#! \section public_params Public Parameters
+#! The following is a list of parameters that may be set according to an application's specific requirements.
+#! <ul>
+#! <li>
+#! <b>FORCE_EZSDK_COPY:</b> set to yes if you want to force the SDK into copying the EZSDK inside the RidgeRun SDK.
+#! This is useful if you are sharing your EZSDK between multiple development environments. Defaults to no.
+#!
+#! <li>
+#! <b>EZSDK_COPY_EXCLUSIONS_PATTERNS:</b> This are the files that should not be copied from the EZSDK to save disk space.
+#! This variable is usually defined by the EZSDK class file for the specific files on the EZSDK version. Only relevant
+#! if FORCE_EZSDK_COPY=yes
+#!
+#! <li>
+#! <b>EZSDKURL:</b> URL from which the user can obtain a copy of the required EZSDK.
+#!
+#! <li>
+#! <b>RULES_MAKE:</b> Location of the Rules.make file within the ezsdk directory for integrity checking.
+#!
+#! <li>
+#! <b>EZSDK_SEARCH_PATH:</b> List of paths in which to look for a valid EZSDK within the host machine.
+#!
+#! <li>
+#! <b>EZSDK_VERIFICATION_FILE:</b> File within the found ezsdk directory to check for its integrity.
+#!
+#! </ul>
+
+export BUILDING_FROM_RR_SDK=yes
+
+# Variables that control EZSDK interaction
+ifeq ($(EZSDK_NAME),)
+$(error ====== EZSDK_NAME variable isn't defined on RidgeRun's ezsdk makefile =====)
+endif
+
+# Variable to define media controller utils path inside the EZSDK #
+ifeq ($(EZSDK_PLATFORM),dm8148)
+EZSDK_MEDIA_CONTROL_PLATFORM=ti814x-evm
+else
+EZSDK_MEDIA_CONTROL_PLATFORM=ti816x-evm
+endif
+
+#============================================================================================
+# Search for an existing EZSDK tarball or create one from an existing EZSDK installation
+#============================================================================================
+
+# Tar arguments
+EZSDK_TAR_VERBOSE=$(if $(VERBOSE:1=),,--verbose)
+
+# Fetcher variables needed to be defined
+PKG_NAME=$(EZSDK_NAME)
+FETCHER_EXTRACT_DIRECTORY_NAME=ezsdk
+
+# Variables that control EZSDK interaction
+EZSDKURL?=http://software-dl.ti.com/dsps/dsps_public_sw/ezsdk/
+RULES_MAKE?=$(FETCHER_EXTRACT_DIRECTORY_NAME)/Rules.make
+-include $(RULES_MAKE)
+
+# Variables that control EZSDK search
+EZSDK_SEARCH_PATH?=$(HOME)/$(EZSDK_NAME) /usr/$(EZSDK_NAME) /usr/local/$(EZSDK_NAME) /usr/local/ezsdk
+EZSDK_VERIFICATION_FILE?=Rules.make
+
+# This variable is usually overwriten by the ezsdk class file with the respective values for the EZSDK version
+EZSDK_TARBALL_EXCLUSIONS_PATTERNS=\
+bin \
+board-support/board-utilities \
+board-support/docs \
+board-support/host-tools \
+board-support/linux-2.6.37-psp04.04.00.01 \
+board-support/u-boot-2010.06-psp04.04.00.01 \
+docs \
+etc \
+example-applications/am-benchmarks-1.1 \
+example-applications/am-sysinfo-1.0 \
+example-applications/linux-driver-examples-psp04.04.00.01 \
+example-applications/matrix-gui-e-1.3 \
+filesystem \
+linux-devkit/bin \
+linux-devkit/environment-setup \
+linux-devkit/etc \
+linux-devkit/include \
+linux-devkit/lib \
+linux-devkit/md5sums \
+linux-devkit/mkspecs \
+linux-devkit/share \
+linux-devkit/site-config \
+linux-devkit/ti-install.log \
+linux-devkit/usr \
+linux-devkit/version \
+setup.sh \
+usr
+
+TARVERBOSE=$(if $(VERBOSE:1=),,v)
+
+# EZSDK tarball name
+EZSDK_TARBALL_NAME?=$(PKG_TARBALL)
+EZSDK_TARBALL_SHA1_NAME?=$(PKG_TARBALL).sha1
+
+# Obtains info from the EZSDK tarball:
+#
+#   EZSDK_TARBALL_EXISTS
+#     - Set to 'yes' if the tarball exists. Otherwise
+#       'no'.
+#   EZSDK_TARBALL_SHA1_EXISTS
+#     - Set to 'yes' if the tarball sha1sum exists. Otherwise
+#       'no'.
+#   EZSDK_TARBALL_DIR
+#     - Set to the directory listed in DOWNLOADS,
+#       where the DVSDK tarball was found. Otherwise
+#       empty.
+#
+define ezsdk_tarball_info
+  EZSDK_TARBALL_EXISTS=no ; \
+  EZSDK_TARBALL_SHA1_EXISTS=no ; \
+  EZSDK_TARBALL_DIR= ; \
+  for path in $(DOWNLOADS); do \
+    if [ -e $$path/$(EZSDK_TARBALL_NAME) ] ; then \
+      EZSDK_TARBALL_EXISTS=yes ; \
+      EZSDK_TARBALL_DIR=$$path ; \
+      if [ -e $$path/$(EZSDK_TARBALL_SHA1_NAME) ] ; then \
+        EZSDK_TARBALL_SHA1_EXISTS=yes ; \
+      fi ; \
+      break ; \
+    fi ; \
+  done
+endef
+
+# Sets EZSDK_TARBALL_TARGET_DIR to a directory listed in DOWNLOADS, where the
+# ezsdk tarball will be placed. If no appropriate directory was found,
+# EZSDK_TARBALL_TARGET_DIR will be empty
+#
+define ezsdk_tarball_target_dir
+  EZSDK_TARBALL_TARGET_DIR= ; \
+  for path in $(DOWNLOADS); do \
+    if [ -e $$path -a -w $$path ] ; then \
+      EZSDK_TARBALL_TARGET_DIR=$$path ; \
+      break ; \
+    fi ; \
+  done
+endef
+
+# Creates a tarball with only a subset of the EZSDK directories, according
+# to the exclude patterns specified in EZSDK_TARBALL_EXCLUSION_PATTERNS.
+#
+# The output is a gzip compressed file, which name is defined by
+# $(EZSDK_TARBALL_NAME).
+#
+# Parameters:
+#   $(1): Absolute path to where the EZSDK is located
+#   $(2): Absolute path where to put the EZSDK tarball
+#
+define ezsdk_tarball_create
+  cd $(1) && \
+  tar $(EZSDK_TAR_VERBOSE) \
+      --no-same-permissions \
+      --atime-preserve \
+      --null \
+      --absolute-names \
+      --exclude-vcs \
+      --exclude=.svn \
+      --exclude=.git \
+      --exclude=\*~ \
+      $(foreach exclusion,$(EZSDK_TARBALL_EXCLUSIONS_PATTERNS),--exclude=$(EZSDK_NAME)/$(exclusion)) \
+      --create \
+      --gzip \
+      --file=$(2)/$(EZSDK_TARBALL_NAME) \
+      ../$(EZSDK_NAME)  \
+  || \
+      { \
+        $(ECHO) "$(ERROR_COLOR)Error:$(NORMAL_COLOR) while creating $(2)/$(EZSDK_TARBALL_NAME)" ; \
+        rm -f $(2)/$(EZSDK_TARBALL_NAME) ; \
+        exit -1 ; \
+      } 
+endef
+
+# Tars the ezsdk source code
+#
+define ezsdk_tar
+  EZSDK_FOUND_INSTALLATION_DIR=no ; \
+  for PATH2TEST in $(EZSDK_SEARCH_PATH); do \
+      if [ -e $$PATH2TEST/$(EZSDK_VERIFICATION_FILE) ] ; then  \
+         \
+         if [ ! -w $$PATH2TEST ] ; then \
+            $(ECHO) "$(ERROR_COLOR)Error:$(NORMAL_COLOR) Found a ezsdk on $$PATH2TEST, but can't write into it" ; \
+            $(ECHO) "Please grant write permissions to the ezsdk directory to continue.\n" ; \
+            exit -1 ; \
+         fi ; \
+         \
+         if [ -f $$PATH2TEST/rrsdk_path ] ; then \
+             $(ECHO) "$(ERROR_COLOR)Error:$(NORMAL_COLOR) Found a ezsdk on $$PATH2TEST, but is currently on use by another RidgeRun SDK at path:" ; \
+             $(ECHO) "  `cat $$PATH2TEST/rrsdk_path`\n" ; \
+             exit -1 ; \
+         fi ; \
+         \
+         $(ECHO) "Found EZSDK at $$PATH2TEST" ; \
+          EZSDK_FOUND_INSTALLATION_DIR=yes ; \
+         \
+         $(call ezsdk_tarball_target_dir) ; \
+         \
+         if [ -z $$EZSDK_TARBALL_TARGET_DIR ] ; then \
+             $(ECHO) "$(ERROR_COLOR)Error:$(NORMAL_COLOR) Unable to find a folder suitable to put the EZSDK tarball:" ; \
+             for PATH2DOWNLOADS in $(DOWNLOADS); do \
+               $(ECHO) "  * $$PATH2DOWNLOADS" ; \
+             done ; \
+             $(ECHO) "\nPlease create and grant write permissions to one of the previous paths.\n" ; \
+             exit -1 ; \
+         fi ; \
+         \
+         $(ECHO) "Creating EZSDK tarball at $$EZSDK_TARBALL_TARGET_DIR/$(EZSDK_TARBALL_NAME)" ; \
+         pushd . > /dev/null ; \
+         $(call ezsdk_tarball_create,$$PATH2TEST,$$EZSDK_TARBALL_TARGET_DIR) ; \
+         popd  > /dev/null ; \
+         \
+         $(ECHO) "Generating EZSDK tarball sha1sum $$EZSDK_TARBALL_TARGET_DIR/$(EZSDK_TARBALL_SHA1_NAME)" ; \
+         sha1sum $$EZSDK_TARBALL_TARGET_DIR/$(EZSDK_TARBALL_NAME) > $$EZSDK_TARBALL_TARGET_DIR/$(EZSDK_TARBALL_SHA1_NAME) ; \
+         break ; \
+      fi ;  \
+  done ; \
+  \
+  if [ "$$EZSDK_FOUND_INSTALLATION_DIR" = "no" ] ; then \
+    $(ECHO) "$(ERROR_COLOR)Error:$(NORMAL_COLOR) EZSDK $(EZSDK_NAME) wasn't found on the following search paths:" ; \
+    for PATH2TEST in $(EZSDK_SEARCH_PATH); do \
+      $(ECHO) "* $$PATH2TEST" ; \
+    done ; \
+    $(ECHO) "\nThe EZSDK should be installed in one of the previous paths.\nYou can download the EZSDK from the following URL:" ; \
+    $(ECHO) " $(GREEN)$(EZSDKURL)$(NORMAL_COLOR)\n" ; \
+    exit -1 ; \
+  fi 
+endef
+
+# Logic to obtain the ezsdk source code
+#
+ezsdk: ezsdk_fetch
+
+ezsdk_fetch:
+	$(V) $(call ezsdk_tarball_info) ; \
+	if [ "$$EZSDK_TARBALL_EXISTS" = "yes" ] ; then \
+	  if [ "$$EZSDK_TARBALL_SHA1_EXISTS" = "no" ] ; then \
+	    $(ECHO) "$(ERROR_COLOR)Error:$(NORMAL_COLOR) missing required sha1sum file: $$EZSDK_TARBALL_DIR/$(EZSDK_TARBALL_SHA1_NAME)" ; \
+	    exit -1 ; \
+	  fi ; \
+	elif [ -z "$(PKG_URL)" ] && [ -z "$(PKG_INTERNAL_URL)"] ; then \
+	    $(call ezsdk_tar) ; \
+	fi ; \
+	\
+	$(MAKE) rrfetched
+
+rrconfig: custom_rules_make rrpatched
+
+custom_rules_make:
+	$(V) if ! [ -L $(RULES_MAKE) ] ; then \
+	    chmod -R +w ezsdk ; \
+	    mv $(RULES_MAKE) $(RULES_MAKE).orig ; \
+	    ln -s $(shell pwd)/patches/arch/Rules.make.custom $(RULES_MAKE) ; \
+	fi
+
+ezsdk_clean: remove_custom_rules_make unpatch
+
+remove_custom_rules_make:
+	$(V) if [ -L $(RULES_MAKE) ] ; then \
+	    mv $(RULES_MAKE).orig $(RULES_MAKE) ; \
+	fi
+
+ezsdk_distclean: rrfetched_clean
+	@#We should not clean if we are going to erase the files anyway, unlike when we are sharing the dir
+	$(V) if [ -L $(FETCHER_EXTRACT_DIRECTORY_NAME) ] ; then \
+	    $(MAKE) ezsdk_clean ; \
+	fi
+
+ezsdk_cmdline:
+ifneq ($(CONFIG_PROPRIETARY_EZSDK_RESERVED_MEMORY),)
+	$(V) # We need to reserve $(CONFIG_PROPRIETARY_EZSDK_CMEM_RESERVED_MEMORY) for cmemk.ko
+	$(V) declare -i MSIZE="($(CONFIG_BSP_ARCH_SDRAM_SIZE)-$(CONFIG_PROPRIETARY_EZSDK_MEM_VALUE))/0x100000" ; \
+	if ! grep -q "mem=" $(CMDLINEFILE) ; then \
+	    echo -n " mem=$${MSIZE}M " >>$(CMDLINEFILE) ; \
+	else \
+	    sed -i -e "s/mem=.*M/mem=$${MSIZE}M/" $(CMDLINEFILE) ; \
+	fi
+endif
+ifneq ($(EZSDK_EXTRA_CMDLINE_ARGS),)
+	$(V) if ! grep -q $(EZSDK_EXTRA_CMDLINE_ARGS) $(CMDLINEFILE) ; then \
+	        echo -n " $(EZSDK_EXTRA_CMDLINE_ARGS) " >> $(CMDLINEFILE) ; \
+	     fi
+endif
+
+ezsdk_create_tar:
+	$(V) $(call ezsdk_tar)
+
+#============================================================================================
+# cmem targets. Compile - install and uninstall the cmem module into the kernel
+#============================================================================================
+
+.PHONY: cmem_v5 cmem_v5_install
+cmem_v5: cmem_built
+cmem_v5_install: cmem_install
+cmem_v5_uninstall: cmem_uninstall
+cmem_v5_clean: cmem_clean
+
+.PHONY: cmem_install
+
+cmem_built:
+	$(MAKE) -C $(CMEM_INSTALL_DIR)/packages/ti/sdo/linuxutils/cmem/src/interface ../../lib/cmem.a470MV RULES_MAKE=../../../../../../../../../Rules.make $(QOUT) $(ERRQOUT)
+ifneq ($(CONFIG_PROPRIETARY_TI_CMEM_DEBUG),)
+	$(MAKE) -C $(CMEM_INSTALL_DIR)/packages/ti/sdo/linuxutils/cmem/src/interface ../../lib/cmemd.a470MV RULES_MAKE=../../../../../../../../../Rules.make $(QOUT) $(ERRQOUT)
+endif
+	$(MAKE) -C $(CMEM_INSTALL_DIR)/packages/ti/sdo/linuxutils/cmem/src/module RULES_MAKE=../../../../../../../../../Rules.make $(QOUT) $(ERRQOUT)
+	$(V) touch $@
+
+cmem_clean:
+	$(MAKE) -C $(CMEM_INSTALL_DIR)/packages/ti/sdo/linuxutils/cmem/src/module clean
+	$(MAKE) -C $(CMEM_INSTALL_DIR)/packages/ti/sdo/linuxutils/cmem/src/interface clean
+	$(V) rm -f cmem_built
+
+cmem_install:
+	$(V)install -d $(FSROOT)/lib/modules/$(KERNELVERSION)/kernel/drivers/dsp
+	$(V)install $(CMEM_INSTALL_DIR)/packages/ti/sdo/linuxutils/cmem/src/module/cmemk.ko $(FSROOT)/lib/modules/$(KERNELVERSION)/kernel/drivers/dsp
+
+cmem_uninstall:
+	$(V) rm -f $(FSROOT)/lib/modules/$(KERNELVERSION)/kernel/drivers/dsp/cmemk.ko
+
+#============================================================================================
+# Targets to build, install and clean imglib_v5
+#============================================================================================
+
+imglib_v5: imglib_built
+imglib_v5_install: imglib_install
+imglib_v5_uninstall: imglib_uninstall
+imglib_v5_clean: imglib_clean
+
+.PHONY: imglib_install
+
+imglib_built:
+	$(V) $(MAKE) -C $(FETCHER_EXTRACT_DIRECTORY_NAME) imglib $(QOUT) $(ERRQOUT)
+	$(V) touch $@
+
+imglib_clean:
+	$(V) $(MAKE) -C $(FETCHER_EXTRACT_DIRECTORY_NAME) imglib_clean $(QOUT) $(ERRQOUT)
+	$(V) rm -f imglib_built
+
+#============================================================================================
+# Targets to build, install and clean dsplib_v5
+#============================================================================================
+
+dsplib_v5: dsplib_built
+dsplib_v5_install: dsplib_install
+dsplib_v5_uninstall: dsplib_uninstall
+dsplib_v5_clean: dsplib_clean
+
+.PHONY: dsplib_install
+
+dsplib_built:
+	$(V) $(MAKE) -C $(FETCHER_EXTRACT_DIRECTORY_NAME) dsplib $(QOUT) $(ERRQOUT)
+	$(V) touch $@
+
+dsplib_clean:
+	$(V) $(MAKE) -C $(FETCHER_EXTRACT_DIRECTORY_NAME) dsplib_clean $(QOUT) $(ERRQOUT)
+	$(V) rm -f dsplib_built
+
+#============================================================================================
+# Targets to build, install and clean mathlib_v5
+#============================================================================================
+
+mathlib_v5: mathlib_built
+mathlib_v5_install: mathlib_install
+mathlib_v5_uninstall: mathlib_uninstall
+mathlib_v5_clean: mathlib_clean
+
+.PHONY: mathlib_install
+
+mathlib_built:
+	$(V) $(MAKE) -C $(FETCHER_EXTRACT_DIRECTORY_NAME) mathlib $(QOUT) $(ERRQOUT)
+	$(V) touch $@
+
+mathlib_clean:
+	$(V) $(MAKE) -C $(FETCHER_EXTRACT_DIRECTORY_NAME) mathlib_clean $(QOUT) $(ERRQOUT)
+	$(V) rm -f mathlib_built
+
+#============================================================================================
+# Targets to build, install and clean the SYSLINK for the configured platform
+#============================================================================================
+
+syslink_v5: syslink_built
+syslink_v5_install: syslink_install
+syslink_v5_uninstall: syslink_uninstall
+syslink_v5_clean: syslink_clean
+#Targets needed to compile slaveLoader
+syslink_v5_slaveloader: syslink_slaveloader_built
+syslink_v5_slaveloader_clean: syslink_slaveloader_clean
+syslink_v5_slaveloader_install: syslink_slaveloader_install
+syslink_v5_slaveloader_uninstall: syslink_slaveloader_uninstall
+
+.PHONY: syslink_install
+
+include $(CLASSES)/fetcher.defs
+
+# Linux module
+syslink_linux_v5: syslink_linux_built
+syslink_linux_v5_clean: syslink_clean
+syslink_linux_v5_install: syslink_install
+syslink_linux_v5_uninstall: syslink_uninstall
+
+ifneq ($(SYSLINK_URL),)
+syslink_linux_built: syslink_downloaded
+else
+syslink_linux_built:
+endif
+	$(V) $(MAKE) -C $(FETCHER_EXTRACT_DIRECTORY_NAME) syslink_hlos  $(QOUT) $(ERRQOUT)
+	$(V) $(MAKE) -C $(FETCHER_EXTRACT_DIRECTORY_NAME) syslink_driver $(QOUT) $(ERRQOUT)
+	$(V) touch $@
+
+# DSP module
+syslink_dsp_v5: syslink_dsp_built
+syslink_dsp_v5_clean: syslink_clean
+syslink_dsp_v5_install: syslink_install
+syslink_dsp_v5_uninstall: syslink_uninstall
+
+ifneq ($(SYSLINK_URL),)
+syslink_dsp_built: syslink_downloaded
+else
+syslink_dsp_built:
+endif
+	$(V) $(MAKE) -C $(FETCHER_EXTRACT_DIRECTORY_NAME) syslink_rtos $(QOUT) $(ERRQOUT)
+	$(V) touch $@
+
+# Common targets
+syslink_downloaded: rrpatched
+	$(V)$(ECHO) Fetching specific version of syslink to use instead of the included on the EZSDK
+	$(V)PKG_URL=$(SYSLINK_URL) \
+	    PKG_TARBALL=$(SYSLINK_TARBALL) \
+	    PKG_SHA1SUM=$(SYSLINK_SHA1SUM) \
+	    FETCHER_EXTRACT_DIRECTORY_NAME=$(subst /packages,,$(SYSLINK_INSTALL_DIR)) \
+	    $(DEVDIR)/bsp/scripts/fetcher.sh $(DEBUG)
+	$(V) rm fetched
+	$(V)touch $@
+
+ifneq ($(SYSLINK_URL),)
+syslink_built: syslink_downloaded
+else
+syslink_built:
+endif
+	$(V) $(MAKE) -C $(FETCHER_EXTRACT_DIRECTORY_NAME) syslink_hlos  $(QOUT) $(ERRQOUT)
+	$(V) $(MAKE) -C $(FETCHER_EXTRACT_DIRECTORY_NAME) syslink_driver $(QOUT) $(ERRQOUT)
+	$(V) $(MAKE) -C $(FETCHER_EXTRACT_DIRECTORY_NAME) syslink_rtos $(QOUT) $(ERRQOUT)
+	$(V) touch $@
+
+syslink_clean:
+	$(V) $(MAKE) -C $(FETCHER_EXTRACT_DIRECTORY_NAME) $@ $(QOUT) $(ERRQOUT)
+	$(V) rm -f syslink_built syslink_linux_built syslink_dsp_built
+
+syslink_install:
+	$(V) install -d $(FSROOT)/lib/modules/$(KERNELVERSION)/kernel/drivers/dsp
+	$(V) install ${SYSLINK_INSTALL_DIR}/packages/ti/syslink/bin/$(EZSDK_SYSLINK_VARIANT)/syslink.ko $(FSROOT)/lib/modules/$(KERNELVERSION)/kernel/drivers/dsp/
+#	$(V) sed -e "s?^prefix=.*?prefix=$(SYSLINK_INSTALL_DIR)?" $(FETCHER_EXTRACT_DIRECTORY_NAME)/linux-devkit/arm-none-linux-gnueabi/usr/lib/pkgconfig/syslink.pc > \
+#	    $(FSDEVROOT)/usr/lib/pkgconfig/syslink.pc
+#	$(V) sed -e "s?^prefix=.*?prefix=$(IPC_INSTALL_DIR)/packages?" $(FETCHER_EXTRACT_DIRECTORY_NAME)/linux-devkit/arm-none-linux-gnueabi/usr/lib/pkgconfig/ipc.pc > \
+#	    $(FSDEVROOT)/usr/lib/pkgconfig/ipc.pc
+
+syslink_uninstall:
+	$(V)rm -rf $(FSROOT)/lib/modules/$(KERNELVERSION)/kernel/drivers/dsp/syslink.ko
+
+syslink_slaveloader_built: 
+	$(V) $(MAKE) syslink_slaveloader_clean 
+	$(V) ${MAKE} -C ${SYSLINK_INSTALL_DIR}/packages/ \
+	DEVICE="$(EZSDK_SYSLINK_VARIANT)" \
+	SYSLINK_ROOT=${SYSLINK_INSTALL_DIR} \
+	SYSLINK_INSTALL_DIR=${SYSLINK_INSTALL_DIR} \
+	GPPOS=Linux \
+	LOADER=ELF \
+	SDK=EZSDK \
+	IPC_INSTALL_DIR="${IPC_INSTALL_DIR}" \
+	BIOS_INSTALL_DIR="${SYSBIOS_INSTALL_DIR}" \
+	XDC_INSTALL_DIR="${XDC_INSTALL_DIR}" \
+	LINUXKERNEL="${KERNEL_INSTALL_DIR}" \
+	CGT_ARM_INSTALL_DIR="${CSTOOL_DIR}" \
+	CGT_ARM_PREFIX="${CSTOOL_PREFIX}" \
+	CGT_C674_ELF_INSTALL_DIR="${CODEGEN_INSTALL_DIR}" \
+	USE_SYSLINK_NOTIFY=0 \
+	SlaveLoader
+		$(V)touch $@
+
+syslink_slaveloader_clean:
+	$(V)${MAKE} -C ${SYSLINK_INSTALL_DIR}/packages/ti/syslink/samples/hlos/common/usr/Linux/ \
+		SYSLINK_ROOT=${SYSLINK_INSTALL_DIR} \
+		SYSLINK_PKGPATH="${IPC_INSTALL_DIR}/packages;${SYSLINK_INSTALL_DIR}" \
+		ARCH=arm \
+		CROSS_COMPILE=${CSTOOL_PREFIX} \
+		TOOLCHAIN_PREFIX=${CSTOOL_PREFIX} \
+		SYSLINK_PLATFORM=$(EZSDK_SYSLINK_PLATFORM) \
+		SYSLINK_VARIANT=$(EZSDK_SYSLINK_VARIANT) \
+		KDIR=$(LINUXKERNEL_INSTALL_DIR) clean 
+	$(V)${MAKE} -C ${SYSLINK_INSTALL_DIR}/packages/ti/syslink/samples/hlos/slaveLoader/usr/Linux/ \
+		SYSLINK_ROOT=${SYSLINK_INSTALL_DIR} \
+		SYSLINK_PKGPATH="${IPC_INSTALL_DIR}/packages;${SYSLINK_INSTALL_DIR}" \
+		ARCH=arm \
+		CROSS_COMPILE=${CSTOOL_PREFIX} \
+		TOOLCHAIN_PREFIX=${CSTOOL_PREFIX} \
+		SYSLINK_PLATFORM=$(EZSDK_SYSLINK_PLATFORM) \
+		SYSLINK_VARIANT=$(EZSDK_SYSLINK_VARIANT) \
+		KDIR=$(LINUXKERNEL_INSTALL_DIR) clean 
+	rm -rf ${SYSLINK_INSTALL_DIR}/packages/ti/syslink/bin/$(EZSDK_SYSLINK_VARIANT)/samples
+	rm -rf syslink_slaveloader_built
+
+syslink_slaveloader_install:
+	$(V) install -Dm 755 ${SYSLINK_INSTALL_DIR}/packages/ti/syslink/bin/$(EZSDK_SYSLINK_VARIANT)/samples/slaveloader_release $(FSROOT)/usr/bin/slaveloader
+
+syslink_slaveloader_uninstall:
+	$(V) rm -rf $(FSROOT)/usr/bin/slaveloader*
+
+#============================================================================================
+# Targets to build, install and clean media-controller-utils
+#============================================================================================
+
+media_controller_utils_v5: media_controller_utils_built
+media_controller_utils_v5_install: media_controller_utils_install
+media_controller_utils_v5_uninstall: media_controller_utils_uninstall
+media_controller_utils_v5_clean: media_controller_utils_clean
+
+.PHONY: media_controller_utils_install
+
+media_controller_utils_built:
+	$(V) $(MAKE) -C $(FETCHER_EXTRACT_DIRECTORY_NAME) media-controller-utils $(QOUT) $(ERRQOUT)
+	$(V) touch $@
+
+media_controller_utils_clean:
+	$(V) $(MAKE) -C $(FETCHER_EXTRACT_DIRECTORY_NAME)  media-controller-utils_clean
+	$(V) rm -f media_controller_utils_built
+
+media_controller_utils_install:
+	$(V) install -Dm 755 $(FETCHER_EXTRACT_DIRECTORY_NAME)/board-support/media-controller-utils*/lib/firmware_loader/bin/$(EZSDK_MEDIA_CONTROL_PLATFORM)/firmware_loader_a8host_debug.xv5T $(FSROOT)/usr/bin/firmware_loader $(QOUT) $(ERRQOUT)
+	$(V) install -Dm 755 $(FETCHER_EXTRACT_DIRECTORY_NAME)/board-support/media-controller-utils*/lib/prcm_config_app/bin/$(EZSDK_MEDIA_CONTROL_PLATFORM)/prcm_config_app_a8host_debug.xv5T $(FSROOT)/usr/bin/prcm_config_app $(QOUT) $(ERRQOUT)
+	$(V) install -Dm 755 $(FETCHER_EXTRACT_DIRECTORY_NAME)/board-support/media-controller-utils*/lib/sys_top/bin/$(EZSDK_MEDIA_CONTROL_PLATFORM)/sys_top_a8host_debug.xv5T $(FSROOT)/usr/bin/sys_top $(QOUT) $(ERRQOUT)
+	$(V) install -Dm 755 $(FETCHER_EXTRACT_DIRECTORY_NAME)/board-support/media-controller-utils*/src/mm_host_util/mm_dm81xxbm_512M.bin $(FSROOT)/lib/firmware/mm_dm81xxbm_512M.bin $(QOUT) 
+	$(V) install -Dm 755 $(FETCHER_EXTRACT_DIRECTORY_NAME)/board-support/media-controller-utils*/src/mm_host_util/mm_dm81xxbm.bin $(FSROOT)/lib/firmware/mm_dm81xxbm.bin $(QOUT)
+
+media_controller_utils_uninstall:
+	$(V) rm -rf $(FSROOT)/usr/bin/{firmware_loader,prcm_config_app,sys_top}
+	$(V) rm -rf $(FSROOT)/lib/firmware/{memsegdef_dm81xxbm,memsegdef_dm81xxbm_512M}
+
+#============================================================================================
+# Targets to build, install and clean the c6accel for the configured platform
+#============================================================================================
+
+c6accel_v5: c6accel_built
+c6accel_v5_install: c6accel_install
+c6accel_v5_uninstall: c6accel_uninstall
+c6accel_v5_clean: c6accel_clean
+
+.PHONY: c6accel_install
+
+c6accel_built:
+	$(V) $(MAKE) -C $(FETCHER_EXTRACT_DIRECTORY_NAME) c6accel $(QOUT) $(ERRQOUT)
+	$(V) touch $@
+
+c6accel_clean:
+	$(V) $(MAKE) -C $(FETCHER_EXTRACT_DIRECTORY_NAME) $@ $(QOUT) $(ERRQOUT)
+	$(V) rm -f c6accel_built
+
+c6accel_install:
+	$(V) $(MAKE) -C $(C6ACCEL_INSTALL_DIR) \
+	PLATFORM="$(EZSDK_SYSLINK_VARIANT)" \
+	CMEM_INSTALL_DIR="$(CMEM_INSTALL_DIR)" \
+	LINK_INSTALL_DIR="$(SYSLINK_INSTALL_DIR)" \
+	C6ACCEL_INSTALL_DIR="$(C6ACCEL_INSTALL_DIR)" \
+	EXEC_DIR_C6ACCEL="$(FSROOT)/usr/share/ti/c6accel-apps" \
+	install $(QOUT)
+
+c6accel_uninstall:
+	$(V)rm -rf $(FSROOT)/usr/share/ti/c6accel-apps
+
+#============================================================================================
+# Targets to build, install and clean the c6run for the configured platform
+#============================================================================================
+
+c6run_v5: c6run_built
+c6run_v5_install: c6run_install
+c6run_v5_uninstall: c6run_uninstall
+c6run_v5_clean: c6run_clean
+
+.PHONY: c6run_install
+
+c6run_built:
+	$(V) $(MAKE) -C $(FETCHER_EXTRACT_DIRECTORY_NAME) c6run $(QOUT) $(ERRQOUT)
+	$(V) touch $@
+
+c6run_clean:
+	$(V) $(MAKE) -C $(FETCHER_EXTRACT_DIRECTORY_NAME) $@ $(QOUT) $(ERRQOUT)
+	$(V) rm -f c6run_built
+
+c6run_install:
+	$(V) $(MAKE) -C $(FETCHER_EXTRACT_DIRECTORY_NAME) $@ $(QOUT) $(ERRQOUT)
+
+c6run_uninstall:
+	$(V)rm -rf $(FSROOT)/usr/share/ti/c6run-apps
+
+#============================================================================================
+# Targets to build, install and clean osal_v5
+#============================================================================================
+
+osal_v5: osal_built
+osal_v5_install: osal_install
+osal_v5_uninstall: osal_uninstall
+osal_v5_clean: osal_clean
+
+.PHONY: osal_install
+
+osal_built:
+	$(V) $(MAKE) -C $(FETCHER_EXTRACT_DIRECTORY_NAME) osal $(QOUT) $(ERRQOUT)
+	$(V) touch $@
+
+osal_clean:
+	$(V) $(MAKE) -C $(FETCHER_EXTRACT_DIRECTORY_NAME) $@ $(QOUT) $(ERRQOUT)
+	$(V) rm -f osal_built
+
+#============================================================================================
+# Targets to build, install and clean omx
+#============================================================================================
+
+omx_v5: omx_built
+omx_v5_install: omx_install
+omx_v5_uninstall: omx_uninstall
+omx_v5_clean: omx_clean
+
+.PHONY: omx_install
+
+omx_built:
+	$(V) $(MAKE) -C $(FETCHER_EXTRACT_DIRECTORY_NAME) omx $(QOUT) $(ERRQOUT)
+	$(V) touch $@
+
+omx_clean:
+	$(V) $(MAKE) -C $(FETCHER_EXTRACT_DIRECTORY_NAME) $@ $(QOUT) $(ERRQOUT)
+	$(V) rm -f omx_built
+
+omx_install:
+	$(V) $(MAKE) -C $(FETCHER_EXTRACT_DIRECTORY_NAME) $@ $(QOUT) $(ERRQOUT)
+
+omx_uninstall:
+	$(V) rm -rf $(FSROOT)/usr/share/ti/ti-omx
+
+#============================================================================================
+# Targets to build, install and clean omtb
+#============================================================================================
+
+omtb_v5: omtb_built
+omtb_v5_install: omtb_install
+omtb_v5_uninstall: omtb_uninstall
+omtb_v5_clean: omtb_clean
+
+.PHONY: omtb_install
+
+omtb_built:
+	$(V) $(MAKE) -C $(FETCHER_EXTRACT_DIRECTORY_NAME) omtb $(QOUT) $(ERRQOUT)
+	$(V) touch $@
+
+omtb_clean:
+	$(V) $(MAKE) -C $(FETCHER_EXTRACT_DIRECTORY_NAME) omtb_clean $(QOUT) $(ERRQOUT)
+	$(V) rm -f omtb_built
+
+omtb_install:
+	$(V) $(MAKE) -C $(FETCHER_EXTRACT_DIRECTORY_NAME) $@ $(QOUT) $(ERRQOUT)
+
+omtb_uninstall:
+	$(V) rm -rf $(FSROOT)/usr/share/ti/ti-omtb
+
+#============================================================================================
+# Targets to build, install and clean sgx-driver
+#============================================================================================
+
+sgx-driver_v5: sgx-driver_built
+sgx-driver_v5_install: sgx-driver_install
+sgx-driver_v5_uninstall: sgx-driver_uninstall
+sgx-driver_v5_clean: sgx-driver_clean
+
+.PHONY: sgx-driver_install
+
+sgx-driver_built:
+	$(V) $(MAKE) -C $(FETCHER_EXTRACT_DIRECTORY_NAME) sgx-driver $(QOUT) $(ERRQOUT)
+	$(V) touch $@
+
+sgx-driver_clean:
+	$(V) $(MAKE) -C $(FETCHER_EXTRACT_DIRECTORY_NAME) sgx-driver_clean $(QOUT) $(ERRQOUT)
+	$(V) rm -f sgx-driver_built
+
+sgx-driver_install:
+	$(V) $(MAKE) -C $(FETCHER_EXTRACT_DIRECTORY_NAME) $@ $(QOUT) $(ERRQOUT)
+
+sgx-driver_uninstall:
+	$(V) rm -rf $(FSROOT)/lib/modules/$(KERNELVERSION)/kernel/drivers/gpu/pvr
+
+#============================================================================================
+# Targets to build, install and clean edma3lld
+#============================================================================================
+
+edma3lld_v5: edma3lld_built
+edma3lld_v5_install: edma3lld_install
+edma3lld_v5_uninstall: edma3lld_uninstall
+edma3lld_v5_clean: edma3lld_clean
+
+.PHONY: edma3lld_install
+
+edma3lld_built:
+	$(V) $(MAKE) -C $(FETCHER_EXTRACT_DIRECTORY_NAME) edma3lld $(QOUT) $(ERRQOUT)
+	$(V) touch $@
+
+edma3lld_clean:
+	$(V) $(MAKE) -C $(FETCHER_EXTRACT_DIRECTORY_NAME) edma3lld_clean $(QOUT) $(ERRQOUT)
+	$(V) rm -f edma3lld_built
+
+#============================================================================================
+# Targets to build, install and clean rpe
+#============================================================================================
+
+rpe_v5: rpe_built
+rpe_v5_install: rpe_install
+rpe_v5_uninstall: rpe_uninstall
+rpe_v5_clean: rpe_clean
+
+.PHONY: rpe_install
+
+# Linux module
+rpe_linux_v5: rpe_linux_built
+rpe_linux_v5_clean: rpe_clean
+rpe_linux_v5_install: rpe_install
+rpe_linux_v5_uninstall: rpe_uninstall
+
+rpe_linux_built:
+	$(V) $(MAKE) -C $(FETCHER_EXTRACT_DIRECTORY_NAME) rpe_linux $(QOUT) $(ERRQOUT)
+	$(V) touch $@
+
+# DSP module
+rpe_dsp_v5: rpe_dsp_built
+rpe_dsp_v5_clean: rpe_clean
+rpe_dsp_v5_install: rpe_install
+rpe_dsp_v5_uninstall: rpe_uninstall
+
+rpe_dsp_built:
+	$(V) $(MAKE) -C $(FETCHER_EXTRACT_DIRECTORY_NAME) rpe_dsp $(QOUT) $(ERRQOUT)
+	$(V) touch $@
+
+# App module
+rpe_app_v5: rpe_app_built
+rpe_app_v5_clean: rpe_clean
+rpe_app_v5_install: rpe_install
+rpe_app_v5_uninstall: rpe_uninstall
+
+rpe_app_built:
+	$(V) $(MAKE) -C $(FETCHER_EXTRACT_DIRECTORY_NAME) rpe $(QOUT) $(ERRQOUT)
+	$(V) touch $@
+
+rpe_built:
+	$(V) $(MAKE) -C $(FETCHER_EXTRACT_DIRECTORY_NAME) rpe_linux $(QOUT) $(ERRQOUT)
+	$(V) $(MAKE) -C $(FETCHER_EXTRACT_DIRECTORY_NAME) rpe_dsp $(QOUT) $(ERRQOUT)
+	$(V) $(MAKE) -C $(FETCHER_EXTRACT_DIRECTORY_NAME) rpe $(QOUT) $(ERRQOUT)
+	$(V) touch $@
+
+rpe_clean:
+	$(V) $(MAKE) -C $(FETCHER_EXTRACT_DIRECTORY_NAME) rpe_clean $(QOUT) $(ERRQOUT)
+	$(V) rm -f rpe_built rpe_linux_built rpe_dsp_built rpe_app_built
+
+rpe_install:
+	$(V) $(MAKE) -C $(FETCHER_EXTRACT_DIRECTORY_NAME) $@ $(QOUT) $(ERRQOUT)
+
+rpe_uninstall:
+	$(V) rm -rf $(FSROOT)/usr/share/ti/ti-omtb
+
+#============================================================================================
+# Targets to build, install and clean psp driver examples
+#============================================================================================
+
+psp_examples_v5: psp_examples_built
+psp_examples_v5_install: psp_examples_install
+psp_examples_v5_uninstall: psp_examples_uninstall
+psp_examples_v5_clean: psp_examples_clean
+
+.PHONY: psp_examples_install
+
+psp_examples_built:
+	$(V) $(MAKE) -C $(FETCHER_EXTRACT_DIRECTORY_NAME) psp-examples $(QOUT) $(ERRQOUT)
+	$(V) touch $@
+
+psp_examples_clean:
+	$(V) $(MAKE) -C $(FETCHER_EXTRACT_DIRECTORY_NAME) psp-examples_clean $(QOUT) $(ERRQOUT)
+	$(V) rm -f psp_examples_built
+
+psp_examples_install:
+	$(V) $(MAKE) -C $(FETCHER_EXTRACT_DIRECTORY_NAME) psp-examples_install $(QOUT) $(ERRQOUT)

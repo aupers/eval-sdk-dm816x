@@ -1,0 +1,11 @@
+config FS_APPS_CUPS
+	bool "CUPS-1.5.0"
+	default n
+	select FS_APPS_LIBTIFF
+	select FS_APPS_JPEG
+	select FS_APPS_LIBPNG
+	select FS_APPS_LIBUSB
+	select FS_APPS_LIBUSB_COMPAT
+	help
+	  The Common Unix Printing System (CUPS) is a print spooler and associated utilities.
+

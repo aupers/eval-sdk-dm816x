@@ -1,0 +1,17 @@
+#
+# Ridgerun initrd target configuration
+#
+
+config FS_TARGET_JFFS2FS
+	bool "JFFS2 disk image"
+	depends on INSTALLER_MODE_ATTACHED_BOARD || INSTALLER_MODE_SD_CARD_INSTALLER
+	depends on BSP_ARCH_SUPPORTS_JFFS2FS
+	select FS_TARGET_REQUIRES_INSTALLER_GENERATION
+	select MTD
+	select MTD_CHAR
+	select MTD_BLOCK
+	select JFFS2_FS
+	select JFFS2_SUMMARY
+	help
+	    Use a jffs2 file system
+

@@ -1,0 +1,5 @@
+config FS_APPS_WPASUPPLICANT
+ 	bool "wpa_supplicant-0.7.3"
+	select FS_APPS_OPENSSL
+	help
+	    Linux Wireless supplicant

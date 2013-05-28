@@ -1,0 +1,6 @@
+config FS_APPS_GSTREAMER_TRACELIB
+	bool "gst-tracelib"
+        select FS_APPS_GSTREAMER
+	help
+	This is a library for tracing gstreamer behavior
+	

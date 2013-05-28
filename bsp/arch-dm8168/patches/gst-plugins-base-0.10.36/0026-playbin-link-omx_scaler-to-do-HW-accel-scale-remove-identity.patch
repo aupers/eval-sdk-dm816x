@@ -1,0 +1,28 @@
+Index: gst-plugins-base-0.10.36/src/gst/playback/gstplaybin.c
+===================================================================
+--- gst-plugins-base-0.10.36.orig/src/gst/playback/gstplaybin.c	2013-02-21 15:33:22.020964212 -0600
++++ gst-plugins-base-0.10.36/src/gst/playback/gstplaybin.c	2013-02-21 15:35:28.804964197 -0600
+@@ -869,19 +869,19 @@
+     goto no_videoscale;
+   gst_bin_add (GST_BIN_CAST (element), scale);*/
+ 
+-  identity = gst_element_factory_make ("identity", "id");
++  /*identity = gst_element_factory_make ("identity", "id");
+   g_object_set (identity, "silent", TRUE, NULL);
+   g_signal_connect (identity, "handoff", G_CALLBACK (handoff), play_bin);
+-  gst_bin_add (GST_BIN_CAST (element), identity);
++  gst_bin_add (GST_BIN_CAST (element), identity);*/
+ 
+-  gst_element_link_pads (identity, "src", conv, "sink");
++  //gst_element_link_pads (identity, "src", conv, "sink");
+  // gst_element_link_pads (conv, "src", scale, "sink");
+   /* be more careful with the pad from the custom sink element, it might not
+    * be named 'sink' */
+   if (!gst_element_link_pads (conv, "src", sink, NULL))
+     goto link_failed;
+ 
+-  pad = gst_element_get_static_pad (identity, "sink");
++  pad = gst_element_get_static_pad (conv, "sink");
+   gst_element_add_pad (element, gst_ghost_pad_new ("sink", pad));
+   gst_object_unref (pad);
+ 

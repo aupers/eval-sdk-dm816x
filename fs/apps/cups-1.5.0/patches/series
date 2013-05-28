@@ -1,0 +1,4 @@
+remove-genstrings-generation.patch
+minimal-components.patch
+fix-installation.patch
+fix-64bit-machine-cross-compile-error.patch

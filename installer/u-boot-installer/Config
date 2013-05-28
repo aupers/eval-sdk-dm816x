@@ -1,0 +1,139 @@
+#
+# Installer Configuration files
+# all definitions on this subtree must prefix with INSTALLER_
+#
+
+choice
+    prompt "Firmware deployment mode"
+
+config INSTALLER_MODE_ATTACHED_BOARD
+	bool "Attached board on communication port"
+	help
+	    On this deployment mode the board is expected to be
+	    attached to the machine running the installer via
+	    serial or termnet communication
+
+config INSTALLER_MODE_SD_CARD
+	bool "Deploy all the firmware to an SD card"
+	depends on BSP_ARCH_SUPPORTS_SD_CARD_INSTALLER_MODE
+	help
+	    On this deployment mode the firmware will be
+	    deployed to an SD card
+
+config INSTALLER_MODE_SD_CARD_INSTALLER
+	bool "Create an SD card installer for flash memory"
+	depends on BSP_ARCH_SUPPORTS_SD_CARD_INSTALLER_MODE
+	help
+	    On this deployment mode the SD card will have an
+	    installer capable of programming flash memory
+
+
+endchoice
+
+config INSTALLER_LOAD_ADDRS
+    hex "RAM address to load components"
+    default 0x82000000
+    help
+	This is the address in RAM where components will be loaded.
+        Watch out to not overlap with U-boot RAM Address
+
+config INSTALLER_HOST_NET_INTERFACE
+    string "Interface on your host machine connected to your target hardware"
+    default "eth0"
+    depends on INSTALLER_MODE_ATTACHED_BOARD || (INSTALLER_MODE_SD_CARD && FS_TARGET_NFSROOT)
+    help
+     If you are going to deploy over tftp or use NFS root mount, you need to
+     specify which network interface in your host machine faces the target
+     hardware in order for the SDK to identify the network address to use
+
+source installer/u-boot-installer/methods/attached_board/Config
+
+config INSTALLER_SD_DEVICE_LOOPBACK
+	bool "Flash SD card image into loopback file instead of real SD"
+	default y
+	depends on INSTALLER_MODE_SD_CARD || INSTALLER_MODE_SD_CARD_INSTALLER
+	help
+	  With this option enabled the SDK will generate a file on
+	  images/sdcard.img
+
+config INSTALLER_SD_DEVICE_LOOPBACK_SIZE
+	string "Size of loopback device for SD card (in MB)"
+	default 128
+	depends on INSTALLER_SD_DEVICE_LOOPBACK
+	help
+	  This is the size of the SD card to be simulated as loopback device
+
+config INSTALLER_SD_DEVICE
+	string "SD device on Linux host"
+	default "/dev/sdX"
+	depends on (INSTALLER_MODE_SD_CARD || INSTALLER_MODE_SD_CARD_INSTALLER || FS_TARGET_SD) && !INSTALLER_SD_DEVICE_LOOPBACK
+	help
+	  This is the name of the device where the SD card is on your Linux hosts
+
+choice
+    prompt "Root Filesystem type for SD card"
+    depends on FS_TARGET_SD
+
+config INSTALLER_SD_ROOTFS_TYPE_EXT3
+	bool "Extended 3 File system (ext3)"
+	select EXT3_FS
+	help
+	    Create a extended 3 (ext3) file system for SD
+endchoice
+
+config INSTALLER_SD_ROOTFS_SIZE
+	string "Minimal size of rootfs (MB)"
+	default "-"
+	depends on FS_TARGET_SD
+	help
+	  Defines the minimal root fs size (the real size depends on disk geometry)
+	  Use "-" for using all the available disk size.
+
+source installer/u-boot-installer/methods/sd_card/Config
+
+comment "NOR Flash memory map (Partitions sizes are given in blocks number)"
+	depends on UBOOT_NOR_FLASH_MEMORY
+comment "NAND Flash memory map (Partitions sizes are given in blocks number)"
+	depends on UBOOT_NAND_FLASH_MEMORY
+comment "OneNAND Flash memory map (Partitions sizes are given in blocks number)"
+	depends on UBOOT_ONENAND_FLASH_MEMORY
+
+if UBOOT_SPI_FLASH_MEMORY || UBOOT_ONENAND_FLASH_MEMORY || UBOOT_NOR_FLASH_MEMORY || UBOOT_NAND_FLASH_MEMORY
+config INSTALLER_UBOOT_SIZE_IN_BLKS
+	string "Uboot partition size"
+
+config INSTALLER_KERNEL_SIZE_IN_BLKS
+	string "Minimum kernel partition size"
+	
+config INSTALLER_FS_SIZE_IN_BLKS
+	string "Mininum file system partition size"
+
+comment "MTD Integration options"
+
+config INSTALLER_MTD_UBOOT_INTEGRATION
+	bool "Configure Kernel MTD partitions with U-boot information"
+	default y
+	select MTD
+	select MTD_CHAR
+	select MTD_BLOCK
+	select MTD_PARTITIONS
+	select MTD_CMDLINE_PARTS
+	help 
+	    Allows U-boot to pass information to the Kernel about MTD partitions
+
+config INSTALLER_MTD_DEVICE_NAME
+	string "MTD device name"
+	depends on INSTALLER_MTD_UBOOT_INTEGRATION
+	help
+	    Unique name used in mapping driver/device (mtd->name)
+
+config INSTALLER_MTD_EXTRA_PARTITIONS
+	string "MTD extra partitions"
+	default ""
+	help
+	  To add extra partitions just write them using the following format: 
+	  size1(name1),size2(name2),... 
+	  Where 'size' is the size of the partition and 'name' is the partitions name.
+	  For example: 1024k(extra1),3m(extra2) 
+
+endif

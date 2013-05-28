@@ -1,0 +1,2 @@
+disable-extra-tools-which-dont-compile-on-cc-2009.patch
+fix-udev-build.patch

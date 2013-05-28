@@ -1,0 +1,12 @@
+config FS_APPS_GSTD
+	select FS_APPS_DBUS
+	select FS_APPS_DBUS_DAEMON
+	select FS_APPS_DBUSGLIB
+	select FS_APPS_READLINE
+	select FS_APPS_GST_PLUGIN_BASE
+	bool "gstd"
+	default n
+	help
+	Gstd is an application capable of receiving
+	through dbus messages Gstreamer pipelines for 
+	playing and recording video and audio streams

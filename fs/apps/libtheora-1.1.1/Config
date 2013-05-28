@@ -1,0 +1,14 @@
+config FS_APPS_LIBTHEORA
+	bool "libtheora-1.1.1"
+	select FS_APPS_LIBVORBIS
+	help
+	Theora is an open video codec being developed by the Xiph.org 
+	Foundation as part of their Ogg project (It is a project that 
+	aims to integrate On2's VP3 video codec, Ogg Vorbis audio codec
+	and Ogg multimedia container formats into a multimedia solution
+	that can compete with MPEG-4 format).
+	 
+	Theora is derived directly from On2's VP3 codec; currently the 
+	two are nearly identical, varying only in framing headers, but 
+	Theora will diverge and improve from the main VP3 development 
+	lineage as time progresses

@@ -1,0 +1,10 @@
+#
+# Ridgerun Bootloader configuration files
+# all definitions on this subtree must prefix with BTLR_
+#
+
+menu "Bootloader Configuration"
+
+source bootloader/ConfigExtra
+
+endmenu

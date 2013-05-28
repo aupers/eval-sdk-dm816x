@@ -1,0 +1,2 @@
+HOST_REQUIRED="dbus-binding-tool"
+TARGET_REQUIRED="dbus glib"

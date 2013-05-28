@@ -1,0 +1,64 @@
+#$L$
+# Copyright (C) 2011 Ridgerun (http://www.ridgerun.com). 
+#$L$
+
+ifeq ($(DEVDIR),)
+$(error ====== DEVDIR variable is empty, invoke this Makefile from the BSP root, or provide the path to it =====)
+endif
+include $(DEVDIR)/bsp/mach/Make.conf
+
+.PHONY: arch_clean arch_build gen_ipl
+
+QUICK_BOOT_CMDLINE_ARGS=quiet lpj=4931584
+
+soft_clean:
+	if [ -d src ] ; then \
+	$(MAKE) -C src CROSS_COMPILE=$(TOOLCHAIN_PREFIX)- distclean ; \
+	fi ; 
+	rm -f uboot_configured uboot_built reflags reflags.tmp .fsloadhex
+
+gen_ipl: 
+ifeq ($(CONFIG_INSTALLER_MODE_SD_CARD),y)
+	$(MAKE) $(BOOTLOADER) 
+	$(MAKE) soft_clean 
+	$(MAKE) rrpatched 
+	$(MAKE) relflags 
+	$(MAKE) ipl_built
+	touch $@
+endif
+
+ipl_built: ipl_configured real_build
+	cp src/u-boot.min* $(IMAGES)
+ifeq ($(CONFIG_UBOOT_NAND_FLASH_MEMORY),y)
+	$(V) ln -sf $(IMAGES)/bootloader $(IMAGES)/bootloader.nandbin
+endif
+ifeq ($(CONFIG_UBOOT_SPI_FLASH_MEMORY),y)
+	$(V) ln -sf $(IMAGES)/bootloader $(IMAGES)/bootloader.spibin
+endif
+
+gen_uboot_flashbin: 
+	$(MAKE) soft_clean build
+ifeq ($(CONFIG_UBOOT_NAND_FLASH_MEMORY),y)
+	$(V) ln -sf $(IMAGES)/bootloader $(IMAGES)/bootloader.nandbin
+endif
+	touch $@
+
+arch_build:
+ifeq ($(CONFIG_INSTALLER_MODE_SD_CARD),y)
+	$(MAKE) gen_ipl
+	$(MAKE) soft_clean
+	$(MAKE) cmdline
+	touch $@
+endif
+
+cmdline:
+ifeq ($(CONFIG_UBOOT_QUICK_BOOT),y)
+	$(V) if ! grep -q "$(QUICK_BOOT_CMDLINE_ARGS)" $(CMDLINEFILE) ; then \
+	        echo -n " $(QUICK_BOOT_CMDLINE_ARGS) " >> $(CMDLINEFILE) ; \
+	     fi
+endif
+
+arch_clean:
+	$(V) rm -rf gen_ipl arch_build gen_uboot_flashbin
+
+arch_post_build:

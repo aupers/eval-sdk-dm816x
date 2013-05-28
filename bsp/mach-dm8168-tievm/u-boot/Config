@@ -1,0 +1,33 @@
+config UBOOT_NETWORKING
+	bool
+	default y
+
+config UBOOT_UPGRADE_BOOTLOADER_ADDR
+	string
+	default "0x82000000"
+
+config UBOOT_NAND_FLASH_MEMORY
+	bool
+	default n
+
+config UBOOT_SPI_FLASH_MEMORY
+	bool
+	default n
+
+config UBOOT_NAND_IPL
+	string
+	default "u-boot.noxip.bin"
+
+config UBOOT_SPI_IPL
+	string
+	default "u-boot.noxip.bin.spi"
+
+config UBOOT_QUICK_BOOT
+	bool "Enable quick boot for MMC"
+	depends on BSP_ARCH_DM8168 || BSP_ARCH_DM8148
+	default n
+	help
+	    If this option is enabled, you are going to use the fast boot 
+	    method provided in uboot for MMCs. You need to configure the
+	    SDK to boot from SD.
+

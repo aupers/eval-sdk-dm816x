@@ -1,0 +1,42 @@
+!/bin/sh
+
+# export UDEV_CONFIG_FILE=/etc/udev.conf
+
+readonly UDEVD_BIN=udevd
+readonly UDEVD=/usr/libexec/udev/${UDEVD_BIN}
+readonly UDEVADM=/usr/bin/udevadm 
+
+do_start()
+{
+	# no help needed
+	echo > /proc/sys/kernel/hotplug
+
+	echo "start udev daemon"
+	${UDEVD} --daemon
+
+	echo "trigger udev daemon"
+	${UDEVADM} trigger 
+}
+
+do_stop()
+{
+	${UDEVADM} control --stop-exec-queue
+	killall ${UDEVD_BIN}
+}
+
+case "${1}" in
+	start)
+		do_start
+		;;
+	stop)
+		do_stop
+		;;
+	restart)
+		do_stop
+		do_start
+		;;
+	*)
+		echo "usage: ${0} start|stop|restart"
+		exit
+		;;
+esac

@@ -1,0 +1,13 @@
+
+# File systems that need to be built at install time will set this
+# flag, to let the installer known (like jffs2 or ubifs)
+
+config FS_TARGET_REQUIRES_INSTALLER_GENERATION
+    bool
+    default n
+
+# Set to true if we need the pagesize information from the installer
+# Tip: we don't need an option for blocksize, we always need that
+config FS_TARGET_REQUIRES_INSTALLER_PAGESIZE
+    bool
+    default n

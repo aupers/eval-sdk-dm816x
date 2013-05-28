@@ -1,0 +1,7 @@
+
+config FS_APPS_DBUSGLIB
+	bool "dbus-glib-0.92"
+	select FS_APPS_DBUS
+	select FS_APPS_DBUS_DAEMON
+	help
+	    glib bindings for dbus

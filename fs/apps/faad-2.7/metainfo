@@ -1,0 +1,3 @@
+NAME="FAAD2"
+DEFS_INCLUDE="$(FSDEVROOT)/usr/include"
+DEFS_LIB="$(FSDEVROOT)/usr/lib"

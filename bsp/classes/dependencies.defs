@@ -1,0 +1,144 @@
+# Copyright (C) 2010 Ridgerun (http://www.ridgerun.com). 
+#
+#  This source code has a dual license.  If this file is linked with other
+#  source code that has a GPL license, then this file is licensed with a GPL
+#  license as described below.  Otherwise the source code contained in this
+#  file is property of Ridgerun. This source code is protected under
+#  copyright law.
+#
+#  This program is free software; you can redistribute  it and/or modify it
+#  under  the terms of  the GNU General  Public License as published by the
+#  Free Software Foundation;  either version 2 of the  License, or (at your
+#  option) any later version.
+#
+#  THIS  SOFTWARE  IS  PROVIDED  ``AS  IS''  AND   ANY  EXPRESS  OR IMPLIED
+#  WARRANTIES,   INCLUDING, BUT NOT  LIMITED  TO, THE IMPLIED WARRANTIES OF
+#  MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.  IN
+#  NO  EVENT  SHALL   THE AUTHOR  BE    LIABLE FOR ANY   DIRECT,  INDIRECT,
+#  INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
+#  NOT LIMITED   TO, PROCUREMENT OF  SUBSTITUTE GOODS  OR SERVICES; LOSS OF
+#  USE, DATA,  OR PROFITS; OR  BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
+#  ANY THEORY OF LIABILITY, WHETHER IN  CONTRACT, STRICT LIABILITY, OR TORT
+#  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+#  THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+#
+#  You should have received a copy of the  GNU General Public License along
+#  with this program; if not, write  to the Free Software Foundation, Inc.,
+#  675 Mass Ave, Cambridge, MA 02139, USA.
+
+# dependency_src is not used and not well tested
+dependency_src:
+	$(V) check_src_deps() \
+	{ if $(DEVDIR)/bsp/scripts/metainfo -p $$1 -c && grep -q "^src:" $$1/Makefile ; then  \
+	    $(ECHO) "$$2Fetching $$1..."; \
+	    $(MAKE) -C $$1 $(MAKE_CALL_PARAMS) src || { echo "Error fetching $$1" ; rm -f patch ; exit 1 ; } ;  \
+	fi; };  \
+	\
+	for i in * ; do \
+	  if [ "$$i" != ".svn" ] && [ -e $$i/patches ] ; then \
+	    check_src_deps $$i "" || { exit 1 ; } ; \
+	  fi; \
+	done ;
+
+dependency_patch:
+	$(V) check_patch_deps() \
+	{ if $(DEVDIR)/bsp/scripts/metainfo -p $$1 -c ; then  \
+	    $(ECHO) "$$2Patching $$1..."; \
+	    $(MAKE) -C $$1 $(MAKE_CALL_PARAMS) patch || { echo "Error patching $$1" ; rm -f patch ; exit 1 ; } ;  \
+	fi; };  \
+	\
+	for i in * ; do \
+	  if [ "$$i" != ".svn" ] && [ -e $$i/patches ] ; then \
+	    check_patch_deps $$i "" || { exit 1 ; } ; \
+	  fi; \
+	done ;
+
+dependency_unpatch:
+	$(V) check_unpatch_deps() \
+	{ if $(DEVDIR)/bsp/scripts/metainfo -p $$1 -c ; then  \
+	    $(ECHO) "$$2Removing patches $$1..."; \
+	    $(MAKE) -C $$1 $(MAKE_CALL_PARAMS) unpatch || { echo "Error removing patches $$1" ; exit 1 ; } ;  \
+	fi; };  \
+	\
+	for i in * ; do \
+	  if [ "$$i" != ".svn" ] && [ -e $$i/patches ] ; then \
+	    check_unpatch_deps $$i "" || { exit 1 ; } ; \
+	  fi; \
+	done ;
+
+dependency_build:
+	$(V) rm -f covered_deps
+	$(V) touch covered_deps
+	$(V) check_deps() \
+	{ if $(DEVDIR)/bsp/scripts/metainfo -p $$1 -c ; then  \
+	    if grep -q -x $$1 covered_deps; then  \
+	    	return; \
+	    fi; \
+	    $(ECHO) "$$2Checking dependencies for $$1"; \
+	    for j in `$(DEVDIR)/bsp/scripts/metainfo -p $$1 -d`; do  \
+	        available_deps=(`ls -v -d $$j*`); \
+	        check_deps $${available_deps[0]} "$$2  ";  \
+	    done ; \
+	    $(ECHO) "$$2Compiling and installing $$1..."; \
+	    $(MAKE) -C $$1 $(MAKE_CALL_PARAMS) build install || { echo "Error building $$1" ; rm -f covered_deps ; exit 1 ; } ;  \
+	    if grep -q "^cmdline:" $$1/Makefile ; then \
+	        $(MAKE) -C $$1 $(MAKE_CALL_PARAMS) cmdline || { echo "Error building cmdline at $$1" ; exit 1 ; } ; \
+	    fi ; \
+	    echo $$1 >> covered_deps; \
+	fi; };  \
+	\
+	for i in * ; do \
+	  check_deps $$i "" || { exit 1 ; } ; \
+	done ;
+	$(V) rm -f covered_deps
+
+dependency_build_sim:
+	$(V) rm -f covered_deps.sim
+	$(V) touch covered_deps.sim
+	$(V) check_deps() \
+	{ if $(DEVDIR)/bsp/scripts/metainfo -p $$1 -c ; then  \
+	    if grep -q -x $$1 covered_deps.sim; then  \
+	    	return; \
+	    fi; \
+	    $(ECHO) "$$2Checking dependencies for $$1"; \
+	    for j in `$(DEVDIR)/bsp/scripts/metainfo -p $$1 -d`; do  \
+	        available_deps=(`ls -c -d $$j*`); \
+	        check_deps $${available_deps[0]} "$$2  ";  \
+	    done ; \
+	    $(ECHO) "$$2Compiling and installing $$1..."; \
+	    $(MAKE) -C $$1 $(MAKE_CALL_PARAMS) sim || { echo "Error building $$1" ; rm -f covered_deps.sim ; exit 1 ; } ;  \
+	    echo $$1 >> covered_deps.sim; \
+	fi; };  \
+	\
+	for i in * ; do \
+	  check_deps $$i "" || { exit 1 ; } ; \
+	done ;
+	$(V) rm -f covered_deps.sim
+
+cmdline:
+	$(V)for i in `ls` ; do \
+	    if [ "$$i" != ".svn" ] && [ -e $$i/Config ] ; then \
+		if grep -q "^cmdline:" $$i/Makefile ; then \
+		    $(ECHO) "Entering $$i..." ; \
+		    $(MAKE) -C $$i $(MAKE_CALL_PARAMS) cmdline || { echo "Error building cmdline at $$i" ; exit 1 ; } ; \
+		fi; \
+	    fi ; \
+	done
+
+buildfs: 
+	$(V)for i in `ls` ; do \
+	    if [ "$$i" != ".svn" ] && [ -e $$i/Config ] ; then \
+		if grep -q "^buildfs:" $$i/Makefile ; then \
+		    $(ECHO) "Entering $$i..." ; \
+		    $(MAKE) -C $$i $(MAKE_CALL_PARAMS) buildfs  || { echo "Error building $$i" ; exit 1 ; } ; \
+		fi ; \
+	    fi ; \
+	done
+
+clean: 
+	$(V)for i in `ls` ; do \
+	    if [ "$$i" != ".svn" ] && [ -e $$i/Config ] ; then \
+		$(ECHO) "Entering $$i..." ; \
+		$(MAKE) -C $$i $(MAKE_CALL_PARAMS) clean || { echo "Error cleaning $$i" ; exit 1 ; } ; \
+	    fi ; \
+	done

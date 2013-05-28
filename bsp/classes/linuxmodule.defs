@@ -1,0 +1,42 @@
+#$L$
+# Copyright (C) 2011 Ridgerun (http://www.ridgerun.com).
+##$L$
+
+#! \defgroup linuxmodules_class Linux modules Class
+#! \ingroup classes
+#! \section intro Introduction
+#! The Linux modules class provides logic for (cross)compiling Linux kernel modules with the kernel used
+#! on the SDK and deploy them into the filesystem
+#!
+#! \section public_params Public Parameters
+#! <ul>
+#! <li>
+#! <b>MODULE_SRC_DIR</b>: Name of the directory where the modules Makefile is found (defaults to src). This
+#! directory will be passed to the kernel tree as the parameter for the M variable.
+#! </li>
+#! </ul>
+
+include $(CLASSES)/flags.defs
+
+export INSTALL_MOD_PATH=$(FSROOT)
+export KERNELDIR="$(DEVDIR)/kernel/$(KERNEL)"
+export KERNELPATH="$(DEVDIR)/kernel"
+
+mod_build:
+	$(V)$(MAKE) -C $(KERNELDIR) M='$(shell pwd)/$(MODULE_SRC_DIR)' $(KFLAGS) modules
+	$(V) touch $(BUILT_FLAG)
+
+mod_clean:
+	$(V) if [ -f $(BUILT_FLAG) ] ; then \
+		$(MAKE) -C $(KERNELDIR) M='$(shell pwd)/$(MODULE_SRC_DIR)' $(KFLAGS) clean ; \
+		rm -f $(BUILT_FLAG) ; \
+	fi
+
+mod_install:
+	$(V)$(MAKE) -C $(KERNELDIR) M='$(PWD)/$(MODULE_SRC_DIR)' $(KFLAGS) modules_install
+
+uninstall:
+
+MODULE_SRC_DIR?=src
+FETCHER_EXTRACT_DIRECTORY_NAME?=$(MODULE_SRC_DIR)
+include $(CLASSES)/fetcher.defs

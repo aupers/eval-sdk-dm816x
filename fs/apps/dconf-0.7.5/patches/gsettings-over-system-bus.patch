@@ -1,0 +1,145 @@
+Index: dconf-0.7.5/src/engine/dconf-engine.c
+===================================================================
+--- dconf-0.7.5.orig/src/engine/dconf-engine.c	2011-06-28 11:39:54.615416557 -0600
++++ dconf-0.7.5/src/engine/dconf-engine.c	2011-06-28 11:41:09.139849092 -0600
+@@ -80,7 +80,7 @@
+           GVariant *parameters[2];
+           GVariant *result;
+ 
+-          dcem.bus_types = "e";
++          dcem.bus_types = "y";
+           dcem.bus_name = "ca.desrt.dconf";
+           dcem.object_path = "/ca/desrt/dconf/Writer";
+           dcem.interface_name = "org.freedesktop.DBus.Properties";
+@@ -172,12 +172,8 @@
+ 
+       if (engine->shm)
+         {
+-          gchar *filename;
+-
+-          filename = g_build_filename (g_get_user_config_dir (),
+-                                       "dconf",
+-                                       engine->names[0],
+-                                       NULL);
++          gchar *filename = g_build_filename ("/etc/dconf/db",
++                                              engine->names[0], NULL);
+           engine->gvdbs[0] = gvdb_table_new (filename, FALSE, NULL);
+           g_free (filename);
+         }
+@@ -346,11 +342,11 @@
+     }
+   else
+     {
+-      if (!dconf_engine_load_profile ("user", &engine->names,
++      if (!dconf_engine_load_profile ("system", &engine->names,
+                                       &engine->n_dbs, NULL))
+         {
+           engine->names = g_new (gchar *, 1);
+-          engine->names[0] = g_strdup ("user");
++          engine->names[0] = g_strdup ("system");
+           engine->n_dbs = 1;
+         }
+     }
+@@ -364,7 +360,7 @@
+   engine->object_paths = g_new (gchar *, engine->n_dbs);
+   engine->gvdbs = g_new0 (GvdbTable *, engine->n_dbs);
+   engine->lock_tables = g_new0 (GvdbTable *, engine->n_dbs);
+-  engine->bus_types = g_strdup ("eyyyyyyyyyyyyy");
++  engine->bus_types = g_strdup ("yyyyyyyyyyyyyy");
+   engine->state = 0;
+ 
+   for (i = 0; i < engine->n_dbs; i++)
+Index: dconf-0.7.5/src/gsettings/dconfsettingsbackend.c
+===================================================================
+--- dconf-0.7.5.orig/src/gsettings/dconfsettingsbackend.c	2011-06-28 11:39:54.647631163 -0600
++++ dconf-0.7.5/src/gsettings/dconfsettingsbackend.c	2011-06-28 11:40:28.003907737 -0600
+@@ -71,7 +71,7 @@
+   if (connection == dcsb->session_bus)
+     {
+       anti_expose = dcsb->anti_expose_tag;
+-      bus_type = 'e';
++      bus_type = 'y';
+     }
+ 
+   else if (connection == dcsb->system_bus)
+@@ -136,23 +136,6 @@
+       switch (dcem->bus_types[i])
+         {
+         case 'e':
+-          if (dcsb->session_bus == NULL && callback)
+-            {
+-              dcsb->session_bus =
+-                g_bus_get_sync (G_BUS_TYPE_SESSION, NULL, &error);
+-
+-              if (dcsb->session_bus != NULL)
+-                dcsb->session_subscription =
+-                  g_dbus_connection_signal_subscribe (dcsb->session_bus, NULL,
+-                                                      "ca.desrt.dconf.Writer",
+-                                                      NULL, NULL, NULL,
+-                                                      G_DBUS_SIGNAL_FLAGS_NO_MATCH_RULE,
+-                                                      dconf_settings_backend_signal,
+-                                                      dcsb, NULL);
+-            }
+-          connection = dcsb->session_bus;
+-          break;
+-
+         case 'y':
+           if (dcsb->system_bus == NULL && callback)
+             {
+@@ -636,9 +619,9 @@
+ static GVariant *
+ dconf_settings_backend_service_func (DConfEngineMessage *dcem)
+ {
+-  g_assert (dcem->bus_types[0] == 'e');
++  g_assert (dcem->bus_types[0] == 'y');
+ 
+-  return g_dbus_connection_call_sync (g_bus_get_sync (G_BUS_TYPE_SESSION,
++  return g_dbus_connection_call_sync (g_bus_get_sync (G_BUS_TYPE_SYSTEM,
+                                                       NULL, NULL),
+                                       dcem->bus_name, dcem->object_path,
+                                       dcem->interface_name, dcem->method_name,
+Index: dconf-0.7.5/src/service/service.c
+===================================================================
+--- dconf-0.7.5.orig/src/service/service.c	2011-06-28 11:39:54.639441042 -0600
++++ dconf-0.7.5/src/service/service.c	2011-06-28 11:40:28.003907737 -0600
+@@ -417,10 +417,7 @@
+   g_type_init ();
+   dconf_state_init (&state);
+ 
+-  if (state.is_session)
+-    type = G_BUS_TYPE_SESSION;
+-  else
+-    type = G_BUS_TYPE_SYSTEM;
++  type = G_BUS_TYPE_SYSTEM;
+ 
+   g_bus_own_name (type, "ca.desrt.dconf", G_BUS_NAME_OWNER_FLAGS_NONE,
+                   bus_acquired, name_acquired, name_lost, &state, NULL);
+Index: dconf-0.7.5/src/service/dconf-state.c
+===================================================================
+--- dconf-0.7.5.orig/src/service/dconf-state.c	2011-06-28 11:39:54.631848481 -0600
++++ dconf-0.7.5/src/service/dconf-state.c	2011-06-28 11:40:28.003907737 -0600
+@@ -10,9 +10,9 @@
+ static void
+ dconf_state_init_session (DConfState *state)
+ {
+-  const gchar *config_dir = g_get_user_config_dir ();
++  const gchar *config_dir = "/etc/dconf/";
+ 
+-  state->db_dir = g_build_filename (config_dir, "dconf", NULL);
++  state->db_dir = g_build_filename (config_dir, "db", NULL);
+ 
+   if (g_mkdir_with_parents (state->db_dir, 0700))
+     {
+Index: dconf-0.7.5/src/service/dconf-writer.c
+===================================================================
+--- dconf-0.7.5.orig/src/service/dconf-writer.c	2011-06-28 11:39:54.623344355 -0600
++++ dconf-0.7.5/src/service/dconf-writer.c	2011-06-28 11:40:28.003907737 -0600
+@@ -59,7 +59,7 @@
+   gchar *path;
+   GDir *dir;
+ 
+-  path = g_build_filename (g_get_user_config_dir (), "dconf", NULL);
++  path = g_build_filename ("/etc/dconf/", "db", NULL);
+   array = g_ptr_array_new ();
+ 
+   if ((dir = g_dir_open (path, 0, NULL)))

@@ -1,0 +1,6 @@
+
+config FS_APPS_ALSAUTILS
+	bool "alsa-utils-1.0.24"
+	select FS_APPS_ALSALIB
+	select FS_APPS_NCURSES
+	help

@@ -1,0 +1,13 @@
+Index: gst-ffmpeg-0.10.13/src/gst-libs/ext/libav/configure
+===================================================================
+--- gst-ffmpeg-0.10.13.orig/src/gst-libs/ext/libav/configure	2011-11-02 09:16:24.000000000 -0600
++++ gst-ffmpeg-0.10.13/src/gst-libs/ext/libav/configure	2013-02-18 12:17:00.962161995 -0600
+@@ -2471,7 +2471,7 @@
+         enable dos_paths
+         add_cppflags -U__STRICT_ANSI__
+         ;;
+-    linux)
++    linux*)
+         add_cppflags -D_POSIX_C_SOURCE=200112 -D_XOPEN_SOURCE=600
+         enable dv1394
+         ;;

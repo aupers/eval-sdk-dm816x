@@ -1,0 +1,23 @@
+#
+# Ridgerun jffs2 target options configuration
+#
+
+config FS_TARGET_JFFS2FS_NOCLEANMAKER
+	bool "Do not include the cleanmaker block (say yes if you are using NAND)"
+	default y
+	depends on FS_TARGET_JFFS2FS
+	
+
+config FS_TARGET_JFFS2FS_SWAP
+	bool "Change JFFS2 endianness"
+	depends on FS_TARGET_JFFS2FS
+	help 
+	    JFFS2 image is built on the endian of the host machine
+	    (usually little endian on x86 host)
+
+config FS_TARGET_JFFS2_ROOTFS_DEV
+	string "JFFS2 mtd device to mount as rootfs"
+	depends on FS_TARGET_JFFS2FS
+	default "/dev/mtdblock2"
+	help
+	    Defines the parameter to pass to the kernel bootargs as the rootfs device

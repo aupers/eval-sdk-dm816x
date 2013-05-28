@@ -1,0 +1,9 @@
+config FS_APPS_MADPLAY
+        bool "madplay-0.15.2b (MPEG Audio Player)"
+        select FS_APPS_LIBID3TAG
+        select FS_APPS_LIBMAD
+        default n
+        help
+        MPEG audio player with multiple output options, 
+        requires libmad and libid3tag (Those packages will be
+        selected). 

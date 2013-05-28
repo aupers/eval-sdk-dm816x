@@ -1,0 +1,68 @@
+From 47f9e56d0d0670f2c8f3a81da843920e7e7dc522 Mon Sep 17 00:00:00 2001
+From: Amarinder Bindra <a-bindra@ti.com>
+Date: Tue, 13 Mar 2012 11:22:47 +0530
+Subject: [PATCH 1/7] ti814x ti816x: changes in makefile for supporting logo file
+
+
+Signed-off-by: Amarinder Bindra <a-bindra@ti.com>
+---
+ Makefile               |    4 ++++
+ drivers/video/Makefile |    6 ++++++
+ 2 files changed, 10 insertions(+), 0 deletions(-)
+
+diff --git a/src/Makefile b/src/Makefile
+index b56b11e..5aeeac3 100644
+--- a/src/Makefile
++++ b/src/Makefile
+@@ -3246,6 +3246,7 @@ ti8148_evm_min_sd:	unconfig
+ 		if [ "$(findstring _nand,$@)" ] ; then \
+ 			echo "#define CONFIG_SYS_NO_FLASH" >> $(obj)include/config.h ; \
+ 			echo "#define CONFIG_NAND_ENV"    >>$(obj)include/config.h ; \
++			echo "#define CONFIG_TI81XX_VIDEO"    >>$(obj)include/config.h ; \
+ 			echo "Setting up TI8148 default build with ENV in NAND..." ; \
+ 		elif [ "$(findstring _nor,$@)" ] ; then \
+ 			echo "#define CONFIG_NOR"	>>$(obj)include/config.h ; \
+@@ -3258,6 +3259,7 @@ ti8148_evm_min_sd:	unconfig
+ 		else	\
+ 			echo "#define CONFIG_SYS_NO_FLASH" >> $(obj)include/config.h ; \
+ 			echo "#define CONFIG_NAND_ENV"    >>$(obj)include/config.h ; \
++			echo "#define CONFIG_TI81XX_VIDEO"    >>$(obj)include/config.h ; \
+ 			echo "Setting up TI8148 default build with ENV in NAND..." ; \
+ 		fi; \
+ 	fi;
+@@ -3297,6 +3299,7 @@ ti8168_evm_min_sd:	unconfig
+ 	@if [ "$(findstring _nand,$@)" ] ; then \
+ 		echo "#define CONFIG_SYS_NO_FLASH"    >>$(obj)include/config.h ; \
+ 		echo "#define CONFIG_NAND_ENV"    >>$(obj)include/config.h ; \
++		echo "#define CONFIG_TI81XX_VIDEO"    >>$(obj)include/config.h ; \
+ 		echo "Setting up TI8168 NAND build with ENV in NAND..." ; \
+ 	elif [ "$(findstring _nor,$@)" ] ; then \
+ 		echo "#define CONFIG_NOR"    >>$(obj)include/config.h ; \
+@@ -3320,6 +3323,7 @@ ti8168_evm_min_sd:	unconfig
+ 	else	\
+ 		echo "#define CONFIG_SYS_NO_FLASH"    >>$(obj)include/config.h ; \
+ 		echo "#define CONFIG_NAND_ENV"    >>$(obj)include/config.h ; \
++		echo "#define CONFIG_TI81XX_VIDEO"    >>$(obj)include/config.h ; \
+ 		echo "Setting up TI8168 default build with NAND..." ; \
+ 	fi;
+ 	@$(MKCONFIG) -a ti8168_evm arm arm_cortexa8 ti8168 ti ti81xx
+diff --git a/src/drivers/video/Makefile b/src/drivers/video/Makefile
+index 7d84fc7..55a467c 100644
+--- a/src/drivers/video/Makefile
++++ b/src/drivers/video/Makefile
+@@ -38,6 +38,12 @@ COBJS-$(CONFIG_SED156X) += sed156x.o
+ COBJS-$(CONFIG_VIDEO_SM501) += sm501.o
+ COBJS-$(CONFIG_VIDEO_SMI_LYNXEM) += smiLynxEM.o videomodes.o
+ COBJS-$(CONFIG_VIDEO_VCXK) += bus_vcxk.o
++ifdef CONFIG_TI816X
++COBJS-$(CONFIG_VIDEO) += ti816x_logo.o firmware.o
++endif
++ifdef CONFIG_TI814X
++COBJS-$(CONFIG_VIDEO) += ti814x_logo.o firmware.o
++endif
+ 
+ COBJS	:= $(COBJS-y)
+ SRCS	:= $(COBJS:.o=.c)
+-- 
+1.7.1
+

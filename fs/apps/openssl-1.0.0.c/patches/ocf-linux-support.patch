@@ -1,0 +1,13 @@
+Index: openssl-1.0.0c/src/crypto/engine/eng_cryptodev.c
+===================================================================
+--- openssl-1.0.0c.orig/src/crypto/engine/eng_cryptodev.c	2011-02-21 11:06:39.941190348 -0600
++++ openssl-1.0.0c/src/crypto/engine/eng_cryptodev.c	2011-02-21 11:06:48.217255821 -0600
+@@ -54,7 +54,7 @@
+ #else 
+  
+ #include <sys/types.h>
+-#include <crypto/cryptodev.h>
++#include <ocf/cryptodev.h>
+ #include <crypto/dh/dh.h>
+ #include <crypto/dsa/dsa.h>
+ #include <crypto/err/err.h>

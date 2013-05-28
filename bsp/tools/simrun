@@ -1,0 +1,13 @@
+#!/bin/sh
+
+if [ -z $DEVDIR ] ; then
+    echo -e "\nERROR: DEVDIR environment variable is not defined, you need to run \`make env\` on the top of the RR SDK\n\n"
+    exit 255
+fi
+
+SIMROOT=$DEVDIR/fs/simulator
+
+export LD_LIBRARY_PATH=$SIMROOT/usr/lib
+export PATH=$SIMROOT/usr/bin:$PATH
+
+$@

@@ -1,0 +1,21 @@
+include $(CLASSES)/autotools.defs
+
+.PHONY: src patch build clean install uninstall distclean
+ 
+build: autotools_build
+
+clean:: autotools_clean
+
+src: rrfetched
+ 
+patch: rrpatched
+
+install:: autotools_install rrsdk_install
+
+uninstall: autotools_uninstall rrsdk_uninstall
+
+distclean: clean rrfetched_clean
+
+sim: build install
+
+docs: autotools_docs

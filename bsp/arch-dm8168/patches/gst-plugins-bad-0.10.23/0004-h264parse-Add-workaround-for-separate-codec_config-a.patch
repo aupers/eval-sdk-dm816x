@@ -1,0 +1,57 @@
+From da1a3659081d2b4a3cbf6c311dfaa7f1442dda4b Mon Sep 17 00:00:00 2001
+From: Amber Jain <amber@ti.com>
+Date: Thu, 29 Jul 2010 11:10:42 +0200
+Subject: [PATCH 4/5] h264parse: Add workaround for separate codec_config as bytestream.
+
+Signed-off-by: Amber Jain <amber@ti.com>
+Signed-off-by: Daniel Diaz <ddiaz@ti.com>
+---
+ gst/h264parse/gsth264parse.c |   21 +++++++++++++++++++++
+ 1 files changed, 21 insertions(+), 0 deletions(-)
+
+Index: gst-plugins-bad-0.10.23/src/gst/h264parse/gsth264parse.c
+===================================================================
+--- gst-plugins-bad-0.10.23.orig/src/gst/h264parse/gsth264parse.c	2013-02-22 09:27:51.064863516 -0600
++++ gst-plugins-bad-0.10.23/src/gst/h264parse/gsth264parse.c	2013-02-22 09:28:06.709037484 -0600
+@@ -1388,6 +1388,7 @@
+ {
+   GstH264Parse *h264parse;
+   GstStructure *str;
++  GstCaps *src_caps = NULL;
+   const GValue *value;
+   guint8 *data;
+   guint size, num_sps, num_pps;
+@@ -1402,6 +1403,25 @@
+   gst_structure_get_fraction (str, "framerate", &h264parse->fps_num,
+       &h264parse->fps_den);
+ 
++  /****** WORKAROUND **********/
++  /* don't treat codec-data as an AVC format codec-data, but treat it like a
++   * normal byte-stream buffer, and handle like bytestream.
++   */
++  /* need to remove the codec_data */
++  if (G_UNLIKELY (h264parse->src_caps == NULL)) {
++    src_caps = gst_caps_copy (caps);
++  } else {
++    src_caps = gst_caps_ref (h264parse->src_caps);
++  }
++  src_caps = gst_caps_make_writable (src_caps);
++  g_return_val_if_fail (src_caps != NULL, FALSE);
++  str = gst_caps_get_structure (src_caps, 0);
++  if (gst_structure_has_field (str, "codec_data")) {
++    gst_structure_remove_field (str, "codec_data");
++    gst_caps_replace (&h264parse->src_caps, src_caps);
++  }
++  /******** END WORKAROUND ************/
++
+   /* packetized video has a codec_data */
+   if ((value = gst_structure_get_value (str, "codec_data"))) {
+     GstBuffer *buffer;
+@@ -1483,6 +1503,7 @@
+     /* we have 4 sync bytes */
+     h264parse->nal_length_size = 4;
+   }
++  gst_caps_unref (src_caps);
+ 
+   /* forward the caps */
+   return gst_h264_parse_update_src_caps (h264parse, caps);

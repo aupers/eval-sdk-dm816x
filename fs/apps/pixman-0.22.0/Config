@@ -1,0 +1,6 @@
+
+config FS_APPS_PIXMAN
+	bool "pixman 0.22.0"
+	help
+	  The pixel-manipulation library for X and cairo
+

@@ -1,0 +1,9 @@
+config FS_APPS_GSTREAMER_PLUGINS_BAD
+	bool "gstreamer-plugins-bad 0.10.23"
+	select FS_APPS_GSTREAMER
+	select FS_APPS_GSTREAMER_PLUGINS_BASE
+	select TOOLCHAIN_INSTALL_CPP_SUPPORT
+	help
+	This option enabled the bad plugins for gstreamer that
+	doesn't have external dependencies on other libraries
+

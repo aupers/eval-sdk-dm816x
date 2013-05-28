@@ -1,0 +1,19 @@
+#!/bin/sh -e
+
+case "$1" in
+start)
+	/usr/libexec/dconf-service 2>&1 | logger -t DCONF &
+	;;
+
+stop)
+	killall dconf-service
+	;;
+
+*)
+	echo "Usage: /etc/init.d/dconf {start|stop}"
+	exit 1
+	;;
+esac
+
+exit 0
+

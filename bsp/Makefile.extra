@@ -1,0 +1,31 @@
+# Extra targets for the BSP that we don't want to put on the main Makefile
+
+.PHONY: svncmd svnup
+
+SVNCMD?=up
+
+svncmd: header
+	@if [ -f .svnlayout ] ; then \
+	    $(ECHO) "Updating development directory from subversion..." ; \
+	    for i in `cat .svnlayout` ; do \
+		if [ -d .$$i/.svn ] ; then \
+		    pushd . >/dev/null; \
+		    cd .$$i ; \
+		    $(ECHO) "  Running 'svn $(SVNCMD)' on $$i ..." ; \
+		    svn $(SVNCMD) | grep -v ? ; \
+		    popd >/dev/null; \
+		else \
+		  echo Directory .$$i is not longer a subversion working directory ; \
+		fi ; \
+	    done \
+	else \
+	    $(ECHO) Your BSP is not a subversion working directory, cannot be updated by this way ; \
+	    $(ECHO) You may receive software updates provided by RidgeRun using the target \"bspupdate\" ; \
+	    $(ECHO) ; \
+	fi
+
+# Shortcut
+svnup: svncmd
+
+help_targets::
+	@echo "   svnup           - recursively run the 'svn up' command."

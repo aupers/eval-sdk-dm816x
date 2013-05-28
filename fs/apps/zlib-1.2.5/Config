@@ -1,0 +1,5 @@
+config FS_APPS_ZLIB
+	bool "zlib-1.2.5"
+	default n
+	help
+	  General purpose data compression library.

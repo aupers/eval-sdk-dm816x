@@ -1,0 +1,14 @@
+Index: ezsdk-5_05_02_00/ezsdk/board-support/media-controller-utils_3_00_00_05/src/firmware_loader/firmware_loader.c
+===================================================================
+--- ezsdk-5_05_02_00.orig/ezsdk/board-support/media-controller-utils_3_00_00_05/src/firmware_loader/firmware_loader.c	2012-09-06 02:16:17.000000000 -0600
++++ ezsdk-5_05_02_00/ezsdk/board-support/media-controller-utils_3_00_00_05/src/firmware_loader/firmware_loader.c	2013-04-18 14:43:35.443752971 -0600
+@@ -245,8 +245,7 @@
+   }
+   else
+   {
+-      printf ("FIRMWARE: Memory map bin file not passed\n");
+-      usage (argsp);
++      printf ("FIRMWARE: Using default Memory map\n");
+   }
+   printf ("FIRMWARE: isI2cInitRequiredOnM3: %d\n", argsp->isI2cInitRequiredOnM3);
+ }

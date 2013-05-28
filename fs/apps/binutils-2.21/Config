@@ -1,0 +1,11 @@
+config FS_APPS_BINUTILS
+        bool "binutils 2.21"
+        default n
+        help
+        The GNU Binutils are a collection of binary tools. Among them are:
+           * ld - the GNU linker.
+           * as - the GNU assembler.
+           * objdump - Displays information from object files.
+        (objdump is required by oprofile)
+
+

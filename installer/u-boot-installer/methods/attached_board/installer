@@ -1,0 +1,1288 @@
+#!/usr/bin/perl
+
+use integer;
+use Expect;
+use Time::HiRes qw( usleep );
+use File::Path qw( mkpath );
+use File::Basename;
+
+require "lib/common.pl";
+
+# ==============================================================================
+# Environment variables
+# ==============================================================================
+my $PORT = $ENV{'PORT'} || "/dev/ttyS0";
+my $NAND_BLOCK_SIZE = $ENV{'NAND_BLOCK_SIZE'}; # in bytes, typically 16368 or 131072
+my $NAND_PAGE_SIZE = $ENV{'NAND_PAGE_SIZE'}; # in bytes, typically 512 or 2048
+my $HOST_IP = $ENV{'HOST_IP'};
+my $COM_METHOD;
+my $TELNETIP;
+my $TELNETPORT;
+my $INSTALL_METHOD;
+my $NET_METHOD;
+my $IPADDR;
+my $FLASH_TYPE;
+my $PREBOOTLOADER;
+# Pre-Bootloader type (some platforms use UBL and others X-LOADER)
+if ($CONFIG_UBOOT_USE_XLOADER){
+    $PREBOOTLOADER="XLoader";
+} else {
+    if($CONFIG_UBOOT_USE_MIN){
+      $PREBOOTLOADER="UBOOT_MIN";
+    } else {
+      $PREBOOTLOADER="UBL";
+     }
+}
+
+my $SD_DEVICE=$CONFIG_INSTALLER_SD_DEVICE;
+my $TFTPDIR=$CONFIG_INSTALLER_TFTP_SERVER_DIRECTORY;
+my $DFUUTIL="$DEVDIR/bootloader/$BOOTLOADER/src/tools/dfu-util/src/dfu-util";
+
+# Configure communication port
+if ($CONFIG_INSTALLER_SERIAL_COM eq "y") {
+    $COM_METHOD="SERIAL";
+} elsif ($CONFIG_INSTALLER_TELNET_COM eq "y") {
+    $COM_METHOD="TELNET";
+    $TELNETIP = $CONFIG_INSTALLER_TELNET_COM_IP;
+    $TELNETPORT = $CONFIG_INSTALLER_TELNET_COM_PORT;
+}
+
+# Configure download port
+if ($CONFIG_INSTALLER_SERIAL_METHOD eq "y") {
+    $INSTALL_METHOD="SERIAL";
+} elsif ($CONFIG_INSTALLER_DFU_METHOD eq "y") {
+    $INSTALL_METHOD="DFU";
+} elsif ($CONFIG_INSTALLER_TFTP_METHOD eq "y") {
+    $INSTALL_METHOD="TFTP";
+    if ($CONFIG_INSTALLER_DHCP eq "y") {
+        $NET_METHOD = "dhcp";
+    } else {
+        $NET_METHOD = "static";
+        $IPADDR = $CONFIG_INSTALLER_IPADDR;
+    }
+}
+
+# Config memory type
+my $FLASH_WRITE_CMD;
+my $FLASH_WRITE_IPL_CMD;
+my $FLASH_UNLOCK_CMD;
+my $FLASH_ERASE_CMD;
+my $FLASH_PRE_IPL_CMD;
+my $FLASH_POST_IPL_CMD;
+my $BOOTLOADERIMAGE = "$IMAGEDIR/bootloader";
+my $UBOOTIMAGE = "$BOOTLOADERIMAGE";
+if ($CONFIG_UBOOT_NOR_FLASH_MEMORY eq "y") {
+    $FLASH_TYPE="NOR";
+    $FLASH_WRITE_CMD="cp.b";
+    $FLASH_WRITE_IPL_CMD="cp.b";
+    $FLASH_ERASE_CMD="erase";
+    $FLASH_UNLOCK_CMD="protect off";
+    $UBOOTIMAGE = "$BOOTLOADERIMAGE.norbin";
+} elsif ($CONFIG_UBOOT_NAND_FLASH_MEMORY eq "y") {
+    $FLASH_WRITE_CMD="nand write";
+    if ($CONFIG_UBOOT_USE_XLOADER){
+        $FLASH_WRITE_IPL_CMD="nand write";
+        if($CONFIG_INSTALLER_IPL_ECC_HW){
+           $FLASH_PRE_IPL_CMD="nandecc hw 2";
+           $FLASH_POST_IPL_CMD="nandecc hw 1";
+        }
+        else {
+           $FLASH_PRE_IPL_CMD="nandecc hw";
+           $FLASH_POST_IPL_CMD="nandecc sw";
+        }
+    } elsif ($CONFIG_UBOOT_USE_MIN){
+             $FLASH_WRITE_IPL_CMD="nand write";
+             $FLASH_PRE_IPL_CMD="nandecc hw 2";
+             $FLASH_POST_IPL_CMD="nandecc sw";
+         } else {
+             $FLASH_WRITE_IPL_CMD="nand write.ubl";
+         }
+    $FLASH_ERASE_CMD="nand erase";
+    $FLASH_TYPE="NAND";
+    $UBOOTIMAGE = "$BOOTLOADERIMAGE.nandbin";
+} elsif ($CONFIG_UBOOT_SPI_FLASH_MEMORY eq "y") {
+    $FLASH_TYPE="SPI";
+    $FLASH_WRITE_CMD="sf write";
+    $FLASH_WRITE_IPL_CMD="sf write";
+    $FLASH_ERASE_CMD="sf erase";
+    $UBOOTIMAGE = "$BOOTLOADERIMAGE.spibin";
+} elsif ($CONFIG_UBOOT_ONENAND_FLASH_MEMORY eq "y") {
+    $FLASH_TYPE="OneNAND";
+    $FLASH_WRITE_CMD="onenand write";
+    $FLASH_WRITE_IPL_CMD="onenand write";
+    $FLASH_ERASE_CMD="onenand erase";
+    $UBOOTIMAGE = "$BOOTLOADERIMAGE.onenandbin";
+}
+
+my $FLASH_BLK_SIZE = $CONFIG_UBOOT_FLASH_BLK_SIZE;
+my $FLASH_BASE_ADDRS = $CONFIG_UBOOT_FLASH_BASE_ADDRS;
+if (!$FLASH_BASE_ADDRS) {
+    $FLASH_BASE_ADDRS = 0;
+}
+my $UBOOT_SIZE_IN_BLKS = $CONFIG_INSTALLER_UBOOT_SIZE_IN_BLKS;
+my $KERNEL_SIZE_IN_BLKS = $CONFIG_INSTALLER_KERNEL_SIZE_IN_BLKS;
+my $FS_SIZE_IN_BLKS = $CONFIG_INSTALLER_FS_SIZE_IN_BLKS;
+my $MTD_DEVICE_NAME = $CONFIG_INSTALLER_MTD_DEVICE_NAME;
+
+my $MTD_UBOOT_INTEGRATION = $CONFIG_INSTALLER_MTD_UBOOT_INTEGRATION;
+my $MTD_EXTRA_PARTITIONS = $CONFIG_INSTALLER_MTD_EXTRA_PARTITIONS;
+my $ERASECHIP = $ENV{'ERASECHIP'};
+
+my $GENERATE_EXTERNAL_INSTALLER = $CONFIG_INSTALLER_MODE_SD_CARD_INSTALLER;
+my $EXTERNAL_INSTALLER_DIR = "$IMAGEDIR/installer";
+my $EXTERNAL_INSTALLER_REPLACE_STRINGS = "";
+
+# ==============================================================================
+# Parameters
+# ==============================================================================
+my $INSTALLATION_MODE = @ARGV[0];
+
+# ==============================================================================
+# Internal variables
+# ==============================================================================
+my $timeout = 5;
+my $long_timeout = 30;
+my $net_timeout = 15;
+my $flash_timeout = 800;
+my $serial_timeout = 360;
+my $prompt;
+my $IPLIMAGE;
+my $MULTI_IPLIMAGE;
+if ($PREBOOTLOADER eq "XLoader") {
+    $IPLIMAGE="$IMAGEDIR/x-load.bin.ift";
+    $IPLIMAGE_BASE = $IPLIMAGE;
+    $MULTI_IPLIMAGE = "$IMAGEDIR/multi-x-load.bin.ift";
+} else {
+    if($PREBOOTLOADER eq "UBOOT_MIN"){
+        if($FLASH_TYPE eq "NAND"){
+            $IPLIMAGE="$IMAGEDIR/$CONFIG_UBOOT_NAND_IPL";
+            $MULTI_IPLIMAGE="$IMAGEDIR/multi_${CONFIG_UBOOT_NAND_IPL}";
+        } else { 
+            $IPLIMAGE="$IMAGEDIR/$CONFIG_UBOOT_SPI_IPL";
+        }
+    } else {
+        if ($FLASH_TYPE eq "SPI") {
+            $IPLIMAGE = "$IMAGEDIR/ubl_spi.spibin";
+        }
+        if ($FLASH_TYPE eq "NOR") {
+            $IPLIMAGE = "$IMAGEDIR/ubl_nor.norbin";
+        } else {
+            $IPLIMAGE = "$IMAGEDIR/ubl_nand.nandbin";
+            $MULTI_IPLIMAGE = "$IMAGEDIR/multi_ubl_nand.nandbin";
+        }
+    }
+}
+
+my $KERNELIMAGE = "$DEVDIR/images/kernel.uImage";
+my $FSIMAGE = "$DEVDIR/images/fsimage.uImage";
+my $KERNEL_OFFSET;
+my $FS_OFFSET;
+my $MTDPARTS;
+# Kernel and file system images sizes
+my $KSIZE;
+my $KSIZE_ALIGNED;
+my $FSSIZE;
+my $FSSIZE_ALIGNED;
+
+# Partition sizes
+my $UBOOT_PARTITION_SIZE;
+my $KERNEL_PARTITION_SIZE;
+my $FS_PARTITION_SIZE;
+
+# Partitions names
+my $UBOOT_PARTITION = "UBOOT";
+my $KERNEL_PARTITION = "KERNEL";
+my $FS_PARTITION = "FS";
+
+# FLAGS
+my $UBOOT_NETWORK_SET = 0;
+
+# ==============================================================================
+# main
+# ==============================================================================
+
+if ( $LOG_INSTALL_FILE ) {
+    mkpath($LOG_DIRECTORY);
+    start_logging($LOG_INSTALL_FILE);
+}
+
+# Sanity checks
+if($INSTALL_METHOD eq "TFTP") {
+    if ( ! -d $TFTPDIR ) {
+        fatal_error("Can't deploy firmware to $TFTPDIR, directory doesn't exists. This is required for tftp installation, so we have to abort");
+    }
+    if ( ! -w $TFTPDIR ) {
+        fatal_error("Can't deploy firmware to $TFTPDIR, we can't write to it. This is required for tftp installation, so we have to abort");
+    }
+    if (system("netstat -an | grep udp | grep -q :69") != 0) {
+        fatal_error("Seems like you aren't running tftp udp service on port 69, please check your server settings.");
+    }
+}
+
+if ($GENERATE_EXTERNAL_INSTALLER eq "y") {
+    if ((not defined $NAND_PAGE_SIZE) || ($NAND_PAGE_SIZE <= 0) ||
+        (not defined $NAND_BLOCK_SIZE) || ($NAND_BLOCK_SIZE <= 0)) {
+        open_comm($COM_METHOD, $LOG_INSTALL_FILE);
+        uboot_synchronize();
+        initial_computations();
+        detect_page_size();
+        send_data("echo\n");
+        usleep(300000);
+        attached_cleanup();
+    } else {
+        initial_computations();
+        detect_page_size();
+    }
+
+    printf "\n  Generating installer script...\n\n";
+    cmd_silent("mkdir -p $EXTERNAL_INSTALLER_DIR");
+    set_external_installer_value("MACH_DESCRIPTION",$MACH_DESCRIPTION);
+    set_external_installer_value("PREBOOTLOADER",$PREBOOTLOADER);
+    set_external_installer_value("FLASH_ERASE_CMD",$FLASH_ERASE_CMD);
+    set_external_installer_value("FLASH_WRITE_CMD",$FLASH_WRITE_CMD);
+    set_external_installer_value("FLASH_WRITE_IPL_CMD",$FLASH_WRITE_IPL_CMD);
+    install_bootloader_core();
+    install_kernel();
+    install_filesystem();
+    config_mtd_partitions();
+    install_cmdline();
+    install_bootcmd();
+    generate_installer_script();
+    printf "\n  Installer script completed...\n\n";
+
+    # We may need to continue into the SD card preparation
+    return 1;
+}
+
+open_comm($COM_METHOD, $LOG_INSTALL_FILE);
+uboot_synchronize();
+initial_computations();
+
+if ($INSTALLATION_MODE eq "bootloader") {
+    install_bootloader();
+} else {
+    # Installation processes
+    if (($INSTALLATION_MODE eq "kernel") || ($INSTALLATION_MODE eq "all")) {
+       install_kernel();
+    }
+
+    if (($INSTALLATION_MODE eq "fs") || ($INSTALLATION_MODE eq "all")) {
+        install_filesystem();
+    }
+
+    # This need to be done after the filesystem generation (that may happen until we
+    # try to install it)
+    config_mtd_partitions();
+
+    if (($INSTALLATION_MODE eq "cmdline") || ($INSTALLATION_MODE eq "all")) {
+        install_cmdline();
+    }
+
+    if (($INSTALLATION_MODE eq "bootcmd") || ($INSTALLATION_MODE eq "all")) {
+        install_bootcmd();
+    }
+}
+
+# since uboot repeats the last command if you press the enter key
+# make sure our last command is harmless to repeat
+send_data("echo\n");
+usleep(300000);
+attached_cleanup();
+
+# ==============================================================================
+# Subroutines
+# ==============================================================================
+
+# ==============================================================================
+# start_logging
+# ==============================================================================
+sub start_logging {
+    my $log_file = shift;
+
+    open(LOG, ">> $log_file") or die "Can not open log file:" . $log_file . "\n";
+    print LOG "\n-------------------------------------------\n";
+    print LOG "-------- " . localtime() . " ---------\n";
+    print LOG "-------------------------------------------\n";
+    close(LOG);
+}
+
+# ==============================================================================
+# open_comm
+# ==============================================================================
+sub open_comm {
+    my $method = shift;
+    my $log_file = shift;
+
+    # Define serial port
+    if ($method eq "SERIAL") {
+        $PORT =~ s/\"//g;
+        system("stty -F $PORT 115200 intr ^C quit ^D erase ^H kill ^U eof ^Z eol ^J start ^Q stop ^S -echo echoe echok -echonl echoke -echoctl -istrip -icrnl -ocrnl -igncr -inlcr onlcr -opost -isig -icanon cs8 -cstopb clocal -crtscts -ixoff -ixon -parenb -parodd -inpck");
+        open(FH, "+> $PORT") or die "Can not open UART:" . $PORT . "\n";
+        $exp = Expect->exp_init(\*FH);
+        $exp->raw_pty(1);
+
+    } elsif($method eq "TELNET") {
+        $exp = Expect->spawn("termnet $TELNETIP $TELNETPORT");
+    } else {
+        die "\nError: Unknown communication channel";
+    }
+
+    $exp || die "Failed to spawn connection";
+
+    $exp->log_stdout(0);
+
+    if ($ENABLE_DEBUG > 1) {
+        $exp->debug($ENABLE_DEBUG);
+    }
+
+    if ( $log_file ) {
+        $exp->log_file("$log_file");
+    }
+}
+
+# ==============================================================================
+# uboot synchronize
+# ==============================================================================
+sub uboot_synchronize {
+    print "  Performing handshake with u-boot...";
+    $|++;
+
+    # Get to u-boot prompt, send a few spaces in case u-boot is counting down
+    send_data("    \n");
+    $exp->clear_accum();
+    sleep(1);
+    send_data("echo resync\n");
+
+    $exp->expect(5, '-re', '^resync\r\n') or
+        fatal_error("failed to synchronize handshake with u-boot.\n" .
+            "  Be sure u-boot is active on port $PORT and you have terminal programs like minicom closed.");
+    # Prompt will be everything to the end of the line, so match EOL and 
+    # grab what comes before match.
+    $exp->expect(1, '-re', " \$");
+    chomp($prompt = $exp->before());
+    $prompt =~ s/\n//s;
+    print "\n\n";
+    dbg("Uboot prompt: [$prompt]\n"); 
+}
+
+# ==============================================================================
+# Send string to target
+# ==============================================================================
+sub send_data($) 
+{
+    my $data = shift;
+
+    if ($ENABLE_DEBUG > 0) {
+        my $t = $data;
+        $t =~ s/\n//s;
+        $t =~ s/\r//s;
+        print("Sending [$t]\n");
+    }
+
+    $exp->send($data);
+}
+
+# ==============================================================================
+# Initial computations of addresses and sizes
+# ==============================================================================
+sub initial_computations {
+    if ($FLASH_TYPE eq "NAND") {    
+        print "  Trying to identify NAND block size... ";
+        if ((defined $NAND_BLOCK_SIZE) && ($NAND_BLOCK_SIZE > 0)) {
+            $FLASH_BLK_SIZE = sprintf("%X", $NAND_BLOCK_SIZE);
+        } else {
+            send_data("nand info\n");
+            usleep(300000);
+            # Two versions of uboot output:
+            # old: Device 0: Samsung K9K1208Q0C at 0x2000000 (64 MB, 16 kB sector)
+            # new: Device 0: NAND 256MiB 1,8V 16-bit, sector size 128 KiB
+            $exp->expect($timeout,'-re',"Device 0: ");
+            my $FLASH_BLK_SIZE_KB = $exp->after;
+            dbg("nand size before regular expression: [$FLASH_BLK_SIZE_KB]");
+            $FLASH_BLK_SIZE_KB =~ s/.*MB, (.*) kB.*/$1/s;
+            dbg("nand size after match for old uboot nand info: [$FLASH_BLK_SIZE_KB]");
+            if ($FLASH_BLK_SIZE_KB eq $exp->after) {
+                dbg("no match, trying new output format");
+                $FLASH_BLK_SIZE_KB =~ s/.*sector size (.*) KiB.*/$1/s;
+                dbg("nand size after match for new uboot nand info: [$FLASH_BLK_SIZE_KB]");
+                if ($FLASH_BLK_SIZE_KB eq $exp->after) {
+                        fatal_error("unable to determine NAND sector size");
+                }
+            }
+            chomp($FLASH_BLK_SIZE_KB);
+            $FLASH_BLK_SIZE = sprintf("%X", $FLASH_BLK_SIZE_KB * 1024);
+        }
+        print "detected NAND block size: 0x$FLASH_BLK_SIZE\n";
+    } elsif ($FLASH_TYPE eq "SPI") {
+        # SPI Initialize device
+        print "  Initializing SPI device 0\n";
+        send_uboot_cmd("sf probe 0");
+    }
+    if ($CONFIG_FS_TARGET_REQUIRES_INSTALLER_PAGESIZE){
+        detect_page_size();
+    }
+
+    # --- U-boot computations ---
+
+    # U-boot and environment partition size
+    $UBOOT_OFFSET = sprintf "0x%x", 25 * hex($FLASH_BLK_SIZE);
+    $UBOOT_PARTITION_SIZE = sprintf("0x%X", $UBOOT_SIZE_IN_BLKS * hex($FLASH_BLK_SIZE));
+    $UBOOT_ENV_PARTITION_SIZE = sprintf("0x%X", $UBOOT_ENV_SIZE_IN_BLKS * hex($FLASH_BLK_SIZE));
+
+    # --- Kernel computations ---
+    # Kernel size
+    $KSIZE =  -s "$KERNELIMAGE";
+    $KSIZE = sprintf("%X", $KSIZE);
+    # We left some 4 erase block sizes to spare to the kernel, to have some grow margin
+    $KSIZE_ALIGNED = sprintf("%X",(hex($KSIZE) / hex($FLASH_BLK_SIZE) + 4) * hex($FLASH_BLK_SIZE));
+    # Minimum kernel size
+    my $MIN_KERNEL_SIZE = $KERNEL_SIZE_IN_BLKS * hex($FLASH_BLK_SIZE);
+
+    if(hex($KSIZE_ALIGNED) < $MIN_KERNEL_SIZE){
+        $KERNEL_PARTITION_SIZE = sprintf("%X", $MIN_KERNEL_SIZE);
+    } else {
+        $KERNEL_PARTITION_SIZE = $KSIZE_ALIGNED;
+    }
+
+    if ($CONFIG_UBOOT_NOR_FLASH_MEMORY eq "y") {
+    $KERNEL_OFFSET = sprintf("%X",hex($UBOOT_PARTITION_SIZE)) + sprintf("%X",hex($FLASH_BASE_ADDRS));
+    } else {
+    $KERNEL_OFFSET = sprintf("%X",hex($UBOOT_PARTITION_SIZE));
+    }
+
+    calculate_fs_size();
+}
+
+sub calculate_fs_size() {
+    $FS_OFFSET = hex($KERNEL_OFFSET) + hex($KERNEL_PARTITION_SIZE);
+    $FS_OFFSET = sprintf("%X", $FS_OFFSET);
+
+    $FSSIZE = -s "$FSIMAGE";
+    $FSSIZE = sprintf("%X", $FSSIZE);
+    # Leave at least 20 free blocks for the FS (heuristic based on experience)
+    $FSSIZE_ALIGNED = sprintf("%X",(hex($FSSIZE) / hex($FLASH_BLK_SIZE) + 20) * hex($FLASH_BLK_SIZE));
+
+    # Minimum file system size 
+    my $MIN_FS_SIZE = $FS_SIZE_IN_BLKS * hex($FLASH_BLK_SIZE);
+    if(hex($FSSIZE_ALIGNED) < $MIN_FS_SIZE){
+        $FS_PARTITION_SIZE = sprintf("%X", $MIN_FS_SIZE);
+    } else {
+        $FS_PARTITION_SIZE = $FSSIZE_ALIGNED;
+    }
+}
+
+# Configure mtd partitions
+sub config_mtd_partitions {
+    $MTDPARTS .= "mtdparts=$MTD_DEVICE_NAME:"; 
+    $MTDPARTS .= $UBOOT_SIZE_IN_BLKS * hex($FLASH_BLK_SIZE) / 1024 . "k($UBOOT_PARTITION),";
+    $MTDPARTS .= hex($KERNEL_PARTITION_SIZE) / 1024 . "k($KERNEL_PARTITION),";
+    $MTDPARTS .= hex($FS_PARTITION_SIZE) / 1024 . "k($FS_PARTITION)";
+
+    if($MTD_EXTRA_PARTITIONS ne ""){
+        $MTDPARTS .= ",$MTD_EXTRA_PARTITIONS";
+    }
+}
+
+# ==============================================================================
+# Uboot network
+# ==============================================================================
+sub uboot_network_setup{
+    print "  Configuring the network...\n";
+    if ($NET_METHOD eq "static") {
+        send_uboot_cmd("setenv ipaddr $IPADDR\n");
+    }
+    if ($NET_METHOD eq "dhcp") {
+        send_uboot_cmd("setenv autoload no\n");
+        $ret = send_uboot_cmd("dhcp", $net_timeout,"BOOTP broadcast 4",\&dhcp_error_callback);
+    }
+    chomp($HOST_IP);
+    send_uboot_cmd("setenv serverip $HOST_IP\n");
+    $UBOOT_NETWORK_SET = 1;
+}
+
+
+# ==============================================================================
+# Bootloader installation
+# ==============================================================================
+sub install_bootloader {
+    detect_page_size();
+    load_upgrade_bootloader();
+    install_bootloader_core();
+    # Don't leave upgrade version of bootloader running
+    restart_bootloader_uboot();
+}
+
+# ==============================================================================
+# Load alternative bootloader
+# ==============================================================================
+sub load_upgrade_bootloader {
+    my $PREVIOUS_BOOTCMD;
+
+    # Load u-boot upgrade image
+    if (!($FORCEINSTALL eq "yes")) {
+        send_data("icache\n");
+        $exp->expect(1, "Instruction Cache is") or
+        fatal_error("Your uboot doesn't have icache command, refusing to load upgrade bootloader due risk of hanging.\n" .
+                    "    You can update your bootloader by other means like SD card or use FORCEINSTALL=yes\n\n");
+    }
+
+    $PREVIOUS_BOOTCMD = read_uboot_value("bootcmd");
+    print "\n  Loading upgrade bootloader...\n";
+    # Reset bootcmd to prevent automatic boot
+    send_uboot_cmd("setenv bootcmd\n");
+    send_uboot_cmd("saveenv\n",$long_timeout);
+    load_file_to_ram($BOOTLOADERIMAGE);
+    $UBOOT_NETWORK_SET = 0;
+
+    # Run new uboot
+    print "  Running upgrade bootloader...\n";
+    send_uboot_cmd("icache off");
+    send_data("go $CONFIG_INSTALLER_LOAD_ADDRS\n");
+    printf("    Uboot => go $CONFIG_INSTALLER_LOAD_ADDRS\n");
+    sleep(2);
+    send_data("\n");
+    send_data("echo sync");
+    send_data("\n");
+    $exp->expect(10, "sync") or fatal_error("failed to detect u-boot restarting.");
+
+    print "\n";
+    uboot_synchronize();
+    if (!($PREVIOUS_BOOTCMD =~ /not defined/)) {
+        printf "  Restoring previous bootcmd value\n";
+        send_uboot_cmd("setenv bootcmd '$PREVIOUS_BOOTCMD'");
+        send_uboot_cmd("saveenv",$long_timeout);
+    }
+}
+
+# ==============================================================================
+# This installs the IPL (UBL, Xloader, UbootMin)
+# first param is the block to start writing the IPL
+# ==============================================================================
+sub install_ipl {
+    my $OFFSET_IN_BLK = $_[0];
+    my $SIZE = -s "$IPLIMAGE";
+    my $SIZE_IN_BLK = ($SIZE / hex($FLASH_BLK_SIZE)) + 1;
+
+    if($CONFIG_INSTALLER_IPL_MULTI_COPY eq "y") {
+        # Generate the image to be copied on NAND. This one will have as
+        # much copies as possible of the IPL within the range given.
+        # IPL images will be embedded in the file in a block-wise way
+        print "  Creating an image with multiple copies of the IPL embedded...\n";
+        my $BLOCK_RANGE = $CONFIG_INSTALLER_MAX_IPL_BLOCK - $OFFSET_IN_BLK + 1;
+        my $FLASH_BLK_SIZE_B = hex($FLASH_BLK_SIZE);
+        system("rm -rf $MULTI_IPLIMAGE");
+        system("dd if=/dev/zero bs=$FLASH_BLK_SIZE_B count=$BLOCK_RANGE | tr \'\\000\' \'\\377\' > $MULTI_IPLIMAGE 2> /dev/null");
+        for($SEEK = 0; $SEEK < $BLOCK_RANGE; $SEEK++) {
+            system("dd bs=$FLASH_BLK_SIZE_B count=$SIZE_IN_BLK if=$IPLIMAGE of=$MULTI_IPLIMAGE seek=$SEEK conv=notrunc 2> /dev/null");
+        }
+        $SIZE = -s "$MULTI_IPLIMAGE";
+        # Since the size of $MULTI_IPLIMAGE is a multiple of the NAND
+        # block size, we don't need to add 1 as we do above.
+        $SIZE_IN_BLK = ($SIZE / hex($FLASH_BLK_SIZE));
+    }
+    if ($GENERATE_EXTERNAL_INSTALLER eq "y") {
+        my $OFFSET = sprintf("0x%x",$OFFSET_IN_BLK * hex($FLASH_BLK_SIZE));
+        my $PSIZE = sprintf("0x%x",$SIZE_IN_BLK * hex($FLASH_BLK_SIZE));
+        set_external_installer_value("IPL_OFFSET",$OFFSET);
+        set_external_installer_value("IPL_PSIZE",$PSIZE);
+        set_external_installer_value("FLASH_PRE_IPL_CMD",$FLASH_PRE_IPL_CMD);
+        if($CONFIG_INSTALLER_IPL_MULTI_COPY eq "y") {
+            cmd_silent("cp $MULTI_IPLIMAGE $EXTERNAL_INSTALLER_DIR/");
+            set_external_installer_value("IPLIMAGE",basename($MULTI_IPLIMAGE));
+        } else {
+            cmd_silent("cp $IPLIMAGE $EXTERNAL_INSTALLER_DIR/");
+            set_external_installer_value("IPLIMAGE",basename($IPLIMAGE));
+        }
+        set_external_installer_value("FLASH_POST_IPL_CMD",$FLASH_POST_IPL_CMD);
+    } else {
+        # Load
+        print "  Loading $PREBOOTLOADER\n";
+        if($CONFIG_INSTALLER_IPL_MULTI_COPY eq "y") {
+            load_file_to_ram($MULTI_IPLIMAGE);
+        } else {
+            load_file_to_ram($IPLIMAGE);
+        }
+
+        # Erase memory
+        if(($FLASH_TYPE eq "NAND") && $ERASECHIP) {
+            print "  Scrubing NAND memory...\n";
+            nand_scrub();
+        } else {
+            print "  Erasing $PREBOOTLOADER flash space...\n";
+            flash_erase_cmd($OFFSET_IN_BLK,$SIZE_IN_BLK);
+        }
+
+        # Save
+       if ($FLASH_PRE_IPL_CMD) {
+           send_uboot_cmd($FLASH_PRE_IPL_CMD);
+       }
+       flash_write_cmd_ipl($CONFIG_INSTALLER_LOAD_ADDRS,$OFFSET_IN_BLK,$SIZE_IN_BLK);
+       if ($FLASH_POST_IPL_CMD) {
+           send_uboot_cmd($FLASH_POST_IPL_CMD);
+       }
+    }
+}
+
+sub install_uboot {
+    my $OFFSET_IN_BLK = $_[0];
+    my $SIZE = -s "$UBOOTIMAGE";
+    my $SIZE_IN_BLK =  ($SIZE / hex($FLASH_BLK_SIZE)) + 1;
+
+    if ($GENERATE_EXTERNAL_INSTALLER eq "y") {
+        my $OFFSET = sprintf("0x%x",$OFFSET_IN_BLK * hex($FLASH_BLK_SIZE));
+        my $PSIZE = sprintf("0x%x",$SIZE_IN_BLK * hex($FLASH_BLK_SIZE));
+        cmd_silent("cp $UBOOTIMAGE $EXTERNAL_INSTALLER_DIR/");
+        set_external_installer_value("UBOOT_OFFSET",$OFFSET);
+        set_external_installer_value("UBOOT_PSIZE",$PSIZE);
+        set_external_installer_value("UBOOTIMAGE",basename($UBOOTIMAGE));
+    } else {
+        # Load
+        print "  Loading U-Boot\n";
+        load_file_to_ram($UBOOTIMAGE);
+
+        # Erase memory 
+        if(($FLASH_TYPE eq "NAND") && ($ERASECHIP eq "true")) {
+            # Do nothing, as the memory was already scrubbed with the IPL installation
+        } else {
+            print "  Erasing U-Boot flash space...\n";
+            flash_erase_cmd($OFFSET_IN_BLK,$SIZE_IN_BLK);
+        }
+
+        # Save
+        if ($FLASH_PRE_IPL_CMD && $CONFIG_UBOOT_USE_XLOADER) {
+           send_uboot_cmd($FLASH_PRE_IPL_CMD);
+        }
+        flash_write_cmd_ipl($CONFIG_INSTALLER_LOAD_ADDRS,$OFFSET_IN_BLK,$SIZE_IN_BLK);
+        if ($FLASH_POST_IPL_CMD && $CONFIG_UBOOT_USE_XLOADER) {
+           send_uboot_cmd($FLASH_POST_IPL_CMD);
+       }
+    }
+}
+
+sub install_bootloader_core {
+    my $INSTALL_IPL = 0;
+    my $UBOOT_BLK_START = 0;
+    my $IPL_BLK_START;
+    my $SIZE;
+    my $IPL_SIZE_IN_BLK;
+
+    if ($CONFIG_BSP_ARCH_INSTALLER_IPL_GENERATION_TARGET) {
+        print "  Building $PREBOOTLOADER image for flash...\n";
+        cmd_silent("make -sC $DEVDIR/bootloader/$BOOTLOADER $CONFIG_BSP_ARCH_INSTALLER_IPL_GENERATION_TARGET PAGESIZE=$NAND_PAGE_SIZE");
+    } else {
+        fatal_error("Your ARCH doesn't define IPL_GENERATION_TARGET, unable to build the IPL image for flash");
+    }
+
+    if ($CONFIG_BSP_ARCH_INSTALLER_UBOOT_FLASH_GENERATION_TARGET) {
+        print "  Building U-boot image for flash...\n";
+        cmd_silent("make -sC $DEVDIR/bootloader/$BOOTLOADER $CONFIG_BSP_ARCH_INSTALLER_UBOOT_FLASH_GENERATION_TARGET PAGESIZE=$NAND_PAGE_SIZE");
+    } else {
+        fatal_error("Your ARCH doesn't define UBOOT_FLASH_GENERATION_TARGET, unable to build the u-boot image for flash");
+    }
+
+    if (($FLASH_TYPE eq "NAND") || ($FLASH_TYPE eq "ONENAND") || 
+        ($FLASH_TYPE eq "SPI") || ($FLASH_TYPE eq "NOR")) {
+        $INSTALL_IPL = 1;
+
+        if ($CONFIG_INSTALLER_MIN_IPL_BLOCK) {
+            # For multi-ipl setup
+            $IPL_BLK_START = $CONFIG_INSTALLER_MIN_IPL_BLOCK;
+        } else {
+            $IPL_BLK_START = 0;
+        }
+        # Arch has the final word on the minimal IPL block
+        if ($CONFIG_BSP_ARCH_INSTALLER_MIN_IPL_FLASH_BLK_START &&
+            $IPL_BLK_START < $CONFIG_BSP_ARCH_INSTALLER_MIN_IPL_FLASH_BLK_START) {
+            $IPL_BLK_START = $CONFIG_BSP_ARCH_INSTALLER_MIN_IPL_FLASH_BLK_START;
+        }
+
+        if($CONFIG_INSTALLER_IPL_MULTI_COPY eq "y") {
+            $SIZE = -s "$MULTI_IPLIMAGE";
+            $IPL_SIZE_IN_BLK =  ($SIZE / hex($FLASH_BLK_SIZE));
+        } else {
+            $SIZE = -s "$IPLIMAGE";
+            $IPL_SIZE_IN_BLK =  ($SIZE / hex($FLASH_BLK_SIZE)) + 1;;
+        }
+
+        $UBOOT_BLK_START = $IPL_SIZE_IN_BLK + $IPL_BLK_START;
+
+        if ($CONFIG_BSP_ARCH_INSTALLER_MIN_UBOOT_FLASH_BLK_START) {
+            if ($UBOOT_BLK_START < hex($CONFIG_BSP_ARCH_INSTALLER_MIN_UBOOT_FLASH_BLK_START)) {
+                $UBOOT_BLK_START = hex($CONFIG_BSP_ARCH_INSTALLER_MIN_UBOOT_FLASH_BLK_START);
+            }
+        }
+    }
+
+    $SIZE = -s "$UBOOTIMAGE";
+    my $UBOOT_SIZE_IN_BLK = ($SIZE / hex($FLASH_BLK_SIZE)) + 1;;
+    my $REQUIRED_MEMORY = $UBOOT_BLK_START + $UBOOT_SIZE_IN_BLK;
+    if ($REQUIRED_MEMORY > $UBOOT_SIZE_IN_BLKS) {
+        fatal_error("The reserved space for U-boot and $PREBOOTLOADER is smaller than required one, please reconfigure your SDK");
+    }
+
+    if ($INSTALL_IPL) {
+        install_ipl($IPL_BLK_START);
+    }
+    install_uboot($UBOOT_BLK_START);
+}
+
+# ==============================================================================
+# Bootloader restart
+# ==============================================================================
+sub restart_bootloader_uboot {
+    print "  Restarting u-boot\n";
+    $exp->clear_accum();
+    send_data("reset\n");
+    sleep(1);
+    $exp->expect(10, "U-Boot ") or
+        fatal_error("failed to detect u-boot restarting.");
+    # uboot doesn't have interrupt driving UART so give plenty of time
+    # while uboot initializes before next command is sent
+    sleep(1);
+    uboot_synchronize();
+}
+
+# ==============================================================================
+# Kernel installation
+# ==============================================================================
+sub install_kernel {
+    my $KERNEL_MD5SUM_ON_BOARD;
+    my $KERNEL_MD5SUM_NEW;
+    my $KERNEL_OFFSET_ON_BOARD;
+
+    # Do the checksum on the kernel file, not the uImage, since the uImage may be
+    # regenerated often by the fs installation
+    my $KERNELFILE = $KERNELIMAGE;
+    $KERNELFILE =~ s/(.*).uImage/$1/s;
+    $KERNEL_MD5SUM_NEW = `md5sum $KERNELFILE | cut -f1 -d' '`;
+    chomp($KERNEL_MD5SUM_NEW);
+
+    my $START_BLK = $UBOOT_SIZE_IN_BLKS;
+    my $SIZE = hex($KERNEL_PARTITION_SIZE) / hex($FLASH_BLK_SIZE);
+
+    if ($GENERATE_EXTERNAL_INSTALLER eq "y") {
+        my $OFFSET = sprintf("0x%x",$START_BLK * hex($FLASH_BLK_SIZE));
+        cmd_silent("cp $IMAGEDIR/kernel.uImage $EXTERNAL_INSTALLER_DIR/");
+        set_external_installer_value("KERNEL_OFFSET",$OFFSET);
+        set_external_installer_value("KERNEL_PSIZE",$KERNEL_PARTITION_SIZE);
+        set_external_installer_value("KERNEL_SIZE",$KSIZE_ALIGNED);
+        set_external_installer_value("KERNEL_CHECKSUM",$KERNEL_MD5SUM_NEW);
+        return;
+    }
+
+    print "\n  Verifying if kernel needs to be installed...\n";
+    $KERNEL_MD5SUM_ON_BOARD = read_uboot_value("kernelmd5sum");
+    $KERNEL_OFFSET_ON_BOARD = read_uboot_value("kerneloffset");
+
+    if (($KERNEL_MD5SUM_NEW ne $KERNEL_MD5SUM_ON_BOARD) || ($INSTALLATION_MODE eq "kernel") ||
+        (hex($KERNEL_OFFSET) != hex($KERNEL_OFFSET_ON_BOARD)) || ($FORCEINSTALL eq "yes")) {
+        print "  Loading Kernel image...\n";
+        load_file_to_ram($KERNELIMAGE);
+        send_uboot_cmd("setenv autostart yes\n");
+
+        # Saving the kernel to flash
+        print "  Saving kernel...\n";
+        flash_erase_cmd($START_BLK,$SIZE);
+        flash_write_cmd($CONFIG_INSTALLER_LOAD_ADDRS,$START_BLK,$SIZE,$flash_timeout);
+
+        print "  Saving new kernel offset and size...\n";
+        send_uboot_cmd("setenv kerneloffset 0x$KERNEL_OFFSET\n");
+        send_uboot_cmd("setenv ksize 0x$KSIZE_ALIGNED\n");
+
+        # Saving new md5sum value
+        print "  Saving new kernel md5sum value...\n";
+        send_uboot_cmd("setenv kernelmd5sum $KERNEL_MD5SUM_NEW\n");
+        send_uboot_cmd("saveenv\n",$long_timeout);
+    } else {
+        print "  Kernel doesn't need to be loaded, since checksums match on board and host\n";
+    }
+}
+
+# ==============================================================================
+# File system installation
+# ==============================================================================
+sub install_filesystem {
+    if($TARGET_FS_TYPE eq "noinstall" || $TARGET_FS_TYPE eq "NFS") {
+        print "  File system doesn't needs to be loaded\n";
+        return;
+    }
+
+    if (($GENERATE_EXTERNAL_INSTALLER eq "y") &&
+      !($TARGET_FS_TYPE eq "ubifs" || $TARGET_FS_TYPE eq "jffs2")) {
+        cmd_silent("rm -Rf $EXTERNAL_INSTALLER_DIR");
+        fatal_error("Unsupported fs type for external installation");
+    }
+
+    if ($TARGET_FS_TYPE eq "sd"){
+        my $FS_SD_FORMAT;
+        my $MKFS;
+        my $FSCK;
+
+        if ( $CONFIG_INSTALLER_SD_ROOTFS_TYPE_EXT3 eq "y" ) {
+            $FS_SD_FORMAT = "ext3";
+            $MKFS = "mkfs.ext3";
+            $FSCK = "fsck.ext3";
+        } else {
+            fatal_error("no valid filesystem format defined for the SD");
+        }
+
+
+        print YELLOW BLINK "  WARNING!!!\n";
+        print "  You are about to format your device ${SD_DEVICE}1, please enter 'yes' to continue\n  ";
+        my $ANSWER = <STDIN>;
+        chomp($ANSWER);
+        if ($ANSWER ne "yes") {
+            print "Aborting installation.\n\n";
+            exit -1;
+        }
+        print "\n";
+
+        my $DEVICE=$SD_DEVICE;
+        $DEVICE =~ s?/dev/??;
+        check_device_is_not_mounted($DEVICE);
+
+        print "  Deploying file system image...\n";
+        print "    Unmounting ${SD_DEVICE}1 in case is mounted...\n";
+        cmd_echo("sudo umount ${SD_DEVICE}1","2> /dev/null ; true");
+        print "    Formating filesystem...\n";
+        if ( $FS_SD_FORMAT eq "ext3" ) {
+            cmd_echo("sudo $MKFS ${SD_DEVICE}1 -L rootfs","2> /dev/null > /dev/null");
+        }
+        print "    Mounting filesystem...\n";
+        cmd_echo("mkdir -p $IMAGEDIR/rootfs ; sudo mount -t $FS_SD_FORMAT ${SD_DEVICE}1 $IMAGEDIR/rootfs");
+        print "    Copying the File System into the SD...\n";
+        cmd_echo("cd $DEVDIR/fs/fs ; find . | sudo cpio -pdum $IMAGEDIR/rootfs");
+        print "    Unmounting filesystem...\n";
+        cmd_echo("sudo umount ${SD_DEVICE}1");
+        print "    Verifying integrity of the fs...\n";
+        if ($FSCK) {
+          cmd_echo("sudo $FSCK ${SD_DEVICE}1");
+        }
+    } else {
+        my $FS_OFFSET_ON_BOARD;
+        my $FS_SIZE_ON_BOARD;
+
+        # File system load address computation
+        if ($CONFIG_FS_TARGET_REQUIRES_INSTALLER_GENERATION) {
+            printf "  Generating file system using flash geometry...\n";
+            my $PAGEINFO;
+            if ($CONFIG_FS_TARGET_REQUIRES_INSTALLER_PAGESIZE) {
+                $PAGEINFO="PAGESIZE=$NAND_PAGE_SIZE";
+            }
+            cmd_silent("make -sC $DEVDIR/fs/fstargets genimage BLOCKSIZE=0x$FLASH_BLK_SIZE $PAGEINFO");
+            # The only posible filesystem that may need an image prefix is initrd, and we don't use it anymore
+            cmd_silent("cp $IMAGEDIR/fsimage $IMAGEDIR/fsimage.uImage");
+
+            # Re-calculate File system size
+            calculate_fs_size();
+        }
+
+        if ($GENERATE_EXTERNAL_INSTALLER eq "y") {
+            $FS_SIZE_ON_BOARD = 0;
+            $FS_OFFSET_ON_BOARD = 0;
+        } else {
+            # Load onboard file system values
+            $FS_SIZE_ON_BOARD = read_uboot_value("fssize");
+            $FS_OFFSET_ON_BOARD = read_uboot_value("fsoffset");
+        }
+
+        my $START_BLK = hex($FS_OFFSET) / hex($FLASH_BLK_SIZE);
+        my $SIZE = hex($FS_PARTITION_SIZE) / hex($FLASH_BLK_SIZE);
+
+        if ($GENERATE_EXTERNAL_INSTALLER eq "y") {
+            my $OFFSET = sprintf("0x%x",$START_BLK * hex($FLASH_BLK_SIZE));
+            cmd_silent("cp $IMAGEDIR/fsimage.uImage $EXTERNAL_INSTALLER_DIR/");
+            set_external_installer_value("FS_OFFSET",$OFFSET);
+            set_external_installer_value("FS_PSIZE",$FS_PARTITION_SIZE);
+            set_external_installer_value("FS_SIZE",$FSSIZE);
+            return;
+        }
+
+        if((hex($FSSIZE) != hex($FS_SIZE_ON_BOARD)) ||
+           (hex($FS_OFFSET) != hex($FS_OFFSET_ON_BOARD)) ||
+           ($INSTALLATION_MODE eq "fs") ||
+           ($FORCEINSTALL eq "yes")) {
+            print "  Loading file system image...\n";
+            load_file_to_ram($FSIMAGE);
+            send_uboot_cmd("setenv autostart yes\n");
+
+            # Saving the file system to flash
+
+            flash_erase_cmd($START_BLK,$SIZE);
+
+            print "  Saving file system...\n";
+            # We assume that the image generated is block-aligned
+            flash_write_cmd($CONFIG_INSTALLER_LOAD_ADDRS,$START_BLK,"filesize");
+
+            # Saving new file system size value
+            print "  Saving new file system values...\n";
+            send_uboot_cmd("setenv fssize 0x$FSSIZE\n");
+            send_uboot_cmd("setenv fsoffset 0x$FS_OFFSET\n");
+            send_uboot_cmd("saveenv\n",$long_timeout);
+        } else {
+            print "  File system doesn't need to be loaded, since file system size match on board and host\n";
+        }
+    }
+}
+
+# ==============================================================================
+# Commad line installation
+# ==============================================================================
+sub install_cmdline {
+
+    if ($GENERATE_EXTERNAL_INSTALLER eq "y") {
+        $CMDLINE_ON_BOARD = "";
+    } else {
+        # Load on board command line
+        $CMDLINE_ON_BOARD = read_uboot_value("bootargs");
+        $CMDLINE_ON_BOARD =~ s/^\s+//; #remove leading spaces
+    }
+
+    my $CMDLINE = `cat $DEVDIR/images/cmdline`;
+
+    if($MTD_UBOOT_INTEGRATION eq "y") {
+        $CMDLINE .= " " . $MTDPARTS;
+    }
+
+    chomp($CMDLINE);
+    $CMDLINE =~ s/^\s+//; #remove leading spaces
+    $CMDLINE =~ tr/ / /s;
+
+    if ($GENERATE_EXTERNAL_INSTALLER eq "y") {
+        set_external_installer_value("BOOTARGS",$CMDLINE);
+        return;
+    }
+
+    print "\n  Verifying if kernel command line needs to be installed...\n";
+
+    if(($CMDLINE ne $CMDLINE_ON_BOARD) || ($INSTALLATION_MODE eq "cmdline")) {
+        send_uboot_cmd("setenv bootargs '$CMDLINE'\n");
+        send_uboot_cmd("saveenv\n",$long_timeout);
+    }
+    else {
+        print "  Kernel command line doesn't need to be installed\n";
+    }
+}
+
+# ==============================================================================
+# Boot command installation
+# ==============================================================================
+sub install_bootcmd(){
+    my $BOOTCMD;
+
+    if ($FLASH_TYPE eq "OneNAND") {
+        $BOOTCMD = "onenand read $CONFIG_INSTALLER_LOAD_ADDRS \\${kerneloffset} \\${ksize}\; bootm $CONFIG_INSTALLER_LOAD_ADDRS";
+    } elsif ($FLASH_TYPE eq "SPI") {
+        $BOOTCMD = "sf probe 0\\;sf read $CONFIG_INSTALLER_LOAD_ADDRS \\${kerneloffset} \\${ksize}\\; bootm $CONFIG_INSTALLER_LOAD_ADDRS";
+    } elsif ($FLASH_TYPE eq "NOR") {
+        $BOOTCMD = 'bootm \\${kerneloffset}';
+    } elsif ($FLASH_TYPE eq "NAND") {
+        $BOOTCMD = "nboot $CONFIG_INSTALLER_LOAD_ADDRS 0 \\\${kerneloffset}";
+    } else {
+        fatal_error("support for this memory type ($FLASH_TYPE) is not available\n");
+    }
+
+    if ($GENERATE_EXTERNAL_INSTALLER eq "y") {
+        set_external_installer_value("BOOTCMD",$BOOTCMD);
+        return;
+    }
+
+    print "\n  Verifying if the boot command needs to be installed...\n";
+
+     # Load on board command line
+    $BOOTCMD_ON_BOARD = read_uboot_value("bootcmd");
+    $BOOTCMD_ON_BOARD =~ s/^\s+//; #remove leading spaces
+
+    $BOOTCMD_STRIPPED = $BOOTCMD;
+    $BOOTCMD_STRIPPED =~ tr/\\//d;
+
+    if(($BOOTCMD_STRIPPED ne $BOOTCMD_ON_BOARD) || ($INSTALLATION_MODE eq "bootcmd")) {
+        send_uboot_cmd("setenv bootcmd $BOOTCMD\n");
+        send_uboot_cmd("setenv autostart yes\n");
+        send_uboot_cmd("saveenv\n",$long_timeout);
+
+    }
+    else {
+        print "  Boot command doesn't need to be installed\n";
+    }
+}
+
+sub generate_installer_script() {
+    cmd_silent("sed $EXTERNAL_INSTALLER_REPLACE_STRINGS " .
+      "$DEVDIR/installer/u-boot-installer/methods/attached_board/installer.txt.in >" .
+      "$EXTERNAL_INSTALLER_DIR/installer.txt");
+    cmd_silent("$DEVDIR/bootloader/$BOOTLOADER/src/tools/mkimage -A arm -T script -n 'Installer Script' -d $EXTERNAL_INSTALLER_DIR/installer.txt $EXTERNAL_INSTALLER_DIR/installer.scr > $LOG_INSTALL_FILE");
+    cmd_silent("cp $DEVDIR/installer/u-boot-installer/methods/attached_board/installer_uEnv.txt $EXTERNAL_INSTALLER_DIR/uEnv.txt");
+}
+
+sub set_external_installer_value() {
+    $EXTERNAL_INSTALLER_REPLACE_STRINGS = "$EXTERNAL_INSTALLER_REPLACE_STRINGS" . "-e 's?\@$_[0]\@?$_[1]?g' ";
+}
+
+# ==============================================================================
+# Load file into the RAM
+# First param: file path
+# Returns: size of the file loaded
+# ==============================================================================
+sub load_file_to_ram() {
+    my $SIZE = -s "$_[0]";
+    my $TARGET = basename($_[0]);
+    if($INSTALL_METHOD eq "TFTP") { 
+        uboot_network_setup();
+        send_uboot_cmd("setenv autostart no\n");
+        cmd_echo("cp -f $_[0] $TFTPDIR/$TARGET${TFTPIMGSUFFIX}");
+        tftp_load_image("$CONFIG_INSTALLER_LOAD_ADDRS","$TARGET",$SIZE);
+    } elsif ($INSTALL_METHOD eq "SERIAL") { 
+        print "     Uboot <= loady $CONFIG_INSTALLER_LOAD_ADDRS\n";
+        $exp->clear_accum();
+        send_data("loady $CONFIG_INSTALLER_LOAD_ADDRS\n");
+        usleep(300000);
+        system("sz --ymodem -b $_[0] > $PORT < $PORT");
+        $exp->expect($serial_timeout,$prompt);
+    } elsif ($INSTALL_METHOD eq "DFU") {
+        dfu_download("$_[0]",0);
+    }
+
+    # TODO: Do a CRC checksum that the data loaded is the same as the file
+
+    return "0x" . read_uboot_value("filesize");
+}
+
+# ==============================================================================
+# Load TFTP image
+# First param: load address
+# Second param: image name
+# Third param: image size
+# ==============================================================================
+sub tftp_load_image() {
+    # Give 10 seconds per MB
+    $tftp_timeout = ((int($_[2]) / 1048576) + 1 ) * 10;
+
+    send_uboot_cmd("tftp $_[0] $_[1]$TFTPIMGSUFFIX\n", $tftp_timeout,
+        "TFTP error",\&tftp_error_callback);
+}
+
+sub tftp_error_callback() {
+    @result = split("\n",$exp->exp_after());
+    $error_string = $result[0];
+    $error_string =~ s/.*\'(.*)\'.*/\1/;
+    fatal_error("There was an TFTP error: $error_string");
+}
+
+sub dhcp_error_callback() {
+    $error_string = $exp->exp_before();
+    fatal_error("Looks like your network doesn't have dhcp enabled or you don't have ethernet link. Output from the bootloader:\n\n $error_string" );
+}
+
+# ==============================================================================
+# Load DFU image
+# First param: image name
+# Second param: partition name or number
+# ==============================================================================
+sub dfu_download(){
+    $exp->hard_close();
+    if(system("sudo $DFUUTIL -R -D $_[0] -a $_[1]") == 256) {
+        fatal_error("DFU flashing process failed, please reboot the target and try again.");
+    }
+    # Allow USB to reset
+    sleep(2);
+    open(FH, "+< $PORT") or die $!;
+    $exp = Expect->exp_init(\*FH);
+}
+
+# ==============================================================================
+# Erase Flash Area
+# First param: start block erased
+# Second param: amount of data to erase
+# ==============================================================================
+sub flash_erase_cmd {
+    my $START = sprintf("0x%X",$_[0] * hex($FLASH_BLK_SIZE));
+    my $LEN   = sprintf("0x%X",$_[1] * hex($FLASH_BLK_SIZE));
+
+    if ($FLASH_TYPE eq "NOR") {
+        $START= sprintf("0x%x", hex($START) + hex($FLASH_BASE_ADDRS));
+        $LEN = "+" . $LEN;
+    }
+
+    if ($FLASH_UNLOCK_CMD) {
+        send_uboot_cmd("$FLASH_UNLOCK_CMD $START $LEN\n");
+    }
+    send_uboot_cmd("$FLASH_ERASE_CMD $START $LEN\n", $flash_timeout);
+}
+
+# ==============================================================================
+# Write Flash Area
+# First param: address with data to be written
+# Second param: start block
+# Third param: size in blocks
+# ==============================================================================
+sub flash_write_cmd {
+    return _flash_write_cmd($_[0],$_[1],$_[2],$FLASH_WRITE_CMD);
+}
+
+# Version with ipl cmd
+sub flash_write_cmd_ipl {
+    return _flash_write_cmd($_[0],$_[1],$_[2],$FLASH_WRITE_IPL_CMD);
+}
+
+sub _flash_write_cmd {
+    my $START = sprintf("0x%X",$_[1] * hex($FLASH_BLK_SIZE));
+    my $LEN;
+    if ($_[2] eq "filesize") {
+        $LEN = '${filesize}';
+    } else {
+        $LEN = sprintf("0x%X",$_[2] * hex($FLASH_BLK_SIZE));
+    }
+
+    if ($FLASH_TYPE eq "NOR") {
+        $START= sprintf("0x%x", hex($START) + hex($FLASH_BASE_ADDRS));
+    }
+
+    send_uboot_cmd("$_[3] $_[0] $START $LEN\n", $flash_timeout);
+}
+
+# ==============================================================================
+# Detects the page size of the flash chip
+# ==============================================================================
+
+sub detect_page_size {
+    if ($FLASH_TYPE ne "NAND") {
+        return;
+    }
+    print "  Trying to identify NAND Page size... ";
+    if ((not defined $NAND_PAGE_SIZE) || ($NAND_PAGE_SIZE <= 0)) {
+        @SIZES = ("0200","0400","0800","1000");
+
+        $NAND_PAGE_SIZE = "0000";
+        my $i = 0;
+        while ($NAND_PAGE_SIZE eq "0000" && $SIZES[$i]) {
+            send_data("nand dump.oob ${SIZES[$i++]}\n");
+            usleep(300000);
+            $exp->expect($timeout,'-re',"Page 0000");
+            $NAND_PAGE_SIZE = $exp->after;
+            $NAND_PAGE_SIZE =~ s/(.*) dump:.*/$1/s;
+        }
+        $NAND_PAGE_SIZE = sprintf("%d", hex($NAND_PAGE_SIZE));
+        if ($NAND_PAGE_SIZE eq "0") {
+            printf("\n");
+            fatal_error("unable to identify a valid NAND page size.");
+        }
+        $exp->clear_accum();
+    }
+    print "detected NAND page size: $NAND_PAGE_SIZE\n";
+}
+
+# ==============================================================================
+# nand_scrub
+# ==============================================================================
+sub nand_scrub() {
+    print "    Uboot <= nand scrub.chip\n";
+    send_data("nand scrub.chip\n");
+    sleep 1;
+    $exp->clear_accum();
+    send_data("y\r");
+    $exp->expect($flash_timeout,$prompt);
+}
+
+# ==============================================================================
+# Send U-boot command
+# First param: U-boot command
+# optional second parm: timeout in seconds
+# optional third param: pattern for error
+# optional fourth param: error callback
+# Returns undef if exchanged failed
+# ==============================================================================
+sub send_uboot_cmd
+{
+    my $ret = 1;
+    my $error;
+    my $cmd = shift;
+    $cmd =~ s/\n//s;
+    my $cmd_timeout = shift;
+    my $error_pattern = shift;
+    my $error_cb = shift;
+    my $error_string;
+    $cmd_timeout ||= $timeout;
+
+    print "    Uboot <= $cmd\n";
+    $exp->clear_accum();
+    send_data($cmd . "\n");
+    usleep(100000);
+
+    # first get the echo-ed command
+    # this is needed because we might be out of sync
+    # with the prompts
+
+    $error = $exp->expect($timeout, $cmd);
+
+    if (not defined $error) {
+        $error_string = $exp->exp_before();
+        fatal_error("the bootloader didn't echo our command, maybe it froze. This is the log of the last command:\n\n $error_string");
+        $ret = undef;
+    }
+
+    # now wait for the prompt
+    if ($error_pattern) {
+        $error = $exp->expect($cmd_timeout,
+                     [$error_pattern, $error_cb],
+                     $prompt);
+    } else {
+        $error = $exp->expect($cmd_timeout, $prompt);
+    }
+
+    if (not defined $error) {
+        $error_string = $exp->exp_before();
+        fatal_error("we didn't get back the bootloader prompt. This is the log of the last command:\n\n$error_string");
+        $ret = undef;
+    }
+
+    return $ret;
+}
+
+# ==============================================================================
+# Read values from board enviroment variables
+# First param: Name of environment variable to read
+# ==============================================================================
+sub read_uboot_value(){
+    # Using regular expresions with expect doesn't work well on USB ports
+    send_data("printenv $_[0]\n");
+    usleep(300000);
+    $exp->expect($timeout,"$_[0]=","## Error:");
+    my @ARRAY = split(/\n/,$exp->after);
+    $TMP = @ARRAY[0];
+    if ($PORT ne "/dev/ttyACM0") {
+        chop($TMP);
+    }
+    return $TMP;
+}
+
+# ==============================================================================
+# sync_uboot_console
+# ==============================================================================
+sub sync_uboot_console() {
+    my $ret;
+    ( my $sec, my $min, my $hour ) = localtime(time);
+    my $prefix = sprintf( "echo %02d%02d\n", $min, $sec );
+    $ret = send_uboot_cmd($prefix, 3);
+
+    if ( !defined($ret) )
+    {
+        print("FAILED: Can't sync uboot console\n");
+        return 0;
+    }
+
+    $ret = waitFor($prompt);
+    if($ret){return 1;}
+}
+
+# ==============================================================================
+# cleanup
+# ==============================================================================
+sub attached_cleanup() 
+{
+    $exp->log_file(undef) if defined $exp;
+    $exp->hard_close()    if defined $exp;
+    $exp = undef;
+}
+
+1;

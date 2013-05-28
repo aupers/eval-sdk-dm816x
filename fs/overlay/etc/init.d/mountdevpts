@@ -1,0 +1,6 @@
+#!/bin/sh
+
+if grep -q '\<devpts\>' /proc/filesystems 2>/dev/null ; then
+    mkdir -p /dev/pts
+    /bin/mount -t devpts -ogid=5,mode=620 devpts /dev/pts
+fi

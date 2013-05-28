@@ -1,0 +1,3 @@
+NAME="LIBSOUP"
+HOST_REQUIRED="automake "
+TARGET_REQUIRED="glib"

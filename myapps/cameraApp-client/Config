@@ -1,0 +1,6 @@
+config FS_APPS_CAMERAAPP_CLIENT
+	bool "CameraApp client example application"
+	depends on FS_APPS_CAMERAAPP
+	default n
+	help
+	    Example application for libgstcam usage.

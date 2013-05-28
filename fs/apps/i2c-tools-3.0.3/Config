@@ -1,0 +1,6 @@
+
+config FS_APPS_I2C_TOOLS
+	bool "i2c-tools-3.0.3"
+	default n
+	help
+	    i2c-tools for allowing interaction with I2C chips via the /dev/i2c* device files.

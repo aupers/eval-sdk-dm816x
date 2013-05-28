@@ -1,0 +1,318 @@
+#!/usr/bin/perl
+
+use strict;
+
+my $DEVDIR = $ENV{'DEVDIR'};
+my $lastselection;
+my $selectedmach;
+
+print "  Unpatching SDK components...";
+system "make unpatch";
+
+print "  Select SDK Core components...\n\n";
+select_mach();
+select_component("toolchain","TOOLCHAIN");
+
+if ( $ARGV[0] eq "" || $ARGV[1] eq "" || $ARGV[2] eq "" || $ARGV[3] eq "")
+{
+	reset_toolchain_definitions();
+}
+
+select_component("bootloader","BOOTLOADER");
+select_component("kernel","KERNEL");
+#generate_kernel_version();
+
+if ( $ARGV[0] eq "" || $ARGV[1] eq "" || $ARGV[2] eq "" || $ARGV[3] eq "")
+{
+	print "  Running configuration menu to select options based on new core components...\n\n";
+	system "make -s config";
+	print "  SDK Core configuration completed.\n\n\n";
+}
+else
+{
+	print "  All coreconfig elements selected from commandline, using default configuration...\n\n\n";
+}
+
+# Params:
+# - Component name
+# - Definition name on Make.conf
+sub select_component(){
+    my $DIR;
+    my $file;
+    my $dirname="$DEVDIR/$_[0]";
+    my %options;
+    my $i = 1;
+    my $key;
+    my $choices;
+    my $tmpstring;
+
+	if( $_[0] eq "toolchain")
+	{
+		if ( $ARGV[1] eq "" )
+		{
+			goto SELECTION;
+		}
+		else
+		{
+			if( -e "toolchain/$ARGV[1]")
+			{
+				$lastselection = $ARGV[1];
+				goto SELECTED;
+			}
+			else
+			{
+				print "toolchain directory: $DEVDIR/toolchain/$ARGV[1] NOT found!\n\n";
+				exit(1);
+			}
+		}
+	}
+	
+	if( $_[0] eq "bootloader")
+	{
+		if ( $ARGV[2] eq "")
+		{
+			goto SELECTION;
+		}
+		else
+		{
+			if( -e "bootloader/$ARGV[2]")
+			{
+				$lastselection = $ARGV[2];
+					
+				goto SELECTED;
+			}
+			else
+			{
+				print "bootloader directory: $DEVDIR/bootloader/$ARGV[2] NOT found!\n\n";
+				exit(1);
+			}
+		}
+	}
+
+	if( $_[0] eq "kernel")
+	{
+		if ( $ARGV[3] eq "")
+		{
+			goto SELECTION;
+		}
+		else
+		{
+			if( -e "kernel/$ARGV[3]")
+			{
+				$lastselection = $ARGV[3];
+				
+				goto SELECTED;
+			}
+			else
+			{
+				print "kernel directory: $DEVDIR/kernel/$ARGV[3] NOT found! Maybe using and uncompiled SDK. Selecting: $ARGV[3]\n\n";
+				$lastselection = $ARGV[3];
+				goto SELECTED;
+				#exit(1);
+			}
+		}
+	}
+
+SELECTION:
+
+	print "  Selecting $_[0]:\n";
+	opendir(DIR, $dirname) || die "can't opendir $dirname: $!";
+	while (defined($file = readdir(DIR))) {
+		next if $file =~ /^\.\.?$/;     # skip . and ..
+		next if $file eq ".svn"; 
+		next if $file eq "patches";
+		next if $file eq ".pc";
+		next unless -d "$dirname/$file";  # skip if not a directory
+		$options{$i}=$file;
+		print "    $i. $options{$i}\n";
+		$i++;
+	}
+	closedir(DIR);
+    
+    while (){
+		print "  Which? ";
+		$key = <STDIN>;
+		chop($key);
+		
+		if ($key >= $i || $key < 1) {
+			print "  Invalid option\n";
+		} else {
+			last;
+		}
+	}
+    $lastselection = $options{$key};
+
+SELECTED:
+    
+    open(REPLACEMENT,">/tmp/Make.conf") or die "Can't open /tmp/Make.conf\n";
+    open(FD, "$DEVDIR/bsp/mach/Make.conf") or die "Can't open $DEVDIR/bsp/mach/Make.conf\n";
+    
+    while (<FD>) {
+	print REPLACEMENT unless /$_[1]\?=/;
+	print REPLACEMENT "$_[1]?=$lastselection\n" if /BOOTLOADER\?=/ ;
+    }
+    
+    system "mv /tmp/Make.conf $DEVDIR/bsp/mach/Make.conf";
+    close(REPLACEMENT);
+    close(FD);
+    print "\n";
+}
+
+sub reset_toolchain_definitions{
+    open(REPLACEMENT,">/tmp/bspconfig") or die "Can't open /tmp/bspconfig\n";
+    open(FD, "$DEVDIR/bsp/mach/bspconfig") or die "Can't open $DEVDIR/bsp/mach/bspconfig\n";
+    
+    while (<FD>) {
+	print REPLACEMENT unless /CONFIG_TOOLCHAIN_/;
+    }
+    
+    system "mv /tmp/bspconfig $DEVDIR/bsp/mach/bspconfig";
+    close(REPLACEMENT);
+    close(FD);
+}
+
+sub select_mach{
+    my $DIR;
+    my $file;
+    my $dirname="$DEVDIR/bsp";
+    my %options;
+    my $i = 1;
+    my $key;
+    my $tmpstring;
+
+    opendir(DIR, $dirname) || die "can't opendir $dirname: $!";
+    
+    if ( $ARGV[0] eq "")
+    {
+		print "  Selecting machine/board:\n";
+
+		while (defined($file = readdir(DIR))) {
+			next unless $file =~ /^mach-.*/;     # skip if doesn't start with mach-
+			next unless -d "$dirname/$file";  # skip if not a directory
+			$options{$i}=$file;
+			print "    $i. $options{$i}\n";
+			$i++;
+		}
+		
+		closedir(DIR);
+		while (){
+			print "  Which? ";
+			$key = <STDIN>;
+			chop($key);
+			if ($key >= $i || $key < 1) {
+				print "  Invalid option\n";
+			} else {
+				last;
+			}
+		}
+		
+		$selectedmach = $options{$key};
+	}
+	else
+	{
+		if ( -e "bsp/$ARGV[0]")
+		{
+			#mach directory involves kernel and bootloader patches
+			#We need to remove those patches first in order to 
+			#build without problems
+			
+			$selectedmach = $ARGV[0];
+		
+			#Removing kernel patches
+			$tmpstring = "$DEVDIR/kernel";
+			
+			print "\n\n  Removing patches from kernel directory\n\n";
+			chdir($tmpstring) or die "$!";
+			system "quilt pop -a";
+			system "rm rrpatched";
+			chdir($DEVDIR) or die "$!";
+			
+			#Cleaning bootloader
+			$tmpstring = "$DEVDIR/bootloader";
+			
+			print "\n\n  Cleaning bootloader directory\n\n";
+			chdir($tmpstring) or die "$!";
+			system "make clean";
+			chdir($DEVDIR) or die "$!";
+
+			#mach modification may have different apps selected
+			#need to clean flags
+			#make cleanfs in order to erase fs/fs
+			#clean fs/fs myapps/
+			system "make remove_fs";
+
+			#Remove flags from fs/apps
+			chdir("$DEVDIR/fs/apps") or die "$!";
+			system "find . -maxdepth 5 -name rrbuilt | xargs rm -f {} ";
+			system "find . -maxdepth 5 -name rrinstalled | xargs rm -f {} ";
+			
+			chdir("$DEVDIR/myapps") or die "$!";
+			system "find . -maxdepth 5 -name rrbuilt | xargs rm -f {} ";
+                        system "find . -maxdepth 5 -name rrinstalled | xargs rm -f {} ";
+
+			chdir($DEVDIR) or die "$!";
+
+		}
+		else
+		{
+			print "mach directory: $DEVDIR/bsp/$ARGV[0] NOT found!\n\n";
+			exit(1);
+		}
+	}
+	
+	system "rm -f $DEVDIR/bsp/mach";
+	system "ln -s $selectedmach mach";
+	system "mv mach bsp/";
+	print "\n";
+	
+	closedir(DIR);
+	return 0;
+}
+
+sub generate_kernel_version{
+    my $VERSION;
+    my $PATCHLEVEL;
+    my $SUBLEVEL;
+    my $EXTRAVERSION;
+    my $dummy;
+    my $line;
+    
+    open(KERNELMAKEFILE,"$DEVDIR/kernel/$lastselection/Makefile") or 
+	die "Can't open $DEVDIR/kernel/$lastselection/Makefile\n"; 
+    while ($line = <KERNELMAKEFILE>){
+	if ($line =~ /EXTRAVERSION\s*=/) {
+	    ($dummy,$EXTRAVERSION) = split("=",$line);
+	    chomp($EXTRAVERSION);
+	    $EXTRAVERSION =~ s/^\s+//; #remove leading spaces
+	    last;
+	}
+	elsif ($line =~ /VERSION\s*=/) {
+	    ($dummy,$VERSION) = split("=",$line);
+	    chomp($VERSION);
+	    $VERSION =~ s/^\s+//; #remove leading spaces
+	}
+	elsif ($line =~ /PATCHLEVEL\s*=/) {
+	    ($dummy,$PATCHLEVEL) = split("=",$line);
+	    chomp($PATCHLEVEL);
+	    $PATCHLEVEL =~ s/^\s+//; #remove leading spaces
+	}
+	elsif ($line =~ /SUBLEVEL\s*=/) {
+	    ($dummy,$SUBLEVEL) = split("=",$line);
+	    chomp($SUBLEVEL);
+	    $SUBLEVEL =~ s/^\s+//; #remove leading spaces
+	}
+    }
+    close(KERNELMAKEFILE);
+
+    open(REPLACEMENT,">/tmp/Make.conf");
+    open(FD, "$DEVDIR/bsp/mach/Make.conf");
+    
+    while (<FD>) {
+	print REPLACEMENT unless /KERNELVERSION\?=/;
+	print REPLACEMENT "KERNELVERSION?=$VERSION.$PATCHLEVEL.$SUBLEVEL$EXTRAVERSION\n" if /KERNELVERSION\?=/ ;
+    }
+    
+    close(REPLACEMENT);
+    close(FD);
+    system "mv /tmp/Make.conf $DEVDIR/bsp/mach/Make.conf";
+}

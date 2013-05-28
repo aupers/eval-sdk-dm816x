@@ -1,0 +1,20 @@
+#
+# Ridgerun ubifs target configuration
+#
+
+config FS_TARGET_UBIFS
+	bool "UBIFS volume"
+	depends on INSTALLER_MODE_ATTACHED_BOARD || INSTALLER_MODE_SD_CARD_INSTALLER
+	depends on BSP_ARCH_SUPPORTS_UBIFS
+	select FS_TARGET_REQUIRES_INSTALLER_GENERATION
+	select FS_TARGET_REQUIRES_INSTALLER_PAGESIZE
+	select MTD
+	select MTD_CHAR
+	select MTD_BLOCK
+	select MTD_UBI
+	select UBIFS_FS
+	select UBIATTACH
+	select UBIDEATTACH
+	help
+	    Use an UBI file system
+

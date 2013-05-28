@@ -1,0 +1,241 @@
+Index: gstreamer-0.10.36/src/gst/gstinfo.c
+===================================================================
+--- gstreamer-0.10.36.orig/src/gst/gstinfo.c	2013-02-20 15:58:37.750645474 -0600
++++ gstreamer-0.10.36/src/gst/gstinfo.c	2013-02-20 16:06:17.958638446 -0600
+@@ -488,6 +488,31 @@
+ #endif
+ 
+ /**
++ * gst_debug_log2:
++ * @category: category to log
++ * @level: level of the message is in
++ * @location: the file, function name, and line number of the location that
++ *    emitted the message
++ * @object: the object this message relates to or NULL if none
++ * @format: a printf style format string
++ * @...: optional arguments for the format
++ *
++ * Logs the given message using the currently registered debugging handlers.
++ */
++void
++gst_debug_log2 (GstDebugCategory * category, GstDebugLevel level,
++    const GstDebugTraceLocation * location,
++    GObject * object, const gchar * format, ...)
++{
++  va_list var_args;
++
++  va_start (var_args, format);
++  gst_debug_log_valist2 (category, level, location, object, format, var_args);
++  va_end (var_args);
++}
++
++
++/**
+  * gst_debug_log_valist:
+  * @category: category to log
+  * @level: level of the message is in
+@@ -506,13 +531,39 @@
+     const gchar * file, const gchar * function, gint line,
+     GObject * object, const gchar * format, va_list args)
+ {
++  GstDebugTraceLocation location = {
++    .file = file,
++    .function = function,
++    .line = line
++  };
++  gst_debug_log_valist2 (category, level, &location, object, format, args);
++}
++
++/**
++ * gst_debug_log_valist2:
++ * @category: category to log
++ * @level: level of the message is in
++ * @location: the file, function name, and line number of the location that
++ *    emitted the message
++ * @object: the object this message relates to or NULL if none
++ * @format: a printf style format string
++ * @args: optional arguments for the format
++ *
++ * Logs the given message using the currently registered debugging handlers.
++ */
++void
++gst_debug_log_valist2 (GstDebugCategory * category, GstDebugLevel level,
++    const GstDebugTraceLocation * location,
++    GObject * object, const gchar * format, va_list args)
++{
+   GstDebugMessage message;
+   LogFuncEntry *entry;
+   GSList *handler;
+ 
+   g_return_if_fail (category != NULL);
+-  g_return_if_fail (file != NULL);
+-  g_return_if_fail (function != NULL);
++  g_return_if_fail (location != NULL);
++  g_return_if_fail (location->file != NULL);
++  g_return_if_fail (location->function != NULL);
+   g_return_if_fail (format != NULL);
+ 
+   /* The predefined macro __FILE__ is always the exact path given to the
+@@ -530,8 +581,9 @@
+   while (handler) {
+     entry = handler->data;
+     handler = g_slist_next (handler);
+-    entry->func (category, level, file, function, line, object, &message,
+-        entry->user_data);
++    // TODO: change GstLogFunction and pass GstDebugTraceLocation ptr instead..
++    entry->func (category, level, location->file, location->function,
++        location->line, object, &message, entry->user_data);
+   }
+   g_free (message.message);
+   va_end (message.arguments);
+@@ -604,7 +656,7 @@
+     return gst_structure_to_string (s);
+ }
+ 
+-static gchar *
++gchar *
+ gst_debug_print_object (gpointer ptr)
+ {
+   GObject *object = (GObject *) ptr;
+@@ -719,7 +771,7 @@
+ 
+ #ifdef HAVE_PRINTF_EXTENSION
+ 
+-static gchar *
++gchar *
+ gst_debug_print_segment (gpointer ptr)
+ {
+   GstSegment *segment = (GstSegment *) ptr;
+Index: gstreamer-0.10.36/src/gst/gstinfo.h
+===================================================================
+--- gstreamer-0.10.36.orig/src/gst/gstinfo.h	2013-02-20 15:58:37.738645469 -0600
++++ gstreamer-0.10.36/src/gst/gstinfo.h	2013-02-20 16:06:17.942638448 -0600
+@@ -177,6 +177,8 @@
+ 
+   const gchar *		name;
+   const gchar *		description;
++
++  void *ext;                /**< for use by LD_PRELOADED trace extension */
+ };
+ 
+ /********** some convenience macros for debugging **********/
+@@ -260,6 +262,14 @@
+ /* FIXME 0.11: move this into private headers */
+ void            _gst_debug_init (void);
+ 
++typedef struct {
++	const gchar *file;
++	const gchar *function;
++	const gint   line;
++} GstDebugTraceLocation;
++
++#define GST_DEBUG_TRACE_LOCATION() \
++	{ __FILE__, GST_FUNCTION, __LINE__ }
+ 
+ #ifdef GST_USING_PRINTF_EXTENSION
+ 
+@@ -273,6 +283,13 @@
+                                           const gchar      * format,
+                                           ...) G_GNUC_NO_INSTRUMENT;
+ 
++void		    gst_debug_log2           (GstDebugCategory * category,
++                                          GstDebugLevel      level,
++                                          const GstDebugTraceLocation *location,
++                                          GObject          * object,
++                                          const gchar      * format,
++                                          ...) G_GNUC_NO_INSTRUMENT;
++
+ #else /* GST_USING_PRINTF_EXTENSION */
+ 
+ void		    gst_debug_log            (GstDebugCategory * category,
+@@ -284,6 +301,13 @@
+                                           const gchar      * format,
+                                           ...) G_GNUC_PRINTF (7, 8) G_GNUC_NO_INSTRUMENT;
+ 
++void		    gst_debug_log2           (GstDebugCategory * category,
++                                          GstDebugLevel      level,
++                                          const GstDebugTraceLocation *location,
++                                          GObject          * object,
++                                          const gchar      * format,
++                                          ...) G_GNUC_PRINTF (5, 6) G_GNUC_NO_INSTRUMENT;
++
+ #endif /* GST_USING_PRINTF_EXTENSION */
+ 
+ void            gst_debug_log_valist     (GstDebugCategory * category,
+@@ -321,8 +345,21 @@
+ 	_gst_debug_nameof_funcptr	(GstDebugFuncPtr	func) G_GNUC_NO_INSTRUMENT;
+ 
+ 
++void            gst_debug_log_valist2    (GstDebugCategory * category,
++                                          GstDebugLevel      level,
++                                          const GstDebugTraceLocation *location,
++                                          GObject          * object,
++                                          const gchar      * format,
++                                          va_list            args) G_GNUC_NO_INSTRUMENT;
++
+ const gchar   * gst_debug_message_get    (GstDebugMessage  * message);
+ 
++gchar *         gst_debug_print_object (gpointer ptr);
++
++#ifdef HAVE_PRINTF_EXTENSION
++gchar *         gst_debug_print_segment (gpointer ptr);
++#endif
++
+ void            gst_debug_log_default    (GstDebugCategory * category,
+                                           GstDebugLevel      level,
+                                           const gchar      * file,
+@@ -507,19 +544,41 @@
+  * debugging messages. You will probably want to use one of the ones described
+  * below.
+  */
++#if defined(GST_USING_PRINTF_EXTENSION) && defined(G_HAVE_GNUC_VARARGS)
++#define GST_CAT_LEVEL_LOG_obj(cat,level,object,str,args...) G_STMT_START{  \
++  if (G_UNLIKELY (level <= __gst_debug_min)) {                             \
++    const GstDebugTraceLocation loc = GST_DEBUG_TRACE_LOCATION();          \
++    gst_debug_log2 ((cat), (level), &loc, NULL, "%"GST_PTR_FORMAT" "str,   \
++        (object), ##args );                                                \
++  }                                                                        \
++}G_STMT_END
++#define GST_CAT_LEVEL_LOG_noobj(cat,level,object,str,args...) G_STMT_START{\
++  if (G_UNLIKELY (level <= __gst_debug_min)) {                             \
++    const GstDebugTraceLocation loc = GST_DEBUG_TRACE_LOCATION();          \
++    gst_debug_log2 ((cat), (level), &loc, NULL, (str), ##args );           \
++  }                                                                        \
++}G_STMT_END
++#else
++#  define GST_CAT_LEVEL_LOG_obj   GST_CAT_LEVEL_LOG
++#  define GST_CAT_LEVEL_LOG_noobj GST_CAT_LEVEL_LOG
++#endif
++
++
+ #ifdef G_HAVE_ISO_VARARGS
+ #define GST_CAT_LEVEL_LOG(cat,level,object,...) G_STMT_START{		\
+-  if (G_UNLIKELY (level <= __gst_debug_min)) {						\
+-    gst_debug_log ((cat), (level), __FILE__, GST_FUNCTION, __LINE__,	\
+-        (GObject *) (object), __VA_ARGS__);				\
++  if (G_UNLIKELY (level <= __gst_debug_min)) {	\
++	const GstDebugTraceLocation loc = GST_DEBUG_TRACE_LOCATION();	\
++    gst_debug_log2 ((cat), (level), &loc, (GObject *) (object),		\
++            __VA_ARGS__);											\
+   }									\
+ }G_STMT_END
+ #else /* G_HAVE_GNUC_VARARGS */
+ #ifdef G_HAVE_GNUC_VARARGS
+ #define GST_CAT_LEVEL_LOG(cat,level,object,args...) G_STMT_START{	\
+   if (G_UNLIKELY (level <= __gst_debug_min)) {						\
+-    gst_debug_log ((cat), (level), __FILE__, GST_FUNCTION, __LINE__,	\
+-        (GObject *) (object), ##args );					\
++    const GstDebugTraceLocation loc = GST_DEBUG_TRACE_LOCATION();	\
++    gst_debug_log2 ((cat), (level), &loc, (GObject *) (object),		\
++            ##args );											    \
+   }									\
+ }G_STMT_END
+ #else /* no variadic macros, use inline */
+@@ -1256,6 +1315,7 @@
+ 
+ #if defined(__GNUC__) && __GNUC__ >= 3
+ #  pragma GCC poison gst_debug_log
++#  pragma GCC poison gst_debug_log2
+ #  pragma GCC poison gst_debug_log_valist
+ #  pragma GCC poison _gst_debug_category_new
+ #endif

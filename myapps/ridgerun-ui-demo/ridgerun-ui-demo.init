@@ -1,0 +1,21 @@
+#!/bin/sh -e
+
+case "$1" in
+start)
+    echo "Starting RidgeRun UI Demo App"
+    /usr/bin/ridgerun-ui-demo -qws | logger -t RIDGERUN-UI-DEMO &
+    ;;
+
+stop)
+    echo "Stoping RidgeRun UI Demo App"
+    killall ridgerun-ui-demo
+    ;;
+
+*)
+    echo "Usage: /etc/init.d/ridgerun-ui-demo {start|stop}"
+    exit 1
+    ;;
+esac
+
+exit 0
+

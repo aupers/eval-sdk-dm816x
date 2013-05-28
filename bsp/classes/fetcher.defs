@@ -1,0 +1,125 @@
+
+#! \defgroup fetcher_class Fetcher Class
+#! \ingroup classes
+#! \section intro Introduction
+#! The Fetcher class provides logic for all automated source and package fetching operations used within the SDK.
+#! It supports fetching through http, ftp, git and svn sources, as well as unique operations for all of them.
+#!
+#! \section public_params Public Parameters
+#! The following is a list of parameters that may be set according to an application's specific requirements.
+#! <ul>
+#! <li>
+#! <b>FETCHER_NO_DOWNLOAD:</b> In the case that no download is to be applied, set this value to anything other than "no".
+#!
+#! <li>
+#! <b>PKG_NAME:</b> The name of the package to be downloaded. If not set, it will be defined as the output of the "pwd" command.
+#!
+#! <li>
+#! <b>PKG_TARBALL:</b> The name of the tarball to be downloaded. If not set, it will be defined as the above parameter's value plus the ".tar.bz2" extension.
+#!
+#! <li>
+#! <b>PKG_URL:</b> The url from where to download the tarball.
+#!
+#! <li>
+#! <b>PKG_INTERNAL_URL:</b> An internal (possible private) url from where to download the tarball.
+#!
+#! <li>
+#! <b>FETCHER_EXTRACT_DIRECTORY_NAME:</b> The name of the directory into which the downloaded package will be extracted. If not defined, this parameter will be set to the PKG_NAME variable mentioned above.
+#!
+#! <li>
+#! <b>PKG_TYPE:</b> The type of download to be made. This value can be set manually to either http, ftp, git or svn. If this value is not set, it will try to infer the package type through the provided URL.
+#!
+#! <li>
+#! <b>PKG_SHA1SUM:</b> Optional value that may be set for package integrity checking through its SHA1SUM value.
+#!
+#! <li>
+#! <b>PKG_ZIP_STRIP_DIR:</b> The unzip command lacks functionality to replace the extracted directory's name with our preferred src convention. For this reason, this variable must be set in case we're downloading a zip file as a package through the fetcher, with the name of the directory that it extracts, so that it's then moved to the appropriate src directory.
+#!
+#! <li>
+#! <b>SVN_AUTH_ARGUMENTS:</b> Arguments that may be required when checking out a svn revision (hence, this variable may only be of use when the PKG_TYPE is set to svn) should be stored in this variable.
+#!
+#! <li>
+#! <b>BIN_ARGUMENTS:</b> Arguments that may be required when running a binary installer.
+#!
+#! <li>
+#! <b>BIN_ANSWERS:</b> String with anwers to feed into any question an installer binary may have
+#!
+#! <li>
+#! <b>FETCHER_DOWNLOAD_RETRY:</b> Boolean variable to enable retry when downloading packages fails (used by autobuilder). 
+#!
+#! <li>
+#! <b>FETCHER_MAX_DOWNLOAD_RETRIES:</b> Specify the maximum number of retries to execute when downloading packages. 
+#!
+#! <li>
+#! <b>FETCHER_DOWNLOAD_RETRY_DELAY?:</b> Sets the wait time between the download the packages. 
+#!
+#! <li>
+#! <b>FETCHER_MAX_DOWNLOAD_RATE:</b> Specify the maximum transfer rate that curl will use to download the packages. 
+#!
+
+include $(CLASSES)/flags.defs
+
+
+.PHONY= $(FETCHED_FLAG)_clean
+
+# Set this variable to something different from 'no' if you don't want
+# to download the code
+FETCHER_NO_DOWNLOAD?=no
+
+PKG_NAME?=$(shell basename `pwd`)
+ifeq ($(PKG_REVISION),)
+PKG_TARBALL?=$(PKG_NAME).tar.bz2
+else
+PKG_TARBALL?=$(PKG_NAME)-$(PKG_REVISION).tar.bz2
+endif
+FETCHER_EXTRACT_DIRECTORY_NAME?=$(PKG_NAME)
+PKG_ZIP_STRIP_DIR?=$(PKG_NAME)
+
+export PKG_NAME
+export PKG_TARBALL
+export FETCHER_EXTRACT_DIRECTORY_NAME
+export DOWNLOADS
+export DOWNLOAD_SERVER
+# Overwrite the package type:
+# default is a http
+# could be ftp, git, or svn
+export PKG_TYPE
+# URL for download
+# The PKG_TYPE is inferred from the start of the URL, unless PKG_TYPE was defined
+export PKG_URL
+export PKG_INTERNAL_URL
+# Valid if PKG_TYPE is svn or git
+export PKG_REVISION
+# Valid if the PKGT_TYPE is http or ftp
+export PKG_SHA1SUM
+export PKG_ZIP_STRIP_DIR
+export QOUT
+export SVN_AUTH_ARGUMENTS
+export BIN_ARGUMENTS
+export BIN_ANSWERS
+
+#Variables used to control package download retries
+export FETCHER_DOWNLOAD_RETRY?=no
+export FETCHER_MAX_DOWNLOAD_RETRIES?=3
+export FETCHER_DOWNLOAD_RETRY_DELAY?=300 #time in seconds
+
+#Variables used by download limit rate
+export FETCHER_MAX_DOWNLOAD_RATE?=1G
+
+ifneq ($(VERBOSE),0)
+DEBUG=--debug
+endif
+
+$(FETCHED_FLAG):
+ifeq ($(FETCHER_NO_DOWNLOAD),no)
+	$(V)$(ECHO) Source code for $(PKG_NAME) not found, fetching it...
+	$(V)$(DEVDIR)/bsp/scripts/fetcher.sh $(DEBUG)
+else
+	$(V) touch $(FETCHED_FLAG)
+endif
+
+$(FETCHED_FLAG)_clean:
+ifeq ($(FETCHER_NO_DOWNLOAD),no)
+	$(V)rm -Rf $(FETCHER_EXTRACT_DIRECTORY_NAME)
+endif
+	$(V)rm -f $(FETCHED_FLAG)

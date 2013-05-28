@@ -1,0 +1,47 @@
+Index: busybox/src/util-linux/fbset.c
+===================================================================
+--- busybox.orig/src/util-linux/fbset.c	2011-09-29 08:58:05.667317301 -0600
++++ busybox/src/util-linux/fbset.c	2011-09-29 09:01:08.163325037 -0600
+@@ -21,7 +21,8 @@
+ #define FB_ACTIVATE_ALL 64
+ enum {
+ 	FBIOGET_VSCREENINFO = 0x4600,
+-	FBIOPUT_VSCREENINFO = 0x4601
++	FBIOPUT_VSCREENINFO = 0x4601,
++	FBIOBLANK = 0x4611
+ };
+ 
+ struct fb_bitfield {
+@@ -118,6 +119,8 @@
+ 	CMD_INFO = 12,
+ 	CMD_SHOW = 13,
+ 	CMD_CHANGE = 14,
++	CMD_DISABLE = 15,
++	CMD_ENABLE = 16,
+ 
+ #if ENABLE_FEATURE_FBSET_FANCY
+ 	CMD_XRES = 100,
+@@ -162,6 +165,8 @@
+ 	{ "double"  , 1, CMD_DOUBLE   },
+ 	{ "show"    , 0, CMD_SHOW     },
+ 	{ "s"       , 0, CMD_SHOW     },
++	{ "disable", 0, CMD_DISABLE  },
++	{ "enable", 0, CMD_ENABLE  },
+ #if ENABLE_FEATURE_FBSET_FANCY
+ 	{ "all"     , 0, CMD_ALL      },
+ 	{ "xres"    , 1, CMD_XRES     },
+@@ -422,6 +427,14 @@
+ 				var_set.hsync_len = xatou32(argv[6]);
+ 				var_set.vsync_len = xatou32(argv[7]);
+ 				break;
++			case CMD_ENABLE:
++				fh = xopen(fbdev, O_RDONLY);
++				xioctl(fh, FBIOBLANK, 0);
++				return EXIT_SUCCESS;
++			case CMD_DISABLE:
++				fh = xopen(fbdev, O_RDONLY);
++				xioctl(fh, FBIOBLANK, 1);
++				return EXIT_SUCCESS;
+ 			case CMD_ACCEL:
+ 				break;
+ 			case CMD_HSYNC:

@@ -1,0 +1,5 @@
+config FS_APPS_ARCH_BASE
+	bool
+	default y
+	select IPCALC
+	select IPCALC_FANCY

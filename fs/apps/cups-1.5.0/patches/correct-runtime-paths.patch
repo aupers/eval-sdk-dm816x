@@ -1,0 +1,139 @@
+Index: cups-1.5.0/src/configure
+===================================================================
+--- cups-1.5.0.orig/src/configure	2011-09-07 15:06:45.308049863 -0600
++++ cups-1.5.0/src/configure	2011-09-07 15:07:29.635902511 -0600
+@@ -11436,7 +11436,7 @@
+ fi
+ 
+ cat >>confdefs.h <<_ACEOF
+-#define CUPS_BINDIR "$bindir"
++#define CUPS_BINDIR "/usr/bin"
+ _ACEOF
+ 
+ 
+@@ -11445,7 +11445,7 @@
+ fi
+ 
+ cat >>confdefs.h <<_ACEOF
+-#define CUPS_SBINDIR "$sbindir"
++#define CUPS_SBINDIR "/usr/sbin"
+ _ACEOF
+ 
+ 
+@@ -11504,11 +11504,6 @@
+ 		IRIX*)
+ 			libdir="$exec_prefix/lib32"
+ 			;;
+-		Linux*)
+-			if test -d /usr/lib64; then
+-				libdir="$exec_prefix/lib64"
+-			fi
+-			;;
+ 		HP-UX*)
+ 			if test -d /usr/lib/hpux32; then
+ 				libdir="$exec_prefix/lib/hpux32"
+@@ -11769,9 +11764,9 @@
+ 
+ if test x$cachedir = x; then
+ 	if test "x$uname" = xDarwin; then
+-		CUPS_CACHEDIR="$localstatedir/spool/cups/cache"
++		CUPS_CACHEDIR="/var/spool/cups/cache"
+ 	else
+-		CUPS_CACHEDIR="$localstatedir/cache/cups"
++		CUPS_CACHEDIR="/var/cache/cups"
+ 	fi
+ else
+ 	CUPS_CACHEDIR="$cachedir"
+@@ -11783,9 +11778,9 @@
+ 
+ 
+ # Data files
+-CUPS_DATADIR="$datadir/cups"
++CUPS_DATADIR="/usr/share/cups"
+ cat >>confdefs.h <<_ACEOF
+-#define CUPS_DATADIR "$datadir/cups"
++#define CUPS_DATADIR "/usr/share/cups"
+ _ACEOF
+ 
+ 
+@@ -11837,7 +11832,7 @@
+ 
+ 
+ if test x$docdir = x; then
+-	CUPS_DOCROOT="$datadir/doc/cups"
++	CUPS_DOCROOT="/usr/share/cups/doc/cups"
+ 	docdir="$datadir/doc/cups"
+ else
+ 	CUPS_DOCROOT="$docdir"
+@@ -11860,7 +11855,7 @@
+ 
+ 
+ if test "x$fontpath" = "x"; then
+-	CUPS_FONTPATH="$datadir/cups/fonts"
++	CUPS_FONTPATH="/usr/share/cups/fonts"
+ else
+ 	CUPS_FONTPATH="$fontpath"
+ fi
+@@ -11875,7 +11870,7 @@
+ if test "$localedir" = "\${datarootdir}/locale"; then
+ 	case "$uname" in
+ 		Linux | GNU | *BSD* | Darwin*)
+-			CUPS_LOCALEDIR="$datarootdir/locale"
++			CUPS_LOCALEDIR="/usr/share/cups/locale"
+ 			;;
+ 
+ 		OSF1* | AIX*)
+@@ -11908,9 +11903,9 @@
+ 
+ 
+ if test x$logdir = x; then
+-	CUPS_LOGDIR="$localstatedir/log/cups"
++	CUPS_LOGDIR="/var/log/cups"
+ 	cat >>confdefs.h <<_ACEOF
+-#define CUPS_LOGDIR "$localstatedir/log/cups"
++#define CUPS_LOGDIR "/var/log/cups"
+ _ACEOF
+ 
+ else
+@@ -11923,9 +11918,9 @@
+ 
+ 
+ # Longer-term spool data
+-CUPS_REQUESTS="$localstatedir/spool/cups"
++CUPS_REQUESTS="/var/spool/cups"
+ cat >>confdefs.h <<_ACEOF
+-#define CUPS_REQUESTS "$localstatedir/spool/cups"
++#define CUPS_REQUESTS "/var/spool/cups"
+ _ACEOF
+ 
+ 
+@@ -11940,7 +11935,7 @@
+ 	*)
+ 		# All others
+ 		INSTALL_SYSV="install-sysv"
+-		CUPS_SERVERBIN="$exec_prefix/lib/cups"
++		CUPS_SERVERBIN="/usr/lib/cups"
+ 		;;
+ esac
+ 
+@@ -11952,9 +11947,9 @@
+ 
+ 
+ # Configuration files
+-CUPS_SERVERROOT="$sysconfdir/cups"
++CUPS_SERVERROOT="/etc/cups"
+ cat >>confdefs.h <<_ACEOF
+-#define CUPS_SERVERROOT "$sysconfdir/cups"
++#define CUPS_SERVERROOT "/etc/cups"
+ _ACEOF
+ 
+ 
+@@ -11967,7 +11962,7 @@
+ 		;;
+ 	*)
+ 		# All others
+-		CUPS_STATEDIR="$localstatedir/run/cups"
++		CUPS_STATEDIR="/var/run/cups"
+ 		;;
+ esac
+ cat >>confdefs.h <<_ACEOF

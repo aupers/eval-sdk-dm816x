@@ -1,0 +1,102 @@
+#! \defgroup rrsdk_class RidgeRun SDK Class
+#! \ingroup classes
+#! \section intro Introduction
+#! Provides the unified logic framework for a package's installation procedure by the SDK. For most applications, no further action or customization should be required other than adding this file as an include on the package's Makefile file.
+#!
+#! \section public_params Public Parameters
+#! The following is a list of parameters that may be set according to an application's specific requirements.
+#! <ul>
+#!
+#! <li>
+#! <b>NONCOMPILED_DESTDIR:</b> The directory (absolute path) where non-compiled files (NONCOMPILED_FILES) will be placed.
+#!
+#! <li>
+#! <b>NONCOMPILED_FILES:</b> A list of files, relative to the application's path (i.e. src/script.py), that will be placed in directory NONCOMPILED_DESTDIR.
+#!
+
+include $(CLASSES)/flags.defs
+-include $(DEVDIR)/fs/Apps.defs
+
+.PHONY: rrsdk_install rrsdk_uninstall src patch unpatch patch_refresh
+
+default_rule: build
+
+define rrsdk_install_dir
+	cd $(1) && \
+	    find -print0 | \
+	    tar --exclude=.svn --exclude=\*~ --null -T - -cf - | \
+	    tar -C $(2) -xpf -
+endef
+
+rrsdk_install:
+	$(V) if [ -d extras_overlay ] ; then \
+	    $(call rrsdk_install_dir,extras_overlay,$(LOCALDIR)) ; \
+	fi
+
+rrsdk_uninstall:
+
+src: rrfetched
+
+rrpatched: $(RRSDK_PREPATCH_TARGETS)
+	$(V) if [ -d patches ] ; then \
+	    rm -f series ; \
+	    if [ ! -f patches/arch/inverted ] ; then \
+	        echo "## ARCH SERIES ##" > series ;\
+	        if [ -f patches/arch/series ] ; then \
+	          echo ; \
+	          echo "Merging arch patches into the series..." ; \
+	          sed -e "s?^\([^#]\)\(.*\)?arch/\1\2?" patches/arch/series >> series ;\
+	        fi ;\
+	        echo "## END OF ARCH SERIES ##" >> series ;\
+	    else \
+	        echo "## SERIES ##" > series ;\
+	        if [ -f patches/series ] ; then \
+	           cat patches/series >> series ;\
+	        fi ;\
+            echo "#END OF SERIES FILE" >> series ;\
+	    fi ;\
+	    echo "## MACH SERIES ##" >> series ;\
+	    if [ -f patches/mach/series ] ; then \
+		echo "Merging mach patches into the series..." ; \
+		sed -e "s?^\([^#]\)\(.*\)?mach/\1\2?" patches/mach/series >> series ;\
+	    fi ;\
+	    echo "## END OF MACH SERIES ##" >> series ;\
+	    if [ ! -f patches/arch/inverted ] ; then \
+	       echo "## SERIES ##" >> series ;\
+	       if [ -f patches/series ] ; then \
+	          cat patches/series >> series ;\
+	       fi ;\
+	    else \
+	        echo "## ARCH SERIES ##" >> series ;\
+	        if [ -f patches/arch/series ] ; then \
+	          echo ; \
+	          echo "Merging arch patches into the series..." ; \
+	          sed -e "s?^\([^#]\)\(.*\)?arch/\1\2?" patches/arch/series >> series ;\
+	        fi ;\
+	    fi ;\
+	    if [ `quilt series | wc -c` != 0 ] ; then \
+		$(ECHO) "Applying quilt patches" ; \
+		quilt push -a $(if $(VERBOSE:0=),-q) $(QOUT) || \
+	        { $(ECHO) "$$WARN_COLOR \nFailed to apply patches $$NORMAL_COLOR \n" ; exit -1 ; }; $(QOUT) \
+		$(ECHO) ; \
+	    fi ; \
+	fi;
+	$(V)touch $@
+
+patch: src rrpatched
+
+unpatch:
+	$(V) $(DEVDIR)/bsp/scripts/check_patches_consistency.sh
+	$(V) if [ -f .pc/applied-patches ] ; then \
+	    $(ECHO) ;\
+	    $(ECHO) "Removing quilt patches" ;\
+	    quilt pop -a $(if $(VERBOSE:0=),-q) $(QOUT) || \
+	    { $(ECHO) "$$WARN_COLOR \nFailed to remove patches$${NORMAL_COLOR}: maybe call \"$${GREEN}quilt refresh${NORMAL_COLOR}\"? \n" ; exit -1 ; }; $(QOUT) \
+	    $(ECHO) ; \
+	    rm -Rf .pc ;\
+	fi
+	$(V) rm -f rrpatched series
+
+patch_refresh:
+	$(V) $(DEVDIR)/bsp/scripts/merge_patches.sh
+

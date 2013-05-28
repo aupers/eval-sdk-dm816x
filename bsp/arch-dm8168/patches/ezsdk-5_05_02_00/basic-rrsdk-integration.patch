@@ -1,0 +1,18 @@
+Index: ezsdk-5_05_02_00/ezsdk/Makefile
+===================================================================
+--- ezsdk-5_05_02_00.orig/ezsdk/Makefile	2011-12-12 21:11:06.180587927 -0600
++++ ezsdk-5_05_02_00/ezsdk/Makefile	2011-12-12 21:13:43.476467562 -0600
+@@ -1,3 +1,13 @@
++ifneq ($(BUILDING_FROM_RR_SDK),yes)
++$(error ERROR: This EZSDK is currently being used by the RidgeRun SDK at \
++"$(shell cat rrsdk_path)". RidgeRun SDK modifies the standard EZSDK, so it \
++cannot longer be used from the ezsdk main makefile. To revert this changes \
++you need to run the command: "make -C $(shell cat rrsdk_path) clean", or to \
++remove and re-install this ezsdk if the original RidgeRun SDK is not longer \
++available. \
++)
++endif
++
+ include Rules.make
+ 
+ # export cross compiler location in PATH

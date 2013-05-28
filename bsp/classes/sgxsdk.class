@@ -1,0 +1,68 @@
+SGXSDKURL?=http://software-dl.ti.com/dsps/dsps_public_sw/sdo_sb/targetcontent/gfxsdk/
+SGXSDK_COPY_EXCLUSIONS_PATTERNS?=
+
+include $(CLASSES)/sgxsdk.defs
+
+#ifeq ($(SGXSDK_PLATFORM),)
+# $(error ====== SGXSDK_PLATFORM variable isn't defined on RidgeRun's ezsdk makefile =====)
+#endif
+#============================================================================================
+# Adding targets according to the configured platform
+#============================================================================================
+ifeq ($(SGXSDK_PLATFORM),dm81xx)
+SGXSDK_TARGETS?=drivers_sgx demos_sgx
+OMAPES=6.x
+BUILD=release
+endif
+
+EXTRA_TARGETS=
+
+export BUILDING_SOFTWARE_OUTSIDE_DEVDIR=y
+
+SGXSDK_TARGETS += $(EXTRA_TARGETS)
+build: sgxsdk sgxsdk_patched sgxsdk.init
+	@# We re-run make since this time Rules.make exist, so we can pull his variables in
+	$(V)$(MAKE) $(SGXSDK_TARGETS)
+
+#============================================================================================
+# sgxsdk.init creates the init script that will be used to load all the
+# necessary modules into the target board.
+#============================================================================================
+
+sgxsdk.init:
+
+real_clean: $(SGXSDK_TARGETS:=_clean) sgxsdk_clean
+
+clean:
+	$(V)if [ -e sgxsdk -a -f sgxsdk/Rules.make.orig ] ; then \
+	  $(MAKE) real_clean ; \
+	fi
+
+distclean:
+	@#We should not clean if we are going to erase the files anyway, unlike when we are sharing the dir
+	$(V) if [ -L sgxsdk -a -f sgxsdk/Rules.make.orig ] ; then \
+	    $(MAKE) clean ; \
+	fi
+	$(V) if [ -d sgxsdk ] ; then \
+	    $(MAKE) unpatch  ; \
+	    rm -rf *_built; \
+	fi
+	$(V) $(MAKE) sgxsdk_distclean
+
+install: targets_install rrsdk_install sgxsdk_cmdline
+	$(V) cp powervr.ini $(FSROOT)/etc
+	$(V) ./sgxsdk/gfx_rel_es$(OMAPES)/install.sh --src $(FSROOT)/opt/gfxlibraries/gfx_rel_es*/  --root $(FSROOT) -k $(KERNELVERSION) --no-x
+
+targets_install: build
+	$(V) if [ -e $(FSROOT)/etc/init.d/rc.pvr ] ; then \
+	    $(SUDO) chmod 777 $(FSROOT)/etc/init.d/rc.pvr ; \
+	fi
+	$(V) if [ -e $(FSROOT)/lib/modules/$(KERNELVERSION)/kernel/drivers/char/ ] ; then \
+	    $(SUDO) chmod 777 $(FSROOT)/lib/modules/$(KERNELVERSION)/kernel/drivers/char/ ; \
+	fi
+	@# We re-run make since this time Rules.make exist, so we can pull his variables in
+	$(V) $(MAKE) $(SGXSDK_TARGETS:=_install)
+
+
+uninstall: $(SGXSDK_TARGETS:=_uninstall)
+

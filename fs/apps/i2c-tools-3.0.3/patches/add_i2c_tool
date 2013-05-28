@@ -1,0 +1,767 @@
+Index: i2c-tools-3.0.3/src/Makefile
+===================================================================
+--- i2c-tools-3.0.3.orig/src/Makefile	2011-02-28 10:11:22.749546283 -0600
++++ i2c-tools-3.0.3/src/Makefile	2011-02-28 10:12:57.097486000 -0600
+@@ -36,5 +36,5 @@
+ 
+ EXTRA	:=
+ #EXTRA	+= py-smbus
+-SRCDIRS	:= include eeprom stub tools $(EXTRA)
++SRCDIRS	:= eeprom stub tools $(EXTRA)
+ include $(SRCDIRS:%=%/Module.mk)
+Index: i2c-tools-3.0.3/src/tools/Module.mk
+===================================================================
+--- i2c-tools-3.0.3.orig/src/tools/Module.mk	2011-02-28 10:11:30.013479955 -0600
++++ i2c-tools-3.0.3/src/tools/Module.mk	2011-02-28 10:12:57.097486000 -0600
+@@ -11,9 +11,9 @@
+ 
+ TOOLS_CFLAGS	:= -Wstrict-prototypes -Wshadow -Wpointer-arith -Wcast-qual \
+ 		   -Wcast-align -Wwrite-strings -Wnested-externs -Winline \
+-		   -W -Wundef -Wmissing-prototypes -Iinclude
++		   -W -Wundef -Wmissing-prototypes
+ 
+-TOOLS_TARGETS	:= i2cdetect i2cdump i2cset i2cget
++TOOLS_TARGETS	:= i2cdetect i2cdump i2cset i2cget i2c
+ 
+ #
+ # Programs
+@@ -31,6 +31,8 @@
+ $(TOOLS_DIR)/i2cget: $(TOOLS_DIR)/i2cget.o $(TOOLS_DIR)/i2cbusses.o $(TOOLS_DIR)/util.o
+ 	$(CC) $(LDFLAGS) -o $@ $^
+ 
++$(TOOLS_DIR)/i2c: $(TOOLS_DIR)/i2c.o
++	$(CC) $(LDFLAGS) -o $@ $^
+ #
+ # Objects
+ #
+@@ -47,6 +49,9 @@
+ $(TOOLS_DIR)/i2cget.o: $(TOOLS_DIR)/i2cget.c $(TOOLS_DIR)/i2cbusses.h $(TOOLS_DIR)/util.h $(INCLUDE_DIR)/linux/i2c-dev.h
+ 	$(CC) $(CFLAGS) $(TOOLS_CFLAGS) -c $< -o $@
+ 
++$(TOOLS_DIR)/i2c.o: $(TOOLS_DIR)/i2c.c
++	$(CC) $(CFLAGS) $(TOOLS_CFLAGS) -c $< -o $@
++
+ $(TOOLS_DIR)/i2cbusses.o: $(TOOLS_DIR)/i2cbusses.c $(TOOLS_DIR)/i2cbusses.h $(INCLUDE_DIR)/linux/i2c-dev.h
+ 	$(CC) $(CFLAGS) $(TOOLS_CFLAGS) -c $< -o $@
+ 
+Index: i2c-tools-3.0.3/src/tools/i2c.8
+===================================================================
+--- /dev/null	1970-01-01 00:00:00.000000000 +0000
++++ i2c-tools-3.0.3/src/tools/i2c.8	2011-02-28 10:12:57.097486000 -0600
+@@ -0,0 +1,53 @@
++.TH I2C 8 "Dec 2009"
++.SH NAME
++i2c \- exchange data with I2C chips
++
++.SH SYNOPSIS
++.B i2c
++.RI [ -d ]
++.RI [ -h ]
++.I i2c
++.RI [ a <addr> | w <val> |  W <val> | r | R | s ]*
++.br
++.B i2c
++.I a 0x50 w 0 w 0 a 0x50 r r r r s
++
++.SH DESCRIPTION
++i2c is a userspace program to exchange data with an I2C device in a
++generalized way.  I2C start, read, write, acknowledge, and stop can
++be directly controlled.  A start always preceeds the I2c device
++address.
++
++.SH WARNING
++This program can confuse your I2C bus, cause data loss and worse!
++
++.SH OPTIONS
++.TP
++.B "\-d <debug level>"
++Set Debug Level 0-2, default is debug off.
++.TP
++.B "\-h"
++Display help information and exit.
++.TP
++.B "a <i2c device address>"
++Send I2C start followed by device address.
++.TP
++.B "w <val>"
++Write a byte of data.  Exits if I2C chip doesn't acknowledge the write.
++.TP
++.B "W <val>"
++Write a byte of data.  Ignore negative acknowledge.
++.TP
++.B "r"
++Read a byte of data.  Host will acknowledge the read.
++.TP
++.B "R"
++Read a byte of data.  Host will negative acknowledge the read.
++.B "s"
++Send I2C stop.
++
++.SH SEE ALSO
++i2cdump(8), i2cdetect
++
++.SH AUTHOR
++Todd Fischer
+Index: i2c-tools-3.0.3/src/tools/i2c.c
+===================================================================
+--- /dev/null	1970-01-01 00:00:00.000000000 +0000
++++ i2c-tools-3.0.3/src/tools/i2c.c	2011-02-28 10:12:57.097486000 -0600
+@@ -0,0 +1,368 @@
++/****************************************************************
++    i2c.c - a user-space program to read and write i2c devices
++    Copyright (C) 2009  Todd Fischer <todd.fischer@ridgerun.com>
++
++    This program is free software; you can redistribute it and/or modify
++    it under the terms of the GNU General Public License as published by
++    the Free Software Foundation; either version 2 of the License, or
++    (at your option) any later version.
++
++    This program is distributed in the hope that it will be useful,
++    but WITHOUT ANY WARRANTY; without even the implied warranty of
++    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++    GNU General Public License for more details.
++
++    You should have received a copy of the GNU General Public License
++    along with this program; if not, write to the Free Software
++    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
++    MA 02110-1301 USA.
++*/
++
++#include <stdio.h>
++#include <stdlib.h>
++#include <sys/ioctl.h>
++#include <sys/types.h>
++#include <sys/stat.h>
++#include <fcntl.h>
++#include <unistd.h>
++#include <errno.h>
++#include <string.h>
++#include <linux/i2c.h>
++#include <linux/i2c-dev.h>
++
++/****************************************************************
++ * Definitions
++ ****************************************************************/
++
++#define dbg(format, arg...)   if (debug>0) printf("[%s|%d]: " format "\n",  __FILE__, __LINE__, ##arg)
++#define dbgq(format, arg...)  if (debug>0) printf(format, ##arg)
++#define vdbg(format, arg...)  if (debug>1) printf("[%s|%d]: " format "\n", __FILE__, __LINE__, ##arg)
++#define vdbgq(format, arg...)  if (debug>1) printf(format, ##arg)
++#define err(format, arg...)   fprintf(stderr,"[%s|%d]: " format "\n",  __FILE__, __LINE__, ##arg)
++#define info(format, arg...)  fprintf(stderr,"[%s|%d]: " format "\n",  __FILE__, __LINE__, ##arg)
++
++#define I2C_MAX_OPS_PER_TRANSACTION 32
++#define I2C_MAX_DEV_FILE            64
++#define I2C_MAX_DATA_PER_MESSAGE    16
++#define I2C_DEFAULT_DEV_FILE        "/dev/i2c-0"
++
++enum I2C_OPS {
++        I2C_OP_NONE,
++        I2C_OP_START,
++        I2C_OP_READ,
++        I2C_OP_WRITE,
++        I2C_OP_STOP,
++};
++
++/****************************************************************
++ * Global variables
++ ****************************************************************/
++
++int debug;
++struct i2c_rdwr_ioctl_data transaction;
++struct i2c_msg msgs[I2C_MAX_OPS_PER_TRANSACTION];
++unsigned char data[I2C_MAX_OPS_PER_TRANSACTION][I2C_MAX_DATA_PER_MESSAGE];
++
++/*****************************************************************
++ * str_to_dec
++ *
++ * - string in the form 0x<hex> or  <dec> accepted
++ * - returns value or negative number to indicate error
++ *
++ ****************************************************************/
++static int str_to_dec(char *value_str)
++{
++        long i;
++        char *endptr;
++
++        i = strtol(value_str, &endptr, 0);
++
++        if ((i > 0xFF) || (value_str == endptr)) {
++                return -1;
++        }
++
++        return (int) i;
++}
++
++/****************************************************************
++ * dump_transaction
++ *
++ * - If verbose debug is enabled dumps the i2c_transaction
++ *
++ ****************************************************************/
++static void dump_transaction(const struct i2c_rdwr_ioctl_data *i2c_transaction)
++{
++        int i;
++        int count = i2c_transaction->nmsgs;
++        int j;
++        unsigned char *p;
++
++        vdbg("Message count: %d", count);
++
++        for (i=0; i < count; i++) {
++                vdbg("  Message: %d", i);
++                vdbg("    address: 0x%2.2X", i2c_transaction->msgs[i].addr);
++                vdbg("    flags: 0x%8.8X", i2c_transaction->msgs[i].flags);
++                vdbg("    len: %d", i2c_transaction->msgs[i].len);
++                vdbgq("    data: ");
++                p = (unsigned char *)i2c_transaction->msgs[i].buf;
++                for (j = 0 ; j < msgs[i].len ; j++) {
++                        vdbgq("0x%2.2X ", p[j]);
++                }
++                vdbgq("\n");
++        }
++}
++
++
++
++/****************************************************************
++ * process_transaction
++ *
++ * - Sends i2c messages to device
++ * - fd: file descriptor to I2C device file
++ * - read_count: pointer to number of reads in the tranaction
++ * - i2c_transaction: pointer to transaction to process
++ * - msgs: pointer to messages in the transaction
++ *
++ ****************************************************************/
++static void process_transaction(int fd, int *read_count,
++                         struct i2c_rdwr_ioctl_data *i2c_transaction,
++                         struct i2c_msg *i2c_msgs )
++{
++        int retval;
++        int i;
++        int j;
++        unsigned char *p;
++
++        dump_transaction(i2c_transaction);
++
++        retval = ioctl(fd, I2C_RDWR, i2c_transaction);
++        if (retval < 0) {
++                fprintf(stderr, "[%s %d] ioctl(I2C_RDWR) failed: %s\n",
++                        __FILE__, __LINE__, strerror(errno));
++                exit(-1);
++        }
++
++        /* print out any data that was read */
++        i = 0;
++        while ((*read_count > 0 ) && (i < I2C_MAX_OPS_PER_TRANSACTION) ) {
++
++                if (i2c_msgs[i].flags & I2C_M_RD ) {
++                        p = (unsigned char *)i2c_msgs[i].buf;
++                        for (j = 0 ; j < i2c_msgs[i].len ; j++) {
++                                printf("0x%2.2X ", p[j]);
++                                *read_count -=1;
++                        }
++                        printf("\n");
++                        vdbg(" index=%d", i);
++                }
++                i++;
++        }
++
++        i2c_transaction->nmsgs = 0;
++        memset(i2c_msgs, 0, sizeof(struct i2c_msg) * I2C_MAX_OPS_PER_TRANSACTION);
++        *read_count = 0;
++}
++
++
++/****************************************************************
++ * Usage
++ ****************************************************************/
++static void usage(void)
++{
++        fprintf(stderr, "i2c [-d <debug lvl>] [-h] [-f <dev file>] [ a <i2c addr> | w <val> |  W <val> | r | R | S ]*\n\n");
++
++        fprintf(stderr, "             -h                   print usage information\n");
++        fprintf(stderr, "             -d <debug level>     Set Debug Level 0-2\n");
++        fprintf(stderr, "             -f <device file>     I2C device file.  Default: %s\n", I2C_DEFAULT_DEV_FILE);
++        fprintf(stderr, "             a <i2c addr>         start followed by i2c address\n");
++        fprintf(stderr, "             w <val>              write <val> (require ACK)\n");
++        fprintf(stderr, "             W <val>              write <val> (ignore NAK)\n");
++        fprintf(stderr, "             r                    read (set ack)\n");
++        fprintf(stderr, "             R                    read (no ack)\n");
++        fprintf(stderr, "             s                    stop\n");
++        fprintf(stderr, "      Notes:\n");
++        fprintf(stderr, "             <val> is a decimal number unless preceeded by\n");
++        fprintf(stderr, "                   0x to indicate hexadecimal or preceeded by\n");
++        fprintf(stderr, "                   0 for octal\n");
++        fprintf(stderr, "      Example:\n");
++        fprintf(stderr, "                   read AIC31 reg 4: i2c a 0x18 w 0x04 a 0x18 r s\n");
++        fprintf(stderr, "                   read 24WC256 eeprom: i2c a 0x50 w 0 w 0 a 0x50 r r r r s\n");
++        fprintf(stderr, "\n\n");
++}
++
++/****************************************************************
++ * Main
++ ****************************************************************/
++int main(int argc, char **argv)
++{
++        int option;
++        int val = 0;
++        int arg_index;
++        int read_count = 0;
++        int addr = -1;
++        int fd = -1;
++        char filename[I2C_MAX_DEV_FILE];
++        int count;
++        enum I2C_OPS last_op;
++
++        strncpy(filename, I2C_DEFAULT_DEV_FILE, I2C_MAX_DEV_FILE);
++
++        /* parse parameters */
++        while ((option = getopt(argc,argv,"?hd:f:")) != EOF)
++        {
++                switch(option)
++                {
++                case 'h' :
++                case '?' :
++                        usage();
++                        exit(0);
++                        break;
++                case 'd' :
++                        debug = atoi(optarg);
++                        dbg("Debug set to %d\n",debug);
++                        break;
++                case 'f' :
++                        strncpy(filename, optarg, I2C_MAX_DEV_FILE);
++                        filename[I2C_MAX_DEV_FILE - 1] = '\0';
++                        dbg("Device file set to %s\n", filename);
++                        break;
++                default :
++                        fprintf(stderr, "unknown flag [%c]\n", option);
++                        break;
++                }
++        }
++
++        arg_index = optind;
++
++        fd = open(filename, O_RDWR);
++
++        if (fd < 0) {
++                printf("Error opening %s\n", filename);
++                exit(-1);
++        }
++
++        /* loop though processing each non-option command line parameter */
++
++        count = 0;
++        transaction.msgs = msgs;
++        memset(msgs, 0, sizeof(struct i2c_msg) * I2C_MAX_OPS_PER_TRANSACTION);
++
++        last_op = I2C_OP_NONE;
++
++        /* Count increment delayed until I2C read or write operation changes.
++         * This allows concectuive read or concecutive write requests to be
++         * packed together into a single message. */
++        while ((arg_index < argc) &&
++               (count < I2C_MAX_OPS_PER_TRANSACTION)) {
++
++                switch(argv[arg_index][0]) {
++
++                case 'a':
++                        arg_index++;
++                        if ((arg_index >= argc) ||
++                            ((addr = str_to_dec(argv[arg_index])) < 0)) {
++                                fprintf(stderr, "Error: invalid address value after 'a' parameter\n");
++                                exit(-1);
++                        }
++                        if ((last_op == I2C_OP_READ) || (last_op == I2C_OP_WRITE)) {
++                                count++;
++                        }
++                        last_op = I2C_OP_START;
++                        vdbg("start 0x%2.2X", addr);
++                        break;
++
++                case 'w':
++                case 'W':
++                        arg_index++;
++                        if (addr < 0) {
++                                fprintf(stderr, "I2C chip address not set before write\n");
++                                break;
++                        }
++                        if ((arg_index >= argc) ||
++                            ((val = str_to_dec(argv[arg_index])) < 0)) {
++                                fprintf(stderr, "Error: invalid write value\n");
++                                exit(-1);
++                        }
++                        if ( last_op != I2C_OP_WRITE) {
++                                if ( last_op == I2C_OP_READ) {
++                                        count++;
++                                }
++                                msgs[count].addr = addr;
++                                if ( argv[arg_index][0] == 'W') {
++                                        msgs[count].flags |= I2C_M_IGNORE_NAK;
++                                }
++                                msgs[count].len = 1;
++                                msgs[count].buf = &data[count][0];
++                                data[count][0] = (unsigned char)(val & 0xFF);
++                        } else {
++                                data[count][msgs[count].len++] = (unsigned char)(val & 0xFF);
++                        }
++
++                        last_op = I2C_OP_WRITE;
++                        vdbg("write 0x%2.2X", val);
++                        break;
++
++                case 'r':
++                case 'R':
++                        if (addr < 0) {
++                                fprintf(stderr, "I2C chip address not set before read\n");
++                                break;
++                        }
++                        if ( last_op != I2C_OP_READ) {
++                                if ( last_op == I2C_OP_WRITE) {
++                                        count++;
++                                }
++
++                                msgs[count].addr = addr;
++                                msgs[count].flags = I2C_M_RD;
++
++                                if ( argv[arg_index][0] == 'R') {
++                                        msgs[count].flags |=   I2C_M_NO_RD_ACK	;
++                                        vdbg("read (no ACK)");
++                                }   else {
++                                        vdbg("read");
++                                }
++                                msgs[count].buf = &data[count][0];
++                                msgs[count].len = 1;
++                                data[count][0] = 0xFF;
++                        } else {
++                                data[count][msgs[count].len++] = 0xFF;
++                        }
++
++                        read_count++;
++                        last_op = I2C_OP_READ;
++                        break;
++
++                case 's':
++                        vdbg("stop");
++                        if ((last_op == I2C_OP_READ) || (last_op == I2C_OP_WRITE)) {
++                                count++;
++                        }
++                        transaction.nmsgs = count;
++                        process_transaction(fd, &read_count, &transaction, msgs);
++                        count = 0;
++                        last_op = I2C_OP_STOP;
++                        break;
++
++                default :
++                        usage();
++                        fprintf(stderr, "command line parameter [%s]\n", argv[arg_index]);
++                        exit(-1);
++                }
++                arg_index++;
++        }
++
++        if (count) {
++                fprintf(stderr, "Warning: adding I2C stop\n");
++                if ((last_op == I2C_OP_READ) || (last_op == I2C_OP_WRITE)) {
++                        count++;
++                }
++                transaction.nmsgs = count;
++                process_transaction(fd, &read_count, &transaction, msgs);
++        }
++
++        close(fd);
++
++        return 0;
++}
+Index: i2c-tools-3.0.3/src/tools/i2cbusses.c
+===================================================================
+--- i2c-tools-3.0.3.orig/src/tools/i2cbusses.c	2011-02-28 10:11:56.985483975 -0600
++++ i2c-tools-3.0.3/src/tools/i2cbusses.c	2011-02-28 10:12:57.097486000 -0600
+@@ -39,6 +39,7 @@
+ #include <errno.h>
+ #include "i2cbusses.h"
+ #include <linux/i2c-dev.h>
++#include "smbaccess.h"
+ 
+ enum adt { adt_dummy, adt_isa, adt_i2c, adt_smbus, adt_unknown };
+ 
+Index: i2c-tools-3.0.3/src/tools/i2cdetect.c
+===================================================================
+--- i2c-tools-3.0.3.orig/src/tools/i2cdetect.c	2011-02-28 10:11:42.937858351 -0600
++++ i2c-tools-3.0.3/src/tools/i2cdetect.c	2011-02-28 10:12:57.097486000 -0600
+@@ -28,6 +28,7 @@
+ #include <linux/i2c-dev.h>
+ #include "i2cbusses.h"
+ #include "../version.h"
++#include "smbaccess.h"
+ 
+ #define MODE_AUTO	0
+ #define MODE_QUICK	1
+@@ -139,7 +140,7 @@
+ 	  .name = "SMBus Block Read" },
+ 	{ .value = I2C_FUNC_SMBUS_BLOCK_PROC_CALL,
+ 	  .name = "SMBus Block Process Call" },
+-	{ .value = I2C_FUNC_SMBUS_PEC,
++	{ .value = I2C_FUNC_SMBUS_HWPEC_CALC,
+ 	  .name = "SMBus PEC" },
+ 	{ .value = I2C_FUNC_SMBUS_WRITE_I2C_BLOCK,
+ 	  .name = "I2C Block Write" },
+Index: i2c-tools-3.0.3/src/tools/i2cdump.c
+===================================================================
+--- i2c-tools-3.0.3.orig/src/tools/i2cdump.c	2011-02-28 10:11:39.145858964 -0600
++++ i2c-tools-3.0.3/src/tools/i2cdump.c	2011-02-28 10:12:57.097486000 -0600
+@@ -29,6 +29,7 @@
+ #include "i2cbusses.h"
+ #include "util.h"
+ #include "../version.h"
++#include "smbaccess.h"
+ 
+ static void help(void)
+ {
+@@ -99,7 +100,7 @@
+ 	}
+ 
+ 	if (pec
+-	 && !(funcs & (I2C_FUNC_SMBUS_PEC | I2C_FUNC_I2C))) {
++	 && !(funcs & (I2C_FUNC_SMBUS_HWPEC_CALC | I2C_FUNC_I2C))) {
+ 		fprintf(stderr, "Warning: Adapter does "
+ 			"not seem to support PEC\n");
+ 	}
+Index: i2c-tools-3.0.3/src/tools/i2cget.c
+===================================================================
+--- i2c-tools-3.0.3.orig/src/tools/i2cget.c	2011-02-28 10:11:46.533543711 -0600
++++ i2c-tools-3.0.3/src/tools/i2cget.c	2011-02-28 10:12:57.097486000 -0600
+@@ -32,6 +32,7 @@
+ #include "i2cbusses.h"
+ #include "util.h"
+ #include "../version.h"
++#include "smbaccess.h"
+ 
+ static void help(void) __attribute__ ((noreturn));
+ 
+@@ -89,7 +90,7 @@
+ 	}
+ 
+ 	if (pec
+-	 && !(funcs & (I2C_FUNC_SMBUS_PEC | I2C_FUNC_I2C))) {
++	 && !(funcs & (I2C_FUNC_SMBUS_HWPEC_CALC | I2C_FUNC_I2C))) {
+ 		fprintf(stderr, "Warning: Adapter does "
+ 			"not seem to support PEC\n");
+ 	}
+Index: i2c-tools-3.0.3/src/tools/i2cset.c
+===================================================================
+--- i2c-tools-3.0.3.orig/src/tools/i2cset.c	2011-02-28 10:11:50.985676111 -0600
++++ i2c-tools-3.0.3/src/tools/i2cset.c	2011-02-28 10:12:57.097486000 -0600
+@@ -29,6 +29,7 @@
+ #include "i2cbusses.h"
+ #include "util.h"
+ #include "../version.h"
++#include "smbaccess.h"
+ 
+ static void help(void) __attribute__ ((noreturn));
+ 
+@@ -81,7 +82,7 @@
+ 	}
+ 
+ 	if (pec
+-	 && !(funcs & (I2C_FUNC_SMBUS_PEC | I2C_FUNC_I2C))) {
++	 && !(funcs & (I2C_FUNC_SMBUS_HWPEC_CALC | I2C_FUNC_I2C))) {
+ 		fprintf(stderr, "Warning: Adapter does "
+ 			"not seem to support PEC\n");
+ 	}
+Index: i2c-tools-3.0.3/src/tools/smbaccess.h
+===================================================================
+--- /dev/null	1970-01-01 00:00:00.000000000 +0000
++++ i2c-tools-3.0.3/src/tools/smbaccess.h	2011-02-28 10:12:57.097486000 -0600
+@@ -0,0 +1,189 @@
++/*
++  smbaccess - C APIs for calling the SMbus ioctls()
++
++  This program is free software; you can redistribute it and/or modify
++  it under the terms of the GNU General Public License as published by
++  the Free Software Foundation; either version 2 of the License, or
++  (at your option) any later version.
++*/
++
++#ifndef _SMBACCESS_H
++#define _SMBACCESS_H
++
++#include <linux/i2c.h>
++#include <linux/i2c-dev.h>
++#include <linux/types.h>
++#include <sys/ioctl.h>
++
++static inline __s32 i2c_smbus_access(int file, char read_write, __u8 command,
++                                     int size, union i2c_smbus_data *data)
++{
++        struct i2c_smbus_ioctl_data args;
++
++        args.read_write = read_write;
++        args.command = command;
++        args.size = size;
++        args.data = data;
++        return ioctl(file,I2C_SMBUS,&args);
++}
++
++static inline __s32 i2c_smbus_write_quick(int file, __u8 value)
++{
++        return i2c_smbus_access(file,value,0,I2C_SMBUS_QUICK,NULL);
++}
++
++static inline __s32 i2c_smbus_read_byte(int file)
++{
++        union i2c_smbus_data data;
++        if (i2c_smbus_access(file,I2C_SMBUS_READ,0,I2C_SMBUS_BYTE,&data))
++                return -1;
++        else
++                return 0x0FF & data.byte;
++}
++
++static inline __s32 i2c_smbus_write_byte(int file, __u8 value)
++{
++        return i2c_smbus_access(file,I2C_SMBUS_WRITE,value,
++                                I2C_SMBUS_BYTE,NULL);
++}
++
++static inline __s32 i2c_smbus_read_byte_data(int file, __u8 command)
++{
++        union i2c_smbus_data data;
++        if (i2c_smbus_access(file,I2C_SMBUS_READ,command,
++                             I2C_SMBUS_BYTE_DATA,&data))
++                return -1;
++        else
++                return 0x0FF & data.byte;
++}
++
++static inline __s32 i2c_smbus_write_byte_data(int file, __u8 command,
++                                              __u8 value)
++{
++        union i2c_smbus_data data;
++        data.byte = value;
++        return i2c_smbus_access(file,I2C_SMBUS_WRITE,command,
++                                I2C_SMBUS_BYTE_DATA, &data);
++}
++
++static inline __s32 i2c_smbus_read_word_data(int file, __u8 command)
++{
++        union i2c_smbus_data data;
++        if (i2c_smbus_access(file,I2C_SMBUS_READ,command,
++                             I2C_SMBUS_WORD_DATA,&data))
++                return -1;
++        else
++                return 0x0FFFF & data.word;
++}
++
++static inline __s32 i2c_smbus_write_word_data(int file, __u8 command,
++                                              __u16 value)
++{
++        union i2c_smbus_data data;
++        data.word = value;
++        return i2c_smbus_access(file,I2C_SMBUS_WRITE,command,
++                                I2C_SMBUS_WORD_DATA, &data);
++}
++
++static inline __s32 i2c_smbus_process_call(int file, __u8 command, __u16 value)
++{
++        union i2c_smbus_data data;
++        data.word = value;
++        if (i2c_smbus_access(file,I2C_SMBUS_WRITE,command,
++                             I2C_SMBUS_PROC_CALL,&data))
++                return -1;
++        else
++                return 0x0FFFF & data.word;
++}
++
++
++/* Returns the number of read bytes */
++static inline __s32 i2c_smbus_read_block_data(int file, __u8 command,
++                                              __u8 *values)
++{
++        union i2c_smbus_data data;
++        int i;
++        if (i2c_smbus_access(file,I2C_SMBUS_READ,command,
++                             I2C_SMBUS_BLOCK_DATA,&data))
++                return -1;
++        else {
++                for (i = 1; i <= data.block[0]; i++)
++                        values[i-1] = data.block[i];
++                return data.block[0];
++        }
++}
++
++static inline __s32 i2c_smbus_write_block_data(int file, __u8 command,
++                                               __u8 length, __u8 *values)
++{
++        union i2c_smbus_data data;
++        int i;
++        if (length > 32)
++                length = 32;
++        for (i = 1; i <= length; i++)
++                data.block[i] = values[i-1];
++        data.block[0] = length;
++        return i2c_smbus_access(file,I2C_SMBUS_WRITE,command,
++                                I2C_SMBUS_BLOCK_DATA, &data);
++}
++
++/* Returns the number of read bytes */
++/* Until kernel 2.6.22, the length is hardcoded to 32 bytes. If you
++   ask for less than 32 bytes, your code will only work with kernels
++   2.6.23 and later. */
++static inline __s32 i2c_smbus_read_i2c_block_data(int file, __u8 command,
++                                                  __u8 length, __u8 *values)
++{
++        union i2c_smbus_data data;
++        int i;
++
++        if (length > 32)
++                length = 32;
++        data.block[0] = length;
++        if (i2c_smbus_access(file,I2C_SMBUS_READ,command,
++                             length == 32 ? I2C_SMBUS_I2C_BLOCK_DATA :
++                             I2C_SMBUS_I2C_BLOCK_DATA,&data))
++                return -1;
++        else {
++                for (i = 1; i <= data.block[0]; i++)
++                        values[i-1] = data.block[i];
++                return data.block[0];
++        }
++}
++
++static inline __s32 i2c_smbus_write_i2c_block_data(int file, __u8 command,
++                                                   __u8 length, __u8 *values)
++{
++        union i2c_smbus_data data;
++        int i;
++        if (length > 32)
++                length = 32;
++        for (i = 1; i <= length; i++)
++                data.block[i] = values[i-1];
++        data.block[0] = length;
++        return i2c_smbus_access(file,I2C_SMBUS_WRITE,command,
++                                I2C_SMBUS_I2C_BLOCK_DATA, &data);
++}
++
++/* Returns the number of read bytes */
++static inline __s32 i2c_smbus_block_process_call(int file, __u8 command,
++                                                 __u8 length, __u8 *values)
++{
++        union i2c_smbus_data data;
++        int i;
++        if (length > 32)
++                length = 32;
++        for (i = 1; i <= length; i++)
++                data.block[i] = values[i-1];
++        data.block[0] = length;
++        if (i2c_smbus_access(file,I2C_SMBUS_WRITE,command,
++                             I2C_SMBUS_BLOCK_PROC_CALL,&data))
++                return -1;
++        else {
++                for (i = 1; i <= data.block[0]; i++)
++                        values[i-1] = data.block[i];
++                return data.block[0];
++        }
++}
++
++#endif /* _SMBACCESS_H */

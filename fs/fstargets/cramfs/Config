@@ -1,0 +1,11 @@
+#
+# Ridgerun cramfs target configuration
+#
+
+config FS_TARGET_CRAMFS
+	bool "CRAMFS disk image"
+	select CRAMFS
+	depends on BSP_ARCH_SUPPORTS_CRAMFS
+	depends on INSTALLER_MODE_ATTACHED_BOARD && !INSTALLER_MODE_SD_CARD_INSTALLER
+	help
+	    Use a cramfs file system

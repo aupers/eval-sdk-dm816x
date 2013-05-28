@@ -1,0 +1,7 @@
+config FS_APPS_FAAC
+        bool "faac-1.28"
+        default n
+        help
+	FAAC is an open source MPEG-4 and MPEG-2 AAC encoder, it is licensed under the LGPL license.
+
+

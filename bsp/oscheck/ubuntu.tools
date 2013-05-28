@@ -1,0 +1,22 @@
+INSTALL="sudo apt-get install"
+
+function host_query {
+ OUTPUT=`dpkg-query -s "$1" 2>/dev/null`
+ STATUS="$?"
+ if echo $OUTPUT | grep "Package: $1" >/dev/null &&
+    echo $OUTPUT | grep "Status: install" >/dev/null
+  then 
+   STATUS="0"
+  else 
+   STATUS="1"
+ fi
+ return $STATUS
+}
+
+function host_install {
+ sudo apt-get install "$1"
+}
+
+function host_remove {
+ sudo apt-get remove "$1"
+}

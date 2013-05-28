@@ -1,0 +1,7 @@
+config FS_APPS_PYTHON_JINJA2
+	bool "jinja 2.6 (python)"
+	select FS_APPS_PYTHON
+	help
+	Jinja2 is a modern and designer friendly templating language for
+	Python, modelled after Django’s templates. It is fast, widely used and
+	secure with the optional sandboxed template execution environment.

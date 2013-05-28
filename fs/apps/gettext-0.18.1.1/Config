@@ -1,0 +1,14 @@
+
+config FS_APPS_GETTEXT
+	bool "gettext"
+	help
+	    The GNU library for intl text support
+
+config FS_APPS_GETTEXT_NLS
+	bool "Internationalization support"
+	depends on FS_APPS_GETTEXT && !TOOLCHAIN_HAS_NLS
+	default y
+	help
+	    This will change the compiling options of internationalization. 
+	    You don't need this feature if your toolchain support to 
+	    include libintl headers.

@@ -1,0 +1,10 @@
+fbdev=/dev/fb0
+no-banner
+no-vt
+no-vt-switch
+
+#mouse-protocol = ms
+#disable-module=keyboard
+# If you want to disable the cursor
+#no-cursor
+

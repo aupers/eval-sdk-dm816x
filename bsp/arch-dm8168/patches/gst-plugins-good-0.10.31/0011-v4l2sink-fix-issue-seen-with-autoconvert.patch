@@ -1,0 +1,46 @@
+From 4e319948c62aafd5339c38d065fd8dbfa5a09ced Mon Sep 17 00:00:00 2001
+From: Rob Clark <rob@ti.com>
+Date: Thu, 13 Jan 2011 09:43:08 -0600
+Subject: [PATCH 11/11] v4l2sink: fix issue seen with autoconvert
+
+In this scenario _set_caps() will get called earlier than _buffer_alloc()
+so we need to not override the number of buffers in the case that the
+upstream element answers the query about number of requested buffers.
+---
+ sys/v4l2/gstv4l2sink.c |    6 ++++--
+ 1 files changed, 4 insertions(+), 2 deletions(-)
+
+Index: gst-plugins-good-0.10.31/src/sys/v4l2/gstv4l2sink.c
+===================================================================
+--- gst-plugins-good-0.10.31.orig/src/sys/v4l2/gstv4l2sink.c	2013-02-22 11:39:36.346829034 -0600
++++ gst-plugins-good-0.10.31/src/sys/v4l2/gstv4l2sink.c	2013-02-22 11:57:41.750826867 -0600
+@@ -893,6 +893,8 @@
+ 
+     gst_query_parse_buffers_count (query, &min_buffers);
+ 
++    GST_DEBUG_OBJECT (v4l2sink, "min_buffers=%d", min_buffers);
++
+     /* XXX need to account for some buffers used by queue, etc.. probably
+      * queue should handle query, pass on to sink pad, and then add some
+      * number of buffers to the min, so this value is dynamic depending
+@@ -900,10 +902,10 @@
+      */
+     if (min_buffers != -1) {
+       min_buffers += 3 + v4l2sink->min_queued_bufs;
++      v4l2sink->num_buffers_can_change = FALSE;
+     }
+ 
+     if (min_buffers > v4l2sink->num_buffers) {
+-      v4l2sink->num_buffers_can_change = FALSE;
+       v4l2sink->num_buffers = min_buffers;
+     }
+ 
+@@ -984,7 +986,7 @@
+        * than four buffers:
+        */
+       if (!strcmp ("omap_vout", driver)) {
+-        if (v4l2sink->num_buffers > 4) {
++        if (v4l2sink->num_buffers_can_change && v4l2sink->num_buffers > 4) {
+           v4l2sink->num_buffers = 4;
+           GST_DEBUG_OBJECT (v4l2sink,
+               "limiting to 4 buffers to work-around omap_vout driver bug");

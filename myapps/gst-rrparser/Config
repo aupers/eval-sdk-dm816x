@@ -1,0 +1,6 @@
+
+config USER_APPS_GSTRRPARSER
+	bool "Plugin that improve the performance of the parser"
+	default n
+	help
+	    Plugin that improve the performance of the parser.

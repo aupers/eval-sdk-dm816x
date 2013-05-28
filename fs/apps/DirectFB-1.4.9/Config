@@ -1,0 +1,24 @@
+
+config FS_APPS_DIRECTFB
+	bool "DirectFB 1.4.9"
+	select FS_APPS_LIBPNG
+	select FS_APPS_ZLIB
+	select VT
+	help
+	    DirectFB is a graphic platform that works over Linux Framebuffer driver
+
+if FS_APPS_DIRECTFB
+comment "DirectFb Options"
+
+config FS_APPS_DIRECTFB_JPEG
+	bool "Support for JPEG"
+        select FS_APPS_JPEG
+        depends on FS_APPS_DIRECTFB
+
+config FS_APPS_DIRECTFB_FREETYPE
+	bool "Support for FreeType"
+	select FS_APPS_FREETYPE
+	depends on FS_APPS_DIRECTFB
+
+endif
+

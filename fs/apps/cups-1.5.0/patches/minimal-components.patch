@@ -1,0 +1,13 @@
+Index: cups-1.5.0/src/configure
+===================================================================
+--- cups-1.5.0.orig/src/configure	2011-09-07 13:59:21.448989630 -0600
++++ cups-1.5.0/src/configure	2011-09-07 14:00:09.268911048 -0600
+@@ -11399,7 +11399,7 @@
+ 
+ case "$COMPONENTS" in
+ 	all)
+-		BUILDDIRS="filter backend berkeley cgi-bin driver monitor notifier ppdc scheduler systemv conf data desktop locale man doc examples templates"
++		BUILDDIRS="filter backend berkeley cgi-bin driver monitor notifier ppdc scheduler systemv conf data"
+ 		;;
+ 
+ 	core)

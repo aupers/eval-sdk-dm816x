@@ -1,0 +1,17 @@
+#
+# Ridgerun BSP Configuration file for kernel
+# all definitions on this subtree must prefix with KERNEL_
+#
+
+menu "Kernel configuration"
+
+comment "Extra parameters to pass to kernel boot args"
+
+config BSP_EXTRA_BOOT_ARGS
+	string "Extra kernel arguments"
+
+comment "Kernel configuration options"
+
+source bsp/arch/Kconfig
+
+endmenu

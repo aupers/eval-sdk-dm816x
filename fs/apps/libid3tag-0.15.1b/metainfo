@@ -1,0 +1,2 @@
+HOST_REQUIRED="gperf"
+TARGET_REQUIRED="zlib"

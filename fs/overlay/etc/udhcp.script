@@ -1,0 +1,74 @@
+#!/bin/sh
+
+# udhcpc script edited by Tim Riker <Tim@Rikers.org>
+# NFS root detection logic by Diego Dompe
+
+[ -z "$1" ] && echo "Error: should be called from udhcpc" && exit 1
+
+RESOLV_CONF="/etc/resolv.conf"
+[ -n "$broadcast" ] && BROADCAST="broadcast $broadcast"
+[ -n "$subnet" ] && NETMASK="netmask $subnet"
+
+check_network_root() {
+    [ -e /proc/mounts ] || return 0
+
+    exec 9<&0 < /proc/mounts
+    while read DEV MTPT FSTYPE REST; do
+	case $FSTYPE in
+	nfs|nfs4)
+	    if [ "$MTPT" == "/" ] ; then
+		cSERVERIP=`echo $REST | sed 's/.*addr=\([0-9]*\.[0-9]*\.[0-9]*\.[0-9]*\).*/\1/'`
+		cNETMASK=`ifconfig $1 | grep Mask | sed "s/.*Mask:\(.*\)/\1/"`
+		if [ ! -z "$cSERVERIP" ] && [ ! -z "$cNETMASK" ] ; then
+		    cNETWORK=`ipcalc -n $cSERVERIP $cNETMASK | cut -d'=' -f2`
+		    cDEVICE_NETWORK=`route -n | grep $1 | head -n1 | cut -d' ' -f1`
+		    if [ "$cNETWORK" == "$cDEVICE_NETWORK" ] ; then
+			return 1;
+		    fi
+		fi
+	    fi 
+	    ;;
+	esac
+    done
+    exec 0<&9 9<&-
+    
+    return 0;
+}
+
+
+case $1 in
+	deconfig )
+		if check_network_root $interface ; then
+			/sbin/ifconfig $interface 0.0.0.0
+		fi
+		;;
+
+	renew | bound )
+		if check_network_root $interface ; then
+			/sbin/ifconfig $interface $ip $BROADCAST $NETMASK
+		else
+			echo "Root filesystem is mounted over $interface network interface, discarting IP obtained by userspace dhcp"
+		fi
+
+		if [ -n "$router" ] ; then
+			echo "deleting routers";  
+			#while 
+                        route del default gw 0.0.0.0 dev $interface ; 
+                        #; do
+			#done
+
+			for i in $router ; do
+				route add default gw $i dev $interface ;
+			done
+		fi
+
+		echo -n > $RESOLV_CONF
+		[ -n "$domain" ] && echo search $domain >> $RESOLV_CONF
+		for i in $dns ; do
+			echo adding dns $i
+			echo nameserver $i >> $RESOLV_CONF
+		done
+		;;
+esac
+
+exit 0

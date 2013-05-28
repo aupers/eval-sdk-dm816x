@@ -1,0 +1,28 @@
+#!/bin/sh -e
+
+case "$1" in
+start)
+	echo "Starting CUPS Scheduler"
+	$(V) chmod 755 /usr/lib/cups/daemon/cups-deviced
+	$(V) chmod 755 /usr/lib/cups/daemon
+	$(V) chmod -R 755 /usr/lib/cups/backend
+	$(V) chown root:lp /usr/lib/cups/daemon/cups-deviced
+	$(V) chown -R root:lp /usr/lib/cups/backend/
+	$(V) chown root:lp /usr/lib/cups/daemon
+	$(V) chown root:lp /usr/lib/cups/daemon/cups-driverd
+	cupsd&
+	;;
+
+stop)
+	echo "Stoping CUPS Scheduler"
+	killall cupsd >/dev/null 2>/dev/null;
+	;;
+
+*)
+	echo "Usage: /etc/init.d/cupsd {start|stop}"
+	exit 1
+	;;
+esac
+
+exit 0
+

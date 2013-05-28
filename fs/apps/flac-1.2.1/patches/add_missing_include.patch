@@ -1,0 +1,12 @@
+Index: flac-1.2.1/src/examples/cpp/encode/file/main.cpp
+===================================================================
+--- flac-1.2.1.orig/src/examples/cpp/encode/file/main.cpp	2011-03-23 16:44:41.591088325 -0600
++++ flac-1.2.1/src/examples/cpp/encode/file/main.cpp	2011-03-23 16:45:05.491099594 -0600
+@@ -30,6 +30,7 @@
+ 
+ #include <stdio.h>
+ #include <stdlib.h>
++#include <string.h>
+ #include "FLAC++/metadata.h"
+ #include "FLAC++/encoder.h"
+ 

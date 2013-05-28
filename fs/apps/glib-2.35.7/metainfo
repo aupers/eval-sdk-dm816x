@@ -1,0 +1,2 @@
+HOST_REQUIRED="gettext gtk2-dev glib2"
+TARGET_REQUIRED="gettext zlib libffi"

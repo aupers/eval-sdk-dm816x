@@ -1,0 +1,18 @@
+config FS_APPS_UDEV
+	bool "udev-182"
+	default n
+	select DEVTMPFS
+	select DEVTMPFS_MOUNT
+	select HOTPLUG
+	select INOTIFY_USER
+	select NET
+	select PROC_FS
+	select SIGNALFD
+	select SYSFS
+	select BLK_DEV_BSG
+	select TMPFS_POSIX_ACL
+	select FS_APPS_KMOD
+	select FS_APPS_UTILS_LINUX
+	help
+	    Udev is a device manager for the Linux kernel. Primarily, it manages
+            device nodes in /dev.

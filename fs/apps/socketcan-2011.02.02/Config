@@ -1,0 +1,4 @@
+config FS_APPS_SOCKETCAN
+	bool "socketcan utils"
+	help
+	    Utilities for handling the CAN bus

@@ -1,0 +1,58 @@
+Index: ezsdk-5_05_02_00/ezsdk/component-sources/omx_05_02_00_48/examples/ti/omx/demos/dm81xx/DspAppMain.cfg
+===================================================================
+--- ezsdk-5_05_02_00.orig/ezsdk/component-sources/omx_05_02_00_48/examples/ti/omx/demos/dm81xx/DspAppMain.cfg	2011-12-12 22:54:31.030598833 -0600
++++ ezsdk-5_05_02_00/ezsdk/component-sources/omx_05_02_00_48/examples/ti/omx/demos/dm81xx/DspAppMain.cfg	2011-12-12 23:00:33.740631234 -0600
+@@ -139,7 +139,8 @@
+   // use aacdec
+   var aaclcdec         = xdc.useModule('ti.sdo.codecs.aaclcdec.ce.AACLCDEC');
+   
+-  //var aaclcenc         = xdc.useModule('ti.sdo.codecs.aaclcenc.ce.AACLCENC');
++  // use aaclc-enc
++  var aaclcenc         = xdc.useModule('ti.sdo.codecs.aaclcenc.ce.AACLCENC');
+   
+ 
+   xdc.useModule('ti.sdo.ce.global.Settings');
+@@ -164,13 +165,13 @@
+       }
+   ]);
+ 
+-  //var myAENCEngine = Engine.create("aenc", [
+-  //    {
+-  //              name : "aaclcenc",
+-  //              mod  : aaclcenc,
+-  //              local: true
+-  //    }
+-  //]);
++  var myAENCEngine = Engine.create("aenc", [
++      {
++                name : "aaclcenc",
++                mod  : aaclcenc,
++                local: true
++      }
++  ]);
+   
+   
+   xdc.loadPackage("ti.sdo.fc.dskt2").profile = "whole_program_debug";
+Index: ezsdk-5_05_02_00/ezsdk/component-sources/omx_05_02_00_48/examples/ti/omx/demos/dm81xx/app_properties.mk
+===================================================================
+--- ezsdk-5_05_02_00.orig/ezsdk/component-sources/omx_05_02_00_48/examples/ti/omx/demos/dm81xx/app_properties.mk	2011-12-12 22:54:31.030598833 -0600
++++ ezsdk-5_05_02_00/ezsdk/component-sources/omx_05_02_00_48/examples/ti/omx/demos/dm81xx/app_properties.mk	2011-12-12 23:00:33.740631234 -0600
+@@ -8,5 +8,5 @@
+ 
+ # Codecs required for this demo:
+ #     Eg: mp3dec aaclcdec...
+-CODECS_IN_APP = aaclcdec
++CODECS_IN_APP = aaclcdec aaclcenc
+ # Nothing beyond this point
+Index: ezsdk-5_05_02_00/ezsdk/component-sources/omx_05_02_00_48/examples/ti/omx/demos/audio_encode/app_properties.mk
+===================================================================
+--- ezsdk-5_05_02_00.orig/ezsdk/component-sources/omx_05_02_00_48/examples/ti/omx/demos/audio_encode/app_properties.mk	2011-12-12 22:54:31.068408348 -0600
++++ ezsdk-5_05_02_00/ezsdk/component-sources/omx_05_02_00_48/examples/ti/omx/demos/audio_encode/app_properties.mk	2011-12-12 23:00:33.740631234 -0600
+@@ -8,6 +8,6 @@
+ 
+ # Codecs required for this demo:
+ #     Eg: mp3dec aaclcdec...
+-CODECS_IN_APP =
++CODECS_IN_APP = aaclcenc
+ 
+ # Nothing beyond this point

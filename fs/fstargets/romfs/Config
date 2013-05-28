@@ -1,0 +1,12 @@
+#
+# Ridgerun target configuration
+#
+
+config FS_TARGET_ROMFS
+	bool "ROMFS disk image"
+	depends on INSTALLER_MODE_ATTACHED_BOARD
+	depends on BSP_ARCH_SUPPORTS_ROMFS && !INSTALLER_MODE_SD_CARD_INSTALLER
+	select ROMFS_FS
+	help
+	    Use a romfs file system
+

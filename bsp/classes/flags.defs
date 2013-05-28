@@ -1,0 +1,26 @@
+#$L$
+# Copyright (C) 2012 Ridgerun (http://www.ridgerun.com).
+#$L$
+
+#! \defgroup RidgeRun SDK flags
+#! The following is a list of parameters that may be set according to an application's specific requirements.
+#! <ul>
+#! <li>
+#! <b>rrbuild:</b> This flag is created when an application has build correctly
+#! <li>
+#! <b>rrinstalled:</b> This flag is created after installing an application correctly
+#! <li>
+#! <b>Flags used at:</b> qt.defs, autotools.defs, fetcher.defs
+#!
+#! </ul>
+
+BUILT_FLAG=rrbuilt
+INSTALLED_FLAG=rrinstalled
+PATCHED_FLAG=rrpatched
+FETCHED_FLAG=rrfetched
+RRSDK_PREFORCE_BUILD_TARGETS=rrpreforce
+
+#CONFIGURED_FLAG= Not sure
+
+
+

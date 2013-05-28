@@ -1,0 +1,4 @@
+config FS_APPS_PCRE
+	bool "pcre 8.12"
+	help
+	    Perl Compatible Regular Expressions Enabled

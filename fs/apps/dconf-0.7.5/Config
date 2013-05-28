@@ -1,0 +1,7 @@
+
+config FS_APPS_DCONF
+	bool "dconf-0.7.5"
+	select FS_APPS_GLIB
+	select FS_APPS_DBUS
+	help
+	  Dconf is a simple key-based configuration system

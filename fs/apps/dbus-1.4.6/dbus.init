@@ -1,0 +1,23 @@
+#!/bin/sh -e
+
+case "$1" in
+start)
+	echo "Starting D-Bus message bus system"
+	mkdir -p /var/run/dbus
+	dbus-daemon --system;
+	;;
+
+stop)
+	echo "Stoping D-Bus message bus system"
+	kill -TERM `cat /var/run/dbus/pid` >/dev/null 2>/dev/null;
+	rm -f /var/run/dbus/pid
+	;;
+
+*)
+	echo "Usage: /etc/init.d/dbus {start|stop}"
+	exit 1
+	;;
+esac
+
+exit 0
+

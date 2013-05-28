@@ -1,0 +1,12 @@
+
+config FS_APPS_DOSFSTOOLS
+	bool "Dosfstools 3.0.11"
+	help
+	    Utilities to create and check MS-DOS FAT filesystems.There are two
+	    utilities (mkdosfs alias mkfs.dos, and dosfsck alias fsck.msdos)
+	    to create and to check MS-DOS FAT filesystems on either hard disks
+	    or floppies.
+	    
+	    Both mkdosfs and dosfsck include support for FAT32, VFAT long
+	    filenames and now can also handle the Atari variation of the MS-DOS
+	    filesystem format.

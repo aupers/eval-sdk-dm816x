@@ -1,0 +1,6 @@
+#
+# Bridge to the kernel architecture configuration
+#
+
+source arch/arm/Kconfig
+

@@ -1,0 +1,38 @@
+Index: gst-plugins-bad-0.10.23/src/gst/mpegdemux/gstmpegdefs.h
+===================================================================
+--- gst-plugins-bad-0.10.23.orig/src/gst/mpegdemux/gstmpegdefs.h	2013-02-22 12:26:24.634823431 -0600
++++ gst-plugins-bad-0.10.23/src/gst/mpegdemux/gstmpegdefs.h	2013-02-22 13:17:16.610817340 -0600
+@@ -159,6 +159,7 @@
+ #define ST_H222_1                       0x09
+ 
+ /* later extensions */
++#define ST_AUDIO_AAC                    0x0f
+ #define ST_AUDIO_AAC_ADTS               0x0f
+ /* LATM/LOAS AAC syntax */
+ #define ST_AUDIO_AAC_LOAS               0x11
+Index: gst-plugins-bad-0.10.23/src/gst/mpegdemux/gstmpegtsdemux.c
+===================================================================
+--- gst-plugins-bad-0.10.23.orig/src/gst/mpegdemux/gstmpegtsdemux.c	2013-02-22 12:26:24.622823431 -0600
++++ gst-plugins-bad-0.10.23/src/gst/mpegdemux/gstmpegtsdemux.c	2013-02-22 13:17:16.610817340 -0600
+@@ -1210,8 +1210,8 @@
+        * to drop. */
+       if (stream->PMT_pid <= MPEGTS_MAX_PID && demux->streams[stream->PMT_pid]
+           && demux->streams[demux->streams[stream->PMT_pid]->PMT.PCR_PID]
+-          && demux->streams[demux->streams[stream->PMT_pid]->PMT.PCR_PID]->
+-          discont_PCR) {
++          && demux->streams[demux->streams[stream->PMT_pid]->PMT.
++              PCR_PID]->discont_PCR) {
+         GST_WARNING_OBJECT (demux, "middle of discont, dropping");
+         goto bad_timestamp;
+       }
+@@ -1232,8 +1232,8 @@
+          */
+         if (stream->PMT_pid <= MPEGTS_MAX_PID && demux->streams[stream->PMT_pid]
+             && demux->streams[demux->streams[stream->PMT_pid]->PMT.PCR_PID]
+-            && demux->streams[demux->streams[stream->PMT_pid]->PMT.PCR_PID]->
+-            last_PCR > 0) {
++            && demux->streams[demux->streams[stream->PMT_pid]->PMT.
++                PCR_PID]->last_PCR > 0) {
+           GST_DEBUG_OBJECT (demux, "timestamps wrapped before noticed in PCR");
+           time = MPEGTIME_TO_GSTTIME (pts) + stream->base_time +
+               MPEGTIME_TO_GSTTIME ((guint64) (1) << 33);

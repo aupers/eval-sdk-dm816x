@@ -1,0 +1,7 @@
+config FS_APPS_GLIB
+	bool "glib 2.35.7"
+	select FS_APPS_GETTEXT
+	select FS_APPS_LIBFFI
+	select FS_APPS_GETTEXT_NLS if !TOOLCHAIN_HAS_NLS
+	help
+	    Glib is the platform dependend layer of the GTK stack

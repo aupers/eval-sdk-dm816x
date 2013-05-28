@@ -1,0 +1,4 @@
+config FS_APPS_UTILS_LINUX
+	bool "util-linux 2.22"
+	help
+	Util-linux is a suite of essential utilities for any Linux system.

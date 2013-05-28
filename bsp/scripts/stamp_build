@@ -1,0 +1,17 @@
+#!/bin/sh
+
+BUILD_HOSTNAME=`hostname`
+BUILD_USERNAME=`id -g -n`
+BUILD_DATE=`date -R`
+if [ -n "${DEVDIR}" ] ; then
+    BUILD_TAG=`readlink "${DEVDIR}/bsp/mach" | sed -e s,^mach-,,`
+else
+    BUILD_TAG=unknown
+fi
+
+cat <<EOT
+Build host: ${BUILD_HOSTNAME}
+Built by: ${BUILD_USERNAME}
+Build date: ${BUILD_DATE}
+Build tag: ${BUILD_TAG}
+EOT

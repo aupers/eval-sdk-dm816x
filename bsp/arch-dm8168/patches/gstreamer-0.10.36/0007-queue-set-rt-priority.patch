@@ -1,0 +1,108 @@
+Index: gstreamer-0.10.36/src/plugins/elements/gstqueue.c
+===================================================================
+--- gstreamer-0.10.36.orig/src/plugins/elements/gstqueue.c	2013-02-21 10:04:20.000000000 -0600
++++ gstreamer-0.10.36/src/plugins/elements/gstqueue.c	2013-02-21 10:12:06.584966512 -0600
+@@ -119,6 +119,8 @@
+   PROP_MIN_THRESHOLD_BYTES,
+   PROP_MIN_THRESHOLD_TIME,
+   PROP_LEAKY,
++  PROP_SCHED,
++  PROP_PRIORITY,
+   PROP_SILENT
+ };
+ 
+@@ -373,6 +375,19 @@
+           "Don't emit queue signals", FALSE,
+           G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
+ 
++  g_object_class_install_property(gobject_class, PROP_PRIORITY,
++      g_param_spec_int("priority",
++            "Priority of queue thread 0 - 99",
++            "Priority of queue thread 0 - 99",
++            0, G_MAXINT32, 99, G_PARAM_WRITABLE));
++
++	
++  g_object_class_install_property(gobject_class, PROP_SCHED,
++      g_param_spec_int("sched",
++            "Sched of queue thread 0 - 2",
++            "Sched of queue thread 0 - 2",
++            0, G_MAXINT32, 2, G_PARAM_WRITABLE));
++  
+   gobject_class->finalize = gst_queue_finalize;
+ 
+   /* Registering debug symbols for function pointers */
+@@ -431,9 +446,12 @@
+   queue->qlock = g_mutex_new ();
+   queue->item_add = g_cond_new ();
+   queue->item_del = g_cond_new ();
+-
+   g_queue_init (&queue->queue);
+ 
++  queue->sched = -1;
++  queue->priority = -1;
++  queue->firstTime = 1;
++  
+   queue->sinktime = GST_CLOCK_TIME_NONE;
+   queue->srctime = GST_CLOCK_TIME_NONE;
+ 
+@@ -1228,14 +1246,28 @@
+     return GST_FLOW_WRONG_STATE;
+   }
+ }
+-
++#include <sched.h>
+ static void
+ gst_queue_loop (GstPad * pad)
+ {
+   GstQueue *queue;
+   GstFlowReturn ret;
+ 
+-  queue = (GstQueue *) GST_PAD_PARENT (pad);
++  static int firstTime = 1;
++  queue = GST_QUEUE (GST_PAD_PARENT (pad));
++ 
++  if(queue->firstTime && (queue->sched != -1) && (queue->priority != -1)) {
++    int policy;
++    struct sched_param param;
++    policy = queue->sched;
++    param.sched_priority = queue->priority;
++    printf("QPriority:%d,Qsched:%d\n",queue->priority,queue->sched);
++    if (sched_setscheduler (0, policy, &param) == -1) {
++ 	 GST_ELEMENT_WARNING (queue, RESOURCE, FAILED, (NULL),
++		 ("Failed to set the request rt scheduler"));
++    }
++	queue->firstTime = 0;
++  }
+ 
+   /* have to lock for thread-safety */
+   GST_QUEUE_MUTEX_LOCK_CHECK (queue, out_flushing);
+@@ -1526,6 +1558,14 @@
+     case PROP_SILENT:
+       queue->silent = g_value_get_boolean (value);
+       break;
++    case PROP_PRIORITY:
++      queue->priority = g_value_get_int(value);
++      printf("priority:%d\n",queue->priority);
++      break;
++    case PROP_SCHED:
++      queue->sched = g_value_get_int(value);
++      printf("sched:%d\n",queue->sched);
++      break;
+     default:
+       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+       break;
+Index: gstreamer-0.10.36/src/plugins/elements/gstqueue.h
+===================================================================
+--- gstreamer-0.10.36.orig/src/plugins/elements/gstqueue.h	2011-12-29 19:14:37.000000000 -0600
++++ gstreamer-0.10.36/src/plugins/elements/gstqueue.h	2013-02-21 10:12:45.820966508 -0600
+@@ -116,6 +116,10 @@
+   /* whether we leak data, and at which end */
+   gint leaky;
+ 
++  gint sched;
++  gint priority;
++  gint firstTime;  
++
+   GMutex *qlock;        /* lock for queue (vs object lock) */
+   gboolean waiting_add;
+   GCond *item_add;      /* signals buffers now available for reading */

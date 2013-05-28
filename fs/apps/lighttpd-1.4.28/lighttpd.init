@@ -1,0 +1,21 @@
+#!/bin/sh -e
+
+case "$1" in
+start)
+    echo "Starting lighttpd"
+    /usr/sbin/lighttpd -f  /etc/lighttpd/lighttpd.conf
+    ;;
+
+stop)
+    echo "Stoping lighttpd"
+    kill -TERM `cat /var/run/lighttpd.pid` >/dev/null 2>/dev/null;
+    ;;
+
+*)
+    echo "Usage: /etc/init.d/lighttpd {start|stop}"
+    exit 1
+    ;;
+esac
+
+exit 0
+

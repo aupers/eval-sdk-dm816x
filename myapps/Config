@@ -1,0 +1,11 @@
+#
+# Ridgerun BSP Configuration file for User Applications
+# all definitions on this subtree must prefix with USER_APPS_
+#
+
+
+menu "User Applications"
+
+source myapps/ConfigExtra
+
+endmenu

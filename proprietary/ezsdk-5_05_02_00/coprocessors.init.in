@@ -1,0 +1,114 @@
+#!/bin/sh -e
+
+HDVICP2_ID=1
+HDVPSS_ID=2
+DSP_ID=0
+
+case "$1" in
+start)
+	prcm_config_app s > /dev/null
+	echo "Loading coprocessors modules..."
+	if [ -f /lib/modules/@KERNELVERSION@/kernel/drivers/dsp/cmemk.ko ] ; then
+	    PHYS_START=@CMEM_START@
+	    if [ -z "$PHYS_START" ] ; then
+	        RESERVED_START=$(( `sed -e "s/.*mem=\([0-9]*\)M .*/\1 * 1024 * 1024/" /proc/cmdline` ))
+	        # Some platforms like DM365 setup reserved video capture and display buffers on the reserver memory area
+	        # so we are careful to avoid overlaping these areas with cmem
+	        VIDEO_DISPLAY_BUFFERS_SIZE=$(( `( grep -q y.cont2 /proc/cmdline && sed -e "s/.*y.cont2_bufsize=\([0-9]*\) .*/+ \1/" /proc/cmdline ) || echo 0` ))
+	        VIDEO_CAPTURE_BUFFERS_SIZE=$(( `( grep -q re.cont /proc/cmdline && sed -e 's/.*e.cont_bufsize=\([0-9]*\) .*/+ \1/' /proc/cmdline ) || echo 0` ))
+	        PHYS_START=`printf '0x%x' $(( @RAM_BASE@ + $RESERVED_START + $VIDEO_DISPLAY_BUFFERS_SIZE + $VIDEO_CAPTURE_BUFFERS_SIZE ))`
+	    fi
+	    PHYS_END=`printf '0x%x' $(($PHYS_START + @CMEM_SIZE@))`
+	    PHYS_END_INT=`printf '%d' $(($PHYS_START + @CMEM_SIZE@))`
+	    if [ $PHYS_END_INT -gt @RAM_END_INT@ ] ; then
+		echo "WARNING: the cmem allocation ends beyond the end of RAM registered for this hardware"
+		echo "End of cmem: $PHYS_END, End of ram: @RAM_END@ \n"
+	    fi
+	    rmmod cmem 2>/dev/null || true
+	    echo "  Loading cmem from $PHYS_START to $PHYS_END"
+	    modprobe cmemk phys_start=$PHYS_START phys_end=$PHYS_END allowOverlap=1 useHeapIfPoolUnavailable=1 @CMEM_TCMSETTINGS@
+	fi
+	if [ -f /lib/modules/@KERNELVERSION@/kernel/drivers/dsp/syslink.ko ] ; then
+	    rmmod syslink 2>/dev/null || true
+	    modprobe syslink
+	fi
+	if [ -f /lib/firmware/@HDVICP2_FIRMWARE@ ] ; then
+	    firmware_loader $HDVICP2_ID  /lib/firmware/@HDVICP2_FIRMWARE@ start -i2c @I2C_MODE@
+	fi
+	sleep 1
+	if [ -f /lib/firmware/@VPSS_FIRMWARE@ ] ; then
+	    firmware_loader $HDVPSS_ID  /lib/firmware/@VPSS_FIRMWARE@ start -i2c @I2C_MODE@
+	fi
+	sleep 1
+	if [ -f /lib/firmware/@DSP_FIRMWARE@ ] ; then
+	    firmware_loader $DSP_ID  /lib/firmware/@DSP_FIRMWARE@ start -i2c @I2C_MODE@
+	fi
+	sleep 1
+	if [ -f /lib/modules/@KERNELVERSION@/kernel/drivers/video/ti81xx/vpss/vpss.ko ] ; then
+	    rmmod vpss 2>/dev/null || true
+	    modprobe vpss sbufaddr=0xBFB00000 i2c_mode=@I2C_MODE@
+	fi
+	if [ -f /lib/modules/@KERNELVERSION@/kernel/drivers/video/ti81xx/ti81xxfb/ti81xxfb.ko ] ; then
+	    rmmod ti81xxfb 2>/dev/null || true
+	    #TODO params
+	    modprobe ti81xxfb vram=0:40M,1:40M,2:1M
+	fi
+	if [ -f /lib/modules/@KERNELVERSION@/kernel/drivers/video/ti81xx/ti81xxhdmi/ti81xxhdmi.ko ] ; then
+	    rmmod ti81xxhdmi 2>/dev/null || true
+	    modprobe ti81xxhdmi 
+	fi
+	if [ -f /lib/modules/@KERNELVERSION@/kernel/drivers/video/ti81xx/tlc59108/tlc59108.ko ] ; then
+	    rmmod tlc59108 2>/dev/null || true
+	    modprobe tlc59108
+	fi
+	if [ -f /lib/modules/@KERNELVERSION@/kernel/drivers/media/video/ti81xx/ti81xxvo.ko ] ; then
+	    rmmod ti81xxvo 2>/dev/null || true
+	    #TODO: ADDR and more params
+	    modprobe ti81xxvo
+	fi
+	
+	;;
+
+stop)
+	echo "Unloading coprocessors modules"
+	killall -9 psplash
+	if lsmod | grep -q cmemk ; then
+	    rmmod cmemk || true
+	fi
+	if lsmod | grep -q tlc59108  ; then
+	    rmmod tlc59108  || true
+	fi
+	if lsmod | grep -q ti81xxhdmi  ; then
+	    rmmod ti81xxhdmi  || true
+	fi
+	if lsmod | grep -q ti81xxfb  ; then
+	    rmmod ti81xxfb || true
+	fi
+	if lsmod | grep -q ti81xxvo  ; then
+	    rmmod ti81xxvo || true
+	fi
+	if lsmod | grep -q ti81xxvin  ; then
+	    rmmod ti81xxvin || true
+	fi
+	if lsmod | grep -q vpss  ; then
+	    rmmod vpss || true
+	fi
+	if [ -f /lib/firmware/@VPSS_FIRMWARE@ ] ; then
+	    firmware_loader $HDVPSS_ID  /lib/firmware/@VPSS_FIRMWARE@ stop /lib/firmware/mm_dm81xxbm.bin
+	fi
+	if [ -f /lib/firmware/@HDVICP2_FIRMWARE@ ] ; then
+	    firmware_loader $HDVICP2_ID  /lib/firmware/@HDVICP2_FIRMWARE@ stop  /lib/firmware/mm_dm81xxbm.bin
+	fi
+	if [ -f /lib/firmware/@DSP_FIRMWARE@ ] ; then
+	    firmware_loader $DSP_ID  /lib/firmware/@DSP_FIRMWARE@ stop  /lib/firmware/mm_dm81xxbm.bin
+	fi
+	if lsmod | grep -q syslink  ; then
+	    rmmod syslink || true
+	fi
+	;;
+
+*)
+	echo "Usage: /etc/init.d/coprocessors {start|stop}"
+	exit 1
+	;;
+esac

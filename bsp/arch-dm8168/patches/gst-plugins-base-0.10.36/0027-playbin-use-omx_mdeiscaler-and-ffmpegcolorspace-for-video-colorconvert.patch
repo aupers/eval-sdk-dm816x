@@ -1,0 +1,91 @@
+Index: gst-plugins-base-0.10.32/src/gst/playback/gstplaybin.c
+===================================================================
+--- gst-plugins-base-0.10.32.orig/src/gst/playback/gstplaybin.c	2012-09-24 23:15:47.490268833 -0600
++++ gst-plugins-base-0.10.32/src/gst/playback/gstplaybin.c	2012-09-24 23:27:26.538271519 -0600
+@@ -828,7 +828,7 @@
+ gen_video_element (GstPlayBin * play_bin)
+ {
+   GstElement *element;
+-  GstElement *conv;
++  GstElement *conv, *conv2, *perf;
+ 
+   //GstElement *scale;
+   GstElement *sink;
+@@ -858,27 +858,34 @@
+    * that when something goes wrong we only need to unref the bin */
+   element = gst_bin_new ("vbin");
+   gst_bin_add (GST_BIN_CAST (element), sink);
++#ifndef NO_GSTPERF
++  perf = gst_element_factory_make ("gstperf", "perf");
++  if (perf == NULL)
++    goto no_gstperf;
++  gst_bin_add (GST_BIN_CAST (element), perf);
++
++  if (!gst_element_link_pads (perf, "src", sink, NULL))
++    goto link_failed;
++#endif
++  conv2 = gst_element_factory_make ("omx_mdeiscaler", "vconv2");
++  if (conv2 == NULL)
++    goto no_mdeiscaler;
++  gst_bin_add (GST_BIN_CAST (element), conv2);
++
++#ifndef NO_GSTPERF
++  if (!gst_element_link_pads (conv2, "src_00", perf, NULL))
++#else
++  if (!gst_element_link_pads (conv2, "src_00", sink, NULL))
++#endif
++    goto link_failed;
++
++  conv = gst_element_factory_make ("ffmpegcolorspace", "vconv");
+ 
+-  conv = gst_element_factory_make ("omx_scaler", "vconv");
+   if (conv == NULL)
+     goto no_colorspace;
+   gst_bin_add (GST_BIN_CAST (element), conv);
+ 
+-/*  scale = gst_element_factory_make ("identity", "vscale");
+-  if (scale == NULL)
+-    goto no_videoscale;
+-  gst_bin_add (GST_BIN_CAST (element), scale);*/
+-
+-  /*identity = gst_element_factory_make ("identity", "id");
+-  g_object_set (identity, "silent", TRUE, NULL);
+-  g_signal_connect (identity, "handoff", G_CALLBACK (handoff), play_bin);
+-  gst_bin_add (GST_BIN_CAST (element), identity);*/
+-
+-  //gst_element_link_pads (identity, "src", conv, "sink");
+- // gst_element_link_pads (conv, "src", scale, "sink");
+-  /* be more careful with the pad from the custom sink element, it might not
+-   * be named 'sink' */
+-  if (!gst_element_link_pads (conv, "src", sink, NULL))
++  if (!gst_element_link_pads (conv, "src", conv2, NULL))
+     goto link_failed;
+ 
+   pad = gst_element_get_static_pad (conv, "sink");
+@@ -903,6 +910,26 @@
+         (NULL));
+     return NULL;
+   }
++no_mdeiscaler:
++  {
++    post_missing_element_message (play_bin, "omx_mdeiscaler");
++    GST_ELEMENT_ERROR (play_bin, CORE, MISSING_PLUGIN,
++        (_("Missing element '%s' - check your GStreamer installation."),
++            "omx_mdeiscaler"), (NULL));
++    gst_object_unref (element);
++    return NULL;
++  }
++#ifndef NO_GSTPERF
++no_gstperf:
++  {
++    post_missing_element_message (play_bin, "gstperf");
++    GST_ELEMENT_ERROR (play_bin, CORE, MISSING_PLUGIN,
++        (_("Missing element '%s' - check your GStreamer installation."),
++            "gstperf"), (NULL));
++    gst_object_unref (element);
++    return NULL;
++  }
++#endif
+ no_colorspace:
+   {
+     post_missing_element_message (play_bin, "ffmpegcolorspace");

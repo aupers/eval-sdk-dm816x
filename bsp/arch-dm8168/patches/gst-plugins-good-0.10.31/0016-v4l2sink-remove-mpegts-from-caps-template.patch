@@ -1,0 +1,14 @@
+--- gst-plugins-good-0.10.28/src/sys/v4l2/gstv4l2object.c	2012-02-03 16:23:29.025525873 +0530
++++ gst-plugins-good-0.10.28.new/sys/v4l2/gstv4l2object.c	2012-02-03 13:24:41.261523644 +0530
+@@ -1259,8 +1259,11 @@ gst_v4l2_object_v4l2fourcc_to_structures
+           NULL);
+       break;
+     case V4L2_PIX_FMT_MPEG:    /* MPEG          */
++#if 0
+       structures[count++] = gst_structure_new ("video/mpegts", NULL);
++#endif
+       break;
++
+     case V4L2_PIX_FMT_WNVA:    /* Winnov hw compres */
+       break;
+ #ifdef V4L2_PIX_FMT_SBGGR8

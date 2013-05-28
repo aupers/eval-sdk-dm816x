@@ -1,0 +1,35 @@
+config FS_APPS_DROPBEAR
+        bool "dropbear-0.53 (SSH Server)"
+        default n
+        select FS_APPS_ZLIB 
+		select START_STOP_DAEMON
+		select FEATURE_START_STOP_DAEMON_FANCY
+		select FEATURE_START_STOP_DAEMON_LONG_OPTIONS
+        help
+         Dropbear SSH server and client
+
+         Dropbear is a relatively small SSH 2 server and client. It runs 
+         on a variety of POSIX-based platforms. Dropbear is open source 
+         software, distributed under a MIT-style license. Dropbear is 
+         particularly useful for "embedded"-type Linux (or other Unix) 
+         systems, such as wireless routers.
+
+         This package requires zlib.
+
+config FS_APPS_DROPBEAR_DBCLIENT
+        bool "Enable dbclient (SSH Client)"
+        default n
+        depends on FS_APPS_DROPBEAR
+        help
+            This option will add an SSH client, it is required by the
+            scp application. 
+
+
+config FS_APPS_DROPBEAR_SCP
+        bool "Enable scp"
+        default n
+        depends on FS_APPS_DROPBEAR
+        select FS_APPS_DROPBEAR_DBCLIENT
+        help
+            This option will add an scp application to securely copy 
+            files to and from other hosts. 

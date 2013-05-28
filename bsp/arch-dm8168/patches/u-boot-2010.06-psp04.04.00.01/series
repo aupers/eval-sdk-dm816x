@@ -1,0 +1,10 @@
+0001-ti814x-ti816x-changes-in-makefile-for-supporting-log.patch
+0002-ti814x-ti816x-header-file-for-the-logo.patch
+0003-ti814x-ti816x-files-for-firmware-settings-during-u-b.patch
+0004-ti814x-setting-the-board-for-displaying-logo-at-u-bo.patch
+0005-ti814x-adding-configs-for-ti814x-for-logo-support.patch
+0006-ti816x-setting-the-board-for-display-of-logo.patch
+0007-ti816x-added-configs-for-logo-support-at-u-boot.patch
+0008-ti814x-ti816x-adding-the-vpdma-firmware-1B2-for-logo.patch
+uboot_add_env_function.patch
+setEccSoftwareMode.patch

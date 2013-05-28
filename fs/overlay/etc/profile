@@ -1,0 +1,4 @@
+PATH=/bin:/usr/bin:/opt/bin:/sbin:/usr/sbin:/usr/local/sbin:/etc
+if [ -f /var/run/dbus_environment.sh ] ; then
+    source /var/run/dbus_environment.sh
+fi

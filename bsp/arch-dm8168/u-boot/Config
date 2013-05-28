@@ -1,0 +1,3 @@
+config UBOOT_USE_MIN
+	bool
+	default y

@@ -1,0 +1,41 @@
+Index: gst-plugins-base-0.10.36/src/gst/playback/gstplaysink.c
+===================================================================
+--- gst-plugins-base-0.10.36.orig/src/gst/playback/gstplaysink.c	2012-01-19 17:25:36.000000000 -0600
++++ gst-plugins-base-0.10.36/src/gst/playback/gstplaysink.c	2013-02-21 12:42:22.640965437 -0600
+@@ -1338,19 +1338,25 @@
+     head = prev = chain->queue;
+   }
+ 
+-  if (!(playsink->flags & GST_PLAY_FLAG_NATIVE_VIDEO)) {
+-    GST_DEBUG_OBJECT (playsink, "creating videoconverter");
+-    chain->conv =
+-        g_object_new (GST_TYPE_PLAY_SINK_VIDEO_CONVERT, "name", "vconv", NULL);
+-    gst_bin_add (bin, chain->conv);
+-    if (prev) {
+-      if (!gst_element_link_pads_full (prev, "src", chain->conv, "sink",
+-              GST_PAD_LINK_CHECK_TEMPLATE_CAPS))
+-        goto link_failed;
++  if (raw && !(playsink->flags & GST_PLAY_FLAG_NATIVE_VIDEO)) {
++    GST_DEBUG_OBJECT (playsink, "creating stridetransform");
++    chain->conv = gst_element_factory_make ("stridetransform", "vconv");
++    if (chain->conv == NULL) {
++      post_missing_element_message (playsink, "stridetransform");
++      GST_ELEMENT_WARNING (playsink, CORE, MISSING_PLUGIN,
++          (_("Missing element '%s' - check your GStreamer installation."),
++              "stridetransform"), ("video rendering might fail"));
+     } else {
+-      head = chain->conv;
++      gst_bin_add (bin, chain->conv);
++      if (prev) {
++        if (!gst_element_link_pads_full (prev, "src", chain->conv, "sink",
++                GST_PAD_LINK_CHECK_TEMPLATE_CAPS))
++          goto link_failed;
++      } else {
++        head = chain->conv;
++      }
++      prev = chain->conv;
+     }
+-    prev = chain->conv;
+   }
+ 
+   if (prev) {

@@ -1,0 +1,13 @@
+Index: iproute2-2.6.37/src/misc/Makefile
+===================================================================
+--- iproute2-2.6.37.orig/src/misc/Makefile	2011-07-14 09:35:10.897288085 -0600
++++ iproute2-2.6.37/src/misc/Makefile	2011-07-14 09:35:48.287328894 -0600
+@@ -1,7 +1,7 @@
+ SSOBJ=ss.o ssfilter.o
+ LNSTATOBJ=lnstat.o lnstat_util.o
+ 
+-TARGETS=ss nstat ifstat rtacct arpd lnstat
++TARGETS=ss nstat ifstat rtacct lnstat
+ 
+ include ../Config
+ 

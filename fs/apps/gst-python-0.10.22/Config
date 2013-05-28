@@ -1,0 +1,7 @@
+config FS_APPS_GST_PYTHON
+	bool "gst-python-0.10.22"
+	select FS_APPS_PYGOBJECT
+	select FS_APPS_DBUS_PYTHON
+	select FS_APPS_GSTREAMER
+	help
+	Python GStreamer Binding

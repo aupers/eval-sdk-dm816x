@@ -1,0 +1,199 @@
+#
+# Ridgerun BSP Configuration file
+#
+
+mainmenu "Ridgerun BSP Configuration"
+
+menu "Generic SDK configuration"
+
+config BSP_MAX_CPU_USAGE
+    int "Percentage of CPU cores to use on multi-core machines"
+    default 50
+    help
+       When the SDK builds on a multi-core machine, it may speed up
+       using several cores. This option allows to control the maximum
+       percentage of cores to use.
+
+config BSP_NET_HAS_NET
+    bool
+    select CONFIG_IFUPDOWN
+
+if BSP_NET_HAS_NET
+comment "Network interface support for Linux"
+
+config BSP_IPV6_SUPPORT
+    bool "Enable IPv6 support on the SDK"
+    default y
+    select IPV6
+    select IPV6_MULTIPLE_TABLES
+    select IPV6_SUBTREES
+    select FEATURE_IPV6
+    select FEATURE_IFUPDOWN_IPV6
+    select FEATURE_IFUPDOWN_EXTERNAL_DHCP
+    select FEATURE_IFUPDOWN_IP_BUILTIN
+    select IP
+    help
+	This options forces all the dependencies to support IPv6
+	enabled SDK out of the box.
+
+if BSP_NET_HAS_ETH0
+config BSP_NET_ETH0_USE_DHCP
+	bool "Use DHCP for eth0"
+	default y
+	help
+	    Use dhcp client for eth0 network interface
+
+config BSP_NET_ETH0_IPADDR
+	string "Linux network IP address (eth0)"
+	default "192.168.1.10"
+	depends on !BSP_NET_ETH0_USE_DHCP
+	help
+	    This is the IP network address to be used by Linux kernel for eth0.
+
+config BSP_NET_ETH0_GATEWAY_IPADDR
+	string "Gateway IP address (eth0)"
+	default "192.168.1.100"
+	depends on !BSP_NET_ETH0_USE_DHCP
+	help
+	    This is the Gateway IP address to be used by Linux kernel for eth0.
+
+config BSP_NET_ETH0_NETMASK
+	string "Linux network mask address for interface (eth0)"
+	default "255.255.255.0"
+	depends on !BSP_NET_ETH0_USE_DHCP
+	help
+	    This is the IP mask to be used by Linux kernel for eth0.
+
+choice
+	prompt "IPv6 configuration mode for eth0"
+	depends on BSP_NET_HAS_ETH0
+	depends on BSP_IPV6_SUPPORT
+	default BSP_NET_ETH0_USE_STATELESS
+
+
+config BSP_NET_ETH0_USE_DHCPV6
+	bool "DHCPv6"
+	select FS_APPS_DHCP_CLIENT
+	help
+	  Say Y if you want to use DHCP to configure with network interface, this is going to 
+	  configure your IPv6, netmask, gateway and DNS server.
+
+config BSP_NET_ETH0_USE_STATELESS
+	bool "Stateless"
+	help
+	  Say Y if you want to use the stateless network configuration, this is going to
+	  configure your IPv6 and netmask.
+
+config BSP_NET_ETH0_USE_STATIC6
+	bool "Static"
+	help
+	  Say Y if you want to configure manually your network parameters.
+endchoice
+
+config BSP_NET_ETH0_GLOBAL_IPADDR6
+	string "Linux global scope network IPv6 address (eth0)"
+	default ""
+	depends on BSP_NET_ETH0_USE_STATIC6
+	help
+	    This is the IPv6 global scope network address to be used by Linux kernel for eth0.
+
+config BSP_NET_ETH0_GATEWAY_IPADDR6
+	string "Linux Gateway IPv6 address (eth0)"
+	default ""
+	depends on BSP_NET_ETH0_USE_STATIC6
+	help
+	    This is the Gateway IPv6 address to be used by Linux kernel for eth0.
+endif # NET_ETH0
+
+if BSP_NET_HAS_USB0
+config BSP_NET_USB0_USE_DHCP
+	bool "Use DHCP for usb0"
+	default y
+	help
+	    Use dhcp client for usb0 network interface
+
+config BSP_NET_USB0_IPADDR
+	string "Linux network IP address (usb0)"
+	default "192.168.1.10"
+	depends on !BSP_NET_USB0_USE_DHCP
+	help
+	    This is the IP network address to be used by Linux kernel for usb0.
+
+config BSP_NET_USB0_GATEWAY_IPADDR
+	string "Gateway IP address (usb0)"
+	default "192.168.1.100"
+	depends on !BSP_NET_USB0_USE_DHCP
+	help
+	    This is the Gateway IP address to be used by Linux kernel for usb0.
+
+config BSP_NET_USB0_NETMASK
+	string "Linux network mask address for interface (usb0)"
+	default "255.255.255.0"
+	depends on !BSP_NET_USB0_USE_DHCP
+	help
+	    This is the IP mask to be used by Linux kernel for usb0.
+
+choice
+	prompt "IPv6 configuration mode for usb0"
+	depends on BSP_NET_HAS_USB0
+	depends on BSP_IPV6_SUPPORT
+	default BSP_NET_USB0_USE_STATELESS
+
+
+config BSP_NET_USB0_USE_DHCPV6
+	bool "DHCPv6"
+	select FS_APPS_DHCP_CLIENT
+	help
+	  Say Y if you want to use DHCP to configure with network interface, this is going to 
+	  configure your IPv6, netmask, gateway and DNS server.
+
+config BSP_NET_USB0_USE_STATELESS
+	bool "Stateless"
+	help
+	  Say Y if you want to use the stateless network configuration, this is going to
+	  configure your IPv6 and netmask.
+
+config BSP_NET_USB0_USE_STATIC6
+	bool "Static"
+	help
+	  Say Y if you want to configure manually your network parameters.
+endchoice
+
+config BSP_NET_USB0_GLOBAL_IPADDR6
+	string "Linux global scope network IPv6 address (usb0)"
+	default ""
+	depends on BSP_NET_USB0_USE_STATIC6
+	help
+	    This is the IPv6 global scope network address to be used by Linux kernel for usb0.
+
+config BSP_NET_USB0_GATEWAY_IPADDR6
+	string "Linux Gateway IPv6 address (usb0)"
+	default ""
+	depends on BSP_NET_USB0_USE_STATIC6
+	help
+	    This is the Gateway IPv6 address to be used by Linux kernel for usb0.
+endif # NET_USB0
+
+endif # HAS_NET
+
+endmenu
+
+# Let's include the ARCH dependand parts (this one will include the mach config)
+source bsp/arch/Config
+
+# Now the generic stuff
+source installer/Config
+
+source bootloader/Config
+
+source fs/Config
+
+source myapps/Config
+
+source kernel/Config
+
+source toolchain/Config
+
+# Now any extra we may have
+source bsp/ConfigExtra
+

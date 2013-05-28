@@ -1,0 +1,7 @@
+config FS_TARGET_INITRAMFS
+	bool "Initramfs filesystem"
+	select BLK_DEV_INITRD
+	depends on INSTALLER_MODE_ATTACHED_BOARD && !INSTALLER_MODE_SD_CARD_INSTALLER
+	help
+	    Initramfs is a filesystem that can be embedded on the kernel image
+

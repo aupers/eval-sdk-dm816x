@@ -1,0 +1,72 @@
+config FS_APPS_QT
+	bool "qt-4.7.2"
+	default n
+	select TOOLCHAIN_INSTALL_CPP_SUPPORT
+	select FS_APPS_FREETYPE
+	select FS_APPS_ZLIB
+	select FS_APPS_LIBPNG
+	select FS_APPS_JPEG
+	help
+
+config FS_APPS_QT_EXCEPTIONS
+	bool "Enable exceptions on compilers that support it"
+	depends on FS_APPS_QT
+	default n
+
+config FS_APPS_QT_GLIB
+	bool "Enable glib support for QT"
+	depends on FS_APPS_QT
+	select FS_APPS_GLIB
+	default n
+
+config FS_APPS_QT_DBUS
+	bool "Enable dbus support for QT"
+	select FS_APPS_DBUS
+	depends on FS_APPS_QT
+	default n
+
+config FS_APPS_QT_TSLIB
+	bool "Enable tslib support for QT"
+	select FS_APPS_TSLIB
+	depends on FS_APPS_QT
+	default n
+
+config FS_APPS_QT_STL
+	bool "Compile STL support for QT"
+	depends on FS_APPS_QT
+	default n
+
+config FS_APPS_QT_SQLITE
+	bool "Enable sqlite support for QT"
+	select FS_APPS_SQLITE
+	depends on FS_APPS_QT
+	default n
+
+config FS_APPS_QT_VNC
+	bool "Enable vnc support for QT testing"
+	depends on FS_APPS_QT
+	default n
+	help
+          See http://doc.trolltech.com/4.5/qt-embedded-vnc.html for details.
+
+config FS_APPS_QT_NOWINSTYLE
+	bool "Disable windows style decoration completely"
+	depends on FS_APPS_QT
+	default n
+
+config FS_APPS_QT_COMPACT
+	bool "Make QT as compact as possible"
+	depends on FS_APPS_QT
+	default y
+
+config FS_APPS_QT_MOUSE
+	bool "Enable mouse support"
+	depends on FS_APPS_QT
+	default y
+
+config FS_APPS_QT_OPENGL
+	bool "Support openGL and its demo"
+	depends on FS_APPS_QT
+	select PROPRIETARY_TI_GRAPHICS_SDK_DM816X
+	select PROPRIETARY_TI_GRAPHICS_SDK
+	default n

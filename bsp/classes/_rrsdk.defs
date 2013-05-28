@@ -1,0 +1,268 @@
+#! \defgroup rrsdk_class RidgeRun SDK Class
+#! \ingroup classes
+#! \section intro Introduction
+#! Provides the unified logic framework for a package's installation procedure by the SDK, such as is the case for libraries, binaries and additional initial scripts. For most applications, no further action or customization should be required other than adding this file as an include on the package's Makefile file.
+#!
+#! \section public_params Public Parameters
+#! The following is a list of parameters that may be set according to an application's specific requirements.
+#! <ul>
+#! <li>
+#! <b>CORRECT_LA</b>: This variable holds all .la files that whose "wired paths" have to be corrected after using the --prefix option pointing to /usr/, due to having to use external libraries such as gstreamer. Check the Development and Integration guide for specific examples on the usage of this variable.
+#!
+#! <li>
+#! <b>CORRECT_PKGCONFIG</b>: This variable holds all pkgconfig (.pc) files that whose "wired paths" have to be corrected after using the --prefix option pointing to /usr/, due to having to use external libraries such as gstreamer. Check the Development and Integration guide for specific examples on the usage of this variable.
+#!
+#! <li>
+#! <b>CORRECT_DBUS_SERVICE</b>: This variable holds all DBUS services files that whose "wired paths" have to be corrected after using the --prefix option pointing to /usr/, due to having to use external libraries such as gstreamer. Check the Development and Integration guide for specific examples on the usage of this variable.
+#!
+#! <li>
+#! <b>CORRECT_LA_SED_EXPRESSION</b>: Sed regular expression used to parse and detect .la file names.
+#!
+#! <li>
+#! <b>CORRECT_PKGCONFIG_SED_EXPRESSION</b>: Sed regular expression used to parse and detect Pkg-Config files filenames.
+#!
+#! <li>
+#! <b>CORRECT_DBUS_SERVICE_SED_EXPRESSION</b>: Sed regular expression used to parse and detect DBUS Services filenames.
+#!
+#! <li>
+#! <b>BINARIES:</b> A list of binaries within the output of the build process that are intended to be placed on the target's final file system. This allows you to filter out non-essential content from the output of the build process that could be needed in the development file system (FSDEV variable) but not in the target's file system.
+#!
+#! <li>
+#! <b>LIBRARIES:</b> A list of libraries within the output of the build process that are intended to be placed on the target's final file system. This allows you to filter out non-essential content from the output of the build process that could be needed in the development file system (FSDEV variable) but not in the target's file system.
+#!
+#! <li>
+#! <b>LIBRARIES_OPTIONAL:</b> A list of optional libraries within the output of the build process that are intended to be placed on the target's final file system. This allows you to filter out non-essential content from the output of the build process that could be needed in the development file system (FSDEV variable) but not in the target's file system.
+#!
+#! <li>
+#! <b>DIRECTORIES:</b> A list of optional libraries within the output of the build process that are intended to be placed on the target's final file system. This allows you to filter out non-essential content from the output of the build process that could be needed in the development file system (FSDEV variable) but not in the target's file system.
+#!
+#! <li>
+#! <b>OTHERS:</b> A list of other files (found within the directory assigned to the "OTHER" variable) within the output of the build process that are intended to be placed on the target's final file system. This allows you to filter out non-essential content from the output of the build process that could be needed in the development file system (FSDEV variable) but not in the target's file system. 
+#!
+#! <li>
+#! <b>LINKS:</b> A list of links within the output of the build process that are intended to be placed on the target's final file system. This allows you to filter out non-essential content from the output of the build process that could be needed in the development file system (FSDEV variable) but not in the target's file system. 
+#!
+#! <li>
+#! <b>EXTRA_FILES:</b>  A list of extra files (found within the directory assigned to the "EXTRA" variable) within the output of the build process that are intended to be placed on the target's final file system. This allows you to filter out non-essential content from the output of the build process that could be needed in the development file system (FSDEV variable) but not in the target's file system.
+#!
+#! <li>
+#! <b>INIT_SCRIPT:</b> Specifies the location of the initialization script (if any) that must go into the target platform, alongside whatever it is that should be stored in the target's filesystem after installation.
+#!
+#! <li>
+#! <b>INIT_SCRIPT_LEVEL:</b> Specifies the level at which the aformentioned initialization script must be run (therefor, only neccesary if an init. script exists at all). 
+#!
+#! <li>
+#! <b>VALA_BINDINGS:</b> A list of the Vala bindings within the output of the build process that are intended to be placed on the directory determined by the VALADIR variable. This allows you to filter out non-essential content from the output of the build process that could be needed in the development file system (FSDEV variable) but not in the target's file system.
+#!
+#! <li>
+#! <b>VALADIR:</b> Directory in which the Vala bindings specified through the aforementioned VALA_BINDINGS variable will be moved.
+#!
+#! <li>
+#! <b>RRSDK_PREPATCH_TARGETS:</b> In case that any rule must be added so that it executes before the patch rule is executed, such rule must be stored into this variable.  The targets must create real files otherwise the build system will attempt to patch already patched files, thus causing quilt to fail.
+#!
+#! <li>
+#! <b>RRSDK_POSTUNPATCH_TARGETS:</b> rule to allow undoing anything done by the RRSDK_PREPATCH_TARGETS
+#!
+
+
+.PHONY: rrsdk_install rrsdk_uninstall src patch unpatch patch_refresh
+
+include $(CLASSES)/flags.defs
+
+default_rule: build
+
+# Simulator support
+ifeq ($(MAKECMDGOALS),sim)
+ARCH_SUFFIX=.sim
+ARCH=sim
+FSDEVROOT=$(SIMROOT)
+TOOLCHAIN_PREFIX=
+#export CFLAGS=
+#export LDFLAGS=
+export PKG_CONFIG_LIBDIR=$(SIMROOT)/usr/lib/pkgconfig
+export PKG_CONFIG_PATH=""
+# Just in case some dumb application wants to run something she builds itself
+export LD_LIBRARY_PATH=$(SIMROOT)/usr/lib
+else
+# In case we need to run something against the localtools
+export LD_LIBRARY_PATH=$(LOCALDIR)/lib
+endif
+LDCONFIG?=ldconfig
+
+#BINARIES:
+#LIBRARIES:
+#LIBRARIES_OPTIONAL:
+#DIRECTORIES:
+#OTHERS:
+#LINKS:
+#EXTRA_FILES:
+#INIT_SCRIPT:
+#INIT_SCRIPT_LEVEL:
+#VALA_BINDINGS:
+
+# We need to the Apps.defs to find VALADIR, but we can live without it
+-include $(DEVDIR)/fs/Apps.defs
+
+define rrsdk_install_dir
+	cd $(1) && \
+	    find -print0 | \
+	    tar --exclude=.svn --exclude=\*~ --null -T - -cf - | \
+	    tar -C $(2) -xpf -
+endef
+
+CORRECT_LA_SED_EXPRESSION?=s?libdir='/usr?libdir='$(FSDEVROOT)/usr?g;\
+        s?\ /usr/lib?\ $(FSDEVROOT)/usr/lib?g
+CORRECT_PKGCONFIG_SED_EXPRESSION?=s?prefix=/usr?prefix=$(FSDEVROOT)/usr?g
+CORRECT_DBUS_SERVICE_SED_EXPRESSION?=s?$(FSDEVROOT)/usr?/usr?g
+
+rrsdk_install:
+ifneq ($(MAKECMDGOALS),sim)
+	$(V) if [ -d extras_dev_overlay ] ; then \
+	    $(call rrsdk_install_dir,extras_dev_overlay,$(FSDEVROOT)) ; \
+	fi
+
+	$(V)for library in $(LIBRARIES) ; do \
+	    install -Dm 755 $(FSDEVROOT)/$$library $(FSROOT)/$$library || \
+	     { echo "Failed to install library $$library" ; exit -1 ; } ; \
+	done
+	$(V)for binaries in $(BINARIES) ; do \
+	    install -Dm 755 $(FSDEVROOT)/$$binaries $(FSROOT)/$$binaries || \
+	     { echo "Failed to install binary $$binaries" ; exit -1 ; } ; \
+	done
+	$(V)for optional in $(LIBRARIES_OPTIONAL) ; do \
+	    if [ -f $(FSDEVROOT)/$$optional ] ; then \
+		install -Dm 755 $(FSDEVROOT)/$$optional $(FSROOT)/$$optional || \
+	        { echo "Failed to install library $$optional" ; exit -1 ; } ; \
+	    fi ;\
+	done
+	$(V)for directories in $(DIRECTORIES) ; do \
+	    mkdir -p $(FSROOT)/$$directories || \
+	     { echo "Failed to create directory $$directories" ; exit -1 ; } ; \
+	done
+	$(V)for others in $(OTHERS) ; do \
+	    install -Dm 644 $(FSDEVROOT)/$$others $(FSROOT)/$$others || \
+	     { echo "Failed to install $$other" ; exit -1 ; } ; \
+	done
+	$(V)for valabinding in $(VALA_BINDINGS) ; do \
+	    if [ -n "$(VALADIR)" ] ; then \
+	      install -Dm 644 $(FSDEVROOT)/$$valabinding $(VALADIR)/`basename $$valabinding` || \
+	       { echo "Failed to install $$other" ; exit -1 ; } ; \
+	    else \
+	      echo "Not installing vala binding file $$valabinding because vala is disabled" $(QOUT) ; \
+	    fi ; \
+	done
+	$(V)for link in $(LINKS) ; do \
+	    if [ ! -d `dirname $(FSROOT)/$$link` ] ; then \
+		mkdir -p `dirname $(FSROOT)/$$link` ; \
+	    else \
+		if [ -f $(FSROOT)/$$link ] ; then \
+		    rm -Rf $(FSROOT)/$$link ; \
+		fi ;\
+	    fi ;\
+	    cp -Pp  $(FSDEVROOT)/$$link $(FSROOT)/$$link || \
+	     { echo "Failed to install link $$link" ; exit -1 ; } ; \
+	done
+	$(V) if [ -n "$(INIT_SCRIPT)" ] ; then \
+	    install -Dm 755 $(INIT_SCRIPT) $(FSROOT)/etc/init.d/$(basename $(INIT_SCRIPT)) ; \
+	    mkdir -p $(FSROOT)/etc/rc.d ; \
+	    ln -fs ../init.d/$(basename $(INIT_SCRIPT)) $(FSROOT)/etc/rc.d/S$(INIT_SCRIPT_LEVEL)$(basename $(INIT_SCRIPT)) ; \
+	fi
+
+	$(V) if [ -d extras_overlay ] ; then \
+	    $(call rrsdk_install_dir,extras_overlay,$(FSROOT)) ; \
+	fi
+
+	$(V)for extra_file in $(EXTRA_FILES) ; do \
+	    mkdir -p $(FSROOT)/$$extra_file ; \
+	    $(call rrsdk_install_dir,$(FSDEVROOT)/$$extra_file,$(FSROOT)/$$extra_file) ; \
+	done
+
+	$(V) for la_file in $(CORRECT_LA) ; do \
+	    sed -i -e "$(CORRECT_LA_SED_EXPRESSION)" $(FSDEVROOT)/$$la_file ; \
+	done
+
+	$(V) for pc_file in $(CORRECT_PKGCONFIG) ; do \
+	    sed -i -e "$(CORRECT_PKGCONFIG_SED_EXPRESSION)" $(FSDEVROOT)/$$pc_file ; \
+	done
+
+	$(V) for dbus_file in $(CORRECT_DBUS_SERVICE) ; do \
+	    sed -i -e "$(CORRECT_DBUS_SERVICE_SED_EXPRESSION)" $(FSDEVROOT)/$$dbus_file ; \
+	done
+endif
+ifneq ($(DO_NOT_RUN_LDCONFIG_ON_INSTALL),yes)
+	$(V) mkdir -p $(FSROOT)/etc/
+	$(V) touch $(FSROOT)/etc/ld.so.conf
+	$(V) mkdir -p $(FSROOT)/var/cache/ldconfig
+	$(V) $(LDCONFIG) -r $(FSROOT)
+endif
+
+rrsdk_uninstall:
+
+src: $(FETCHED_FLAG)
+
+$(PATCHED_FLAG): $(RRSDK_PREPATCH_TARGETS)
+	$(V) if [ -f $(PATCHED_FLAG) -a -n "$(RRSDK_PREPATCH_TARGETS)" ] ; then \
+		quilt pop -a ; \
+	fi
+
+	$(V) if [ -d patches ] ; then \
+	    rm -f series ; \
+	    if [ ! -f patches/arch/inverted ] ; then \
+	        echo "## ARCH SERIES ##" > series ;\
+	        if [ -f patches/arch/series ] ; then \
+	          echo ; \
+	          echo "Merging arch patches into the series..." ; \
+	          sed -e "s?^\([^#]\)\(.*\)?arch/\1\2?" patches/arch/series >> series ;\
+	        fi ;\
+	        echo "## END OF ARCH SERIES ##" >> series ;\
+	    else \
+	        echo "## SERIES ##" > series ;\
+	        if [ -f patches/series ] ; then \
+	           cat patches/series >> series ;\
+	        fi ;\
+            echo "#END OF SERIES FILE" >> series ;\
+	    fi ;\
+	    echo "## MACH SERIES ##" >> series ;\
+	    if [ -f patches/mach/series ] ; then \
+		echo "Merging mach patches into the series..." ; \
+		sed -e "s?^\([^#]\)\(.*\)?mach/\1\2?" patches/mach/series >> series ;\
+	    fi ;\
+	    echo "## END OF MACH SERIES ##" >> series ;\
+	    if [ ! -f patches/arch/inverted ] ; then \
+	       echo "## SERIES ##" >> series ;\
+	       if [ -f patches/series ] ; then \
+	          cat patches/series >> series ;\
+	       fi ;\
+	    else \
+	        echo "## ARCH SERIES ##" >> series ;\
+	        if [ -f patches/arch/series ] ; then \
+	          echo ; \
+	          echo "Merging arch patches into the series..." ; \
+	          sed -e "s?^\([^#]\)\(.*\)?arch/\1\2?" patches/arch/series >> series ;\
+	        fi ;\
+	    fi ;\
+	    if [ `quilt series | wc -c` != 0 ] ; then \
+		$(ECHO) "Applying quilt patches" ; \
+		quilt push -a $(if $(VERBOSE:0=),-q) $(QOUT) || \
+	        { $(ECHO) "$$WARN_COLOR \nFailed to apply patches $$NORMAL_COLOR \n" ; exit -1 ; }; $(QOUT) \
+		$(ECHO) ; \
+	    fi ; \
+	fi;
+	$(V)touch $(PATCHED_FLAG)
+
+patch: src $(PATCHED_FLAG)
+
+unpatch: $(RRSDK_POSTUNPATCH_TARGETS)
+	$(V) $(DEVDIR)/bsp/scripts/check_patches_consistency.sh
+	$(V) if [ -f .pc/applied-patches ] ; then \
+	    $(ECHO) ;\
+	    $(ECHO) "Removing quilt patches" ;\
+	    quilt pop -a $(if $(VERBOSE:0=),-q) $(QOUT) || \
+	    { $(ECHO) "$$WARN_COLOR \nFailed to remove patches$${NORMAL_COLOR}: maybe call \"$${GREEN}quilt refresh${NORMAL_COLOR}\"? \n" ; exit -1 ; }; $(QOUT) \
+	    $(ECHO) ; \
+	    rm -Rf .pc ;\
+	fi
+	$(V) rm -f $(PATCHED_FLAG) series
+
+patch_refresh:
+	$(V) $(DEVDIR)/bsp/scripts/merge_patches.sh

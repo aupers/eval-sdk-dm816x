@@ -1,0 +1,2 @@
+NAME="READLINE"
+DEFS_LIB="$(FSDEVROOT)/usr/lib"

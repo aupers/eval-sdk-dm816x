@@ -1,0 +1,23 @@
+#! \defgroup cache_defs CCache Class
+#! \ingroup classes
+#! \section intro Introduction
+#! The CCache definitions provides logic for using the ccache compiler tool with the SDK.
+#!
+#! \section public_params Public Parameters
+#! The following is a list of parameters that may be set according to an application's specific requirements.
+#! <ul>
+#!
+#! <li>
+#! <b>CCACHE_ENABLE:</b> Use CCACHE_ENABLE=no in order to build a package without ccache.
+#!
+
+CCACHE=
+
+ifeq ($(CONFIG_TOOLCHAIN_CCACHE),y)
+export CCACHE=$(shell which ccache)
+export CCACHE_BASEDIR=$(DEVDIR)
+export CCACHE_UMASK=002
+ifneq ($(CCACHE_HARDLINK),)
+unset CCACHE_HARDLINK
+endif
+endif

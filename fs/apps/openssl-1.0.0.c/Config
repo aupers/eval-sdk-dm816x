@@ -1,0 +1,4 @@
+
+config FS_APPS_OPENSSL
+ 	bool "openssl-1.0.0c"
+	help

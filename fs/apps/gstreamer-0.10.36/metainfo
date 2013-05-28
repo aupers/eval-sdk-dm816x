@@ -1,0 +1,2 @@
+HOST_REQUIRED="bison flex"
+TARGET_REQUIRED="glib zlib libxml2 gettext"

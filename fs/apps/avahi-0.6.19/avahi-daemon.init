@@ -1,0 +1,21 @@
+#!/bin/sh -e
+
+case "$1" in
+start)
+    echo "Starting avahi daemon"
+    /usr/sbin/avahi-daemon -D
+    ;;
+
+stop)
+    echo "Stoping avahi daemon"
+    /usr/sbin/avahi-daemon -k 
+    ;;
+
+*)
+    echo "Usage: /etc/init.d/avahi-daemon {start|stop}"
+    exit 1
+    ;;
+esac
+
+exit 0
+

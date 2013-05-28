@@ -1,0 +1,11 @@
+
+
+include $(CLASSES)/flags.defs
+
+force_build: $(RRSDK_PREFORCE_BUILD_TARGETS) remove_built_flag force_build_execute
+
+$(RRSDK_PREFORCE_BUILD_TARGETS)::
+
+remove_built_flag:
+	$(V) find . -maxdepth 5 -name "$(BUILT_FLAG)" -not -iwholename '*host-apps*' | xargs rm -f {}
+	$(V) find . -maxdepth 5 -name "$(INSTALLED_FLAG)" -not -iwholename '*host-apps*' | xargs rm -f {}

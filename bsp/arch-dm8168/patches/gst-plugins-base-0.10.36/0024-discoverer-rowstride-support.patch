@@ -1,0 +1,171 @@
+Index: gst-plugins-base-0.10.36/src/gst-libs/gst/pbutils/gstdiscoverer.c
+===================================================================
+--- gst-plugins-base-0.10.36.orig/src/gst-libs/gst/pbutils/gstdiscoverer.c	2012-02-14 13:40:23.000000000 -0600
++++ gst-plugins-base-0.10.36/src/gst-libs/gst/pbutils/gstdiscoverer.c	2013-02-28 13:22:17.259673179 -0600
+@@ -49,6 +49,7 @@
+ #include "pbutils-private.h"
+ 
+ #include "gst/glib-compat-private.h"
++#include <gst/video/video.h>
+ 
+ GST_DEBUG_CATEGORY_STATIC (discoverer_debug);
+ #define GST_CAT_DEFAULT discoverer_debug
+@@ -635,7 +636,7 @@
+   GstStructure *caps_st;
+   GstTagList *tags_st;
+   const gchar *name;
+-  int tmp, tmp2;
++  int tmp, tmp2, tmp3;
+   guint utmp;
+ 
+   if (!st || !gst_structure_id_has_field (st, _CAPS_QUARK)) {
+@@ -698,6 +699,7 @@
+   } else if (g_str_has_prefix (name, "video/") ||
+       g_str_has_prefix (name, "image/")) {
+     GstDiscovererVideoInfo *info;
++    GstVideoFormat format;
+ 
+     if (parent)
+       info = (GstDiscovererVideoInfo *) gst_discoverer_stream_info_ref (parent);
+@@ -707,8 +709,7 @@
+       info->parent.caps = gst_caps_ref (caps);
+     }
+ 
+-    if (gst_structure_get_int (caps_st, "width", &tmp) &&
+-        gst_structure_get_int (caps_st, "height", &tmp2)) {
++    if (gst_video_format_parse_caps_strided (caps, &format, &tmp, &tmp2, &tmp3)) {
+       info->width = (guint) tmp;
+       info->height = (guint) tmp2;
+     }
+Index: gst-plugins-base-0.10.36/src/gst-libs/gst/pbutils/Makefile.am
+===================================================================
+--- gst-plugins-base-0.10.36.orig/src/gst-libs/gst/pbutils/Makefile.am	2011-12-30 07:29:13.000000000 -0600
++++ gst-plugins-base-0.10.36/src/gst-libs/gst/pbutils/Makefile.am	2013-02-28 13:22:17.259673179 -0600
+@@ -45,7 +45,9 @@
+ 	pbutils-private.h
+ EXTRA_DIST = pbutils-marshal.list
+ 
+-libgstpbutils_@GST_MAJORMINOR@_la_LIBADD = $(GST_LIBS)
++libgstpbutils_@GST_MAJORMINOR@_la_LIBADD = \
++  $(top_builddir)/gst-libs/gst/video/libgstvideo-@GST_MAJORMINOR@.la \
++  $(GST_LIBS)
+ libgstpbutils_@GST_MAJORMINOR@_la_CFLAGS = $(GST_PLUGINS_BASE_CFLAGS) $(GST_CFLAGS)
+ libgstpbutils_@GST_MAJORMINOR@_la_LDFLAGS = $(GST_LIB_LDFLAGS) $(GST_ALL_LDFLAGS) $(GST_LT_LDFLAGS)
+ 
+@@ -81,6 +83,7 @@
+ 		$(gir_cincludes) \
+ 		-I$(top_srcdir)/gst-libs \
+ 		-I$(top_builddir)/gst-libs \
++		--add-include-path=$(srcdir)/../video \
+ 		--add-include-path=`$(PKG_CONFIG) --variable=girdir gstreamer-@GST_MAJORMINOR@` \
+ 		--library=libgstpbutils-@GST_MAJORMINOR@.la \
+ 		--library-path=`$(PKG_CONFIG) --variable=libdir gstreamer-@GST_MAJORMINOR@` \
+@@ -88,6 +91,7 @@
+ 		--include=Gst-@GST_MAJORMINOR@ \
+ 		--libtool="$(top_builddir)/libtool" \
+ 		--pkg gstreamer-@GST_MAJORMINOR@ \
++		--pkg gstreamer-video-@GST_MAJORMINOR@ \
+ 		--pkg-export gstreamer-pbutils-@GST_MAJORMINOR@ \
+ 		--add-init-section="gst_init(NULL,NULL);" \
+ 		--output $@ \
+@@ -107,6 +111,7 @@
+ 	$(AM_V_GEN)PKG_CONFIG_PATH="$(GST_PKG_CONFIG_PATH)" \
+ 		$(INTROSPECTION_COMPILER) \
+ 		--includedir=$(srcdir) \
++		--includedir=$(srcdir)/../video \
+ 		--includedir=$(builddir) \
+ 		--includedir=`$(PKG_CONFIG) --variable=girdir gstreamer-@GST_MAJORMINOR@` \
+ 		$(INTROSPECTION_COMPILER_OPTS) $< -o $(@F)
+Index: gst-plugins-base-0.10.36/src/gst-libs/gst/Makefile.am
+===================================================================
+--- gst-plugins-base-0.10.36.orig/src/gst-libs/gst/Makefile.am	2011-12-30 07:29:12.000000000 -0600
++++ gst-plugins-base-0.10.36/src/gst-libs/gst/Makefile.am	2013-02-28 13:22:17.271673180 -0600
+@@ -21,6 +21,8 @@
+ noinst_HEADERS = gettext.h gst-i18n-plugin.h glib-compat-private.h
+ 
+ # dependencies:
++pbutils: video
++
+ audio: interfaces pbutils
+ 
+ cdda: tag
+@@ -30,7 +32,7 @@
+ rtsp: sdp
+ 
+ INDEPENDENT_SUBDIRS = \
+-	interfaces tag fft floatcast netbuffer pbutils rtp sdp video app
++	interfaces tag fft floatcast netbuffer rtp sdp video app
+ 
+ .PHONY: independent-subdirs $(INDEPENDENT_SUBDIRS)
+ 
+Index: gst-plugins-base-0.10.36/src/gst-libs/gst/Makefile.in
+===================================================================
+--- gst-plugins-base-0.10.36.orig/src/gst-libs/gst/Makefile.in	2012-02-20 17:33:14.000000000 -0600
++++ gst-plugins-base-0.10.36/src/gst-libs/gst/Makefile.in	2013-02-28 13:30:37.879664602 -0600
+@@ -446,7 +446,7 @@
+ 
+ noinst_HEADERS = gettext.h gst-i18n-plugin.h glib-compat-private.h
+ INDEPENDENT_SUBDIRS = \
+-	interfaces tag fft floatcast netbuffer pbutils rtp sdp video app
++	interfaces tag fft floatcast netbuffer rtp sdp video app
+ 
+ all: all-recursive
+ 
+@@ -801,6 +801,8 @@
+ 
+ 
+ # dependencies:
++pbutils: video
++
+ audio: interfaces pbutils
+ 
+ cdda: tag
+Index: gst-plugins-base-0.10.36/src/gst-libs/gst/pbutils/Makefile.in
+===================================================================
+--- gst-plugins-base-0.10.36.orig/src/gst-libs/gst/pbutils/Makefile.in	2012-02-20 17:33:16.000000000 -0600
++++ gst-plugins-base-0.10.36/src/gst-libs/gst/pbutils/Makefile.in	2013-02-28 13:36:09.279658920 -0600
+@@ -127,7 +127,7 @@
+ 	"$(DESTDIR)$(libgstpbutils_@GST_MAJORMINOR@includedir)"
+ LTLIBRARIES = $(lib_LTLIBRARIES)
+ am__DEPENDENCIES_1 =
+-libgstpbutils_@GST_MAJORMINOR@_la_DEPENDENCIES =  \
++libgstpbutils_@GST_MAJORMINOR@_la_DEPENDENCIES = $(top_builddir)/gst-libs/gst/video/libgstvideo-@GST_MAJORMINOR@.la \
+ 	$(am__DEPENDENCIES_1)
+ am_libgstpbutils_@GST_MAJORMINOR@_la_OBJECTS =  \
+ 	libgstpbutils_@GST_MAJORMINOR@_la-gstpluginsbaseversion.lo \
+@@ -529,7 +529,10 @@
+ 	pbutils-private.h
+ 
+ EXTRA_DIST = pbutils-marshal.list
+-libgstpbutils_@GST_MAJORMINOR@_la_LIBADD = $(GST_LIBS)
++libgstpbutils_@GST_MAJORMINOR@_la_LIBADD = \
++  $(top_builddir)/gst-libs/gst/video/libgstvideo-@GST_MAJORMINOR@.la \
++  $(GST_LIBS)
++
+ libgstpbutils_@GST_MAJORMINOR@_la_CFLAGS = $(GST_PLUGINS_BASE_CFLAGS) $(GST_CFLAGS)
+ libgstpbutils_@GST_MAJORMINOR@_la_LDFLAGS = $(GST_LIB_LDFLAGS) $(GST_ALL_LDFLAGS) $(GST_LT_LDFLAGS)
+ BUILT_SOURCES = \
+@@ -1108,6 +1111,7 @@
+ @HAVE_INTROSPECTION_TRUE@		$(gir_cincludes) \
+ @HAVE_INTROSPECTION_TRUE@		-I$(top_srcdir)/gst-libs \
+ @HAVE_INTROSPECTION_TRUE@		-I$(top_builddir)/gst-libs \
++@HAVE_INTROSPECTION_TRUE@		--add-include-path=$(srcdir)/../video \
+ @HAVE_INTROSPECTION_TRUE@		--add-include-path=`$(PKG_CONFIG) --variable=girdir gstreamer-@GST_MAJORMINOR@` \
+ @HAVE_INTROSPECTION_TRUE@		--library=libgstpbutils-@GST_MAJORMINOR@.la \
+ @HAVE_INTROSPECTION_TRUE@		--library-path=`$(PKG_CONFIG) --variable=libdir gstreamer-@GST_MAJORMINOR@` \
+@@ -1115,6 +1119,7 @@
+ @HAVE_INTROSPECTION_TRUE@		--include=Gst-@GST_MAJORMINOR@ \
+ @HAVE_INTROSPECTION_TRUE@		--libtool="$(top_builddir)/libtool" \
+ @HAVE_INTROSPECTION_TRUE@		--pkg gstreamer-@GST_MAJORMINOR@ \
++@HAVE_INTROSPECTION_TRUE@		--pkg gstreamer-video-@GST_MAJORMINOR@ \
+ @HAVE_INTROSPECTION_TRUE@		--pkg-export gstreamer-pbutils-@GST_MAJORMINOR@ \
+ @HAVE_INTROSPECTION_TRUE@		--add-init-section="gst_init(NULL,NULL);" \
+ @HAVE_INTROSPECTION_TRUE@		--output $@ \
+@@ -1125,6 +1130,7 @@
+ @HAVE_INTROSPECTION_TRUE@	$(AM_V_GEN)PKG_CONFIG_PATH="$(GST_PKG_CONFIG_PATH)" \
+ @HAVE_INTROSPECTION_TRUE@		$(INTROSPECTION_COMPILER) \
+ @HAVE_INTROSPECTION_TRUE@		--includedir=$(srcdir) \
++@HAVE_INTROSPECTION_TRUE@		--includedir=$(srcdir)/../video \
+ @HAVE_INTROSPECTION_TRUE@		--includedir=$(builddir) \
+ @HAVE_INTROSPECTION_TRUE@		--includedir=`$(PKG_CONFIG) --variable=girdir gstreamer-@GST_MAJORMINOR@` \
+ @HAVE_INTROSPECTION_TRUE@		$(INTROSPECTION_COMPILER_OPTS) $< -o $(@F)

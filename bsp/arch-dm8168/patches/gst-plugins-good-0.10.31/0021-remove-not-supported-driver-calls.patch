@@ -1,0 +1,44 @@
+Index: gst-plugins-good-0.10.31/src/sys/v4l2/v4l2src_calls.c
+===================================================================
+--- gst-plugins-good-0.10.31.orig/src/sys/v4l2/v4l2src_calls.c	2013-04-18 13:12:04.671784206 -0600
++++ gst-plugins-good-0.10.31/src/sys/v4l2/v4l2src_calls.c	2013-04-18 13:13:35.699783689 -0600
+@@ -276,21 +276,6 @@
+   crop.c.top = 0;
+   crop.c.width = maxWidth;
+   crop.c.height = maxHeight;
+-  
+-  if (v4l2_ioctl (fd, VIDIOC_S_CROP, &crop) < 0) {
+-    goto set_fmt_failed;
+-  }
+-  
+-  fmt_win.type = V4L2_BUF_TYPE_VIDEO_OVERLAY;
+-  fmt_win.fmt.win.w.left = 0;
+-  fmt_win.fmt.win.w.top = 0;
+-  fmt_win.fmt.win.w.width = width;
+-  fmt_win.fmt.win.w.height = height;
+-  
+-  if (v4l2_ioctl (fd, VIDIOC_S_FMT, &fmt_win) < 0) {
+-    goto set_fmt_failed;
+-  }
+-
+   if (v4l2_ioctl (fd, VIDIOC_S_FMT, &format) < 0) {
+     goto set_fmt_failed;
+   }
+@@ -366,6 +351,8 @@
+ 
+   memset (&stream, 0x00, sizeof (struct v4l2_streamparm));
+   stream.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
++  goto already_set;
++
+   if (v4l2_ioctl (fd, VIDIOC_G_PARM, &stream) < 0) {
+     GST_ELEMENT_WARNING (v4l2src, RESOURCE, SETTINGS,
+         (_("Could not get parameters on device '%s'"),
+@@ -400,6 +387,8 @@
+     goto done;
+   }
+ 
++already_set:
++
+   v4l2src->fps_n = fps_n;
+   v4l2src->fps_d = fps_d;
+ 

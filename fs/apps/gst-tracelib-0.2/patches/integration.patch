@@ -1,0 +1,11 @@
+Index: gst-tracelib/src/autogen.sh
+===================================================================
+--- gst-tracelib.orig/src/autogen.sh	2011-03-31 11:55:08.806781772 -0600
++++ gst-tracelib/src/autogen.sh	2011-03-31 11:55:14.139270301 -0600
+@@ -15,5 +15,5 @@
+ autoconf
+ autoheader
+ automake --add-missing --foreign --copy
+-./configure $*
++#./configure $*
+ 

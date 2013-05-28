@@ -1,0 +1,46 @@
+#!/bin/sh
+
+ALT_PATH=/opt
+
+part_start ()
+{
+    part="$1"
+    if [ -x "$part" ] ; then
+        if ! "$part" start 2>/dev/null ; then
+            echo "Error while running '$part'."
+        fi
+    else
+        # Assume it's a shell script
+        if ! sh "$part" start 2>/dev/null ; then
+            echo "Error while running '$part'."
+        fi
+    fi
+}
+
+run_parts ()
+{
+    total=`echo $@ | wc -w`;
+    i=0;
+    inc=$((100 / total));
+    # ls is our poor's man sort
+    for part in `ls "$@" 2>/dev/null` ; do
+        if [ -e "${ALT_PATH}${part}" ] ; then
+            part_start "${ALT_PATH}${part}"
+        elif [ -e "$part" ] ; then
+            part_start "$part"
+        fi
+	i=$((i + inc));
+	if [ -f /usr/bin/psplash-write ] ; then
+	    /usr/bin/psplash-write "PROGRESS $i" >/dev/null 2>/dev/null;
+	fi
+    done
+}
+
+run_parts /etc/rc.d/S*
+
+# To allow new scripts to be added to
+# ${ALT_PATH}/etc/rc.d/S*, uncomment out
+# the following line
+
+run_parts ${ALT_PATH}/etc/rc.d/S*
+

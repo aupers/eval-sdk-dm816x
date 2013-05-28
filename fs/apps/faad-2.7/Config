@@ -1,0 +1,6 @@
+config FS_APPS_FAAD2
+        bool "faad2-2.7"
+        default n
+        help
+	FAAD2 is an open source MPEG-4 and MPEG-2 AAC decoder, it is licensed under the GPLv2 license.
+

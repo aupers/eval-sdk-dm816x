@@ -1,0 +1,126 @@
+From 7e06ab884620612ebaac351d4d9758c9c4c5b482 Mon Sep 17 00:00:00 2001
+From: Vita Preskovsky <vitap@ti.com>
+Date: Thu, 9 Feb 2012 19:22:39 +0200
+Subject: [PATCH] ARM: ti814x: Fix ti8148's mmc indices
+
+The sd-card is connected to the second mmc host, and not the first one.
+Fix this by modifying and adding the relevant mmc base addresses and dma
+channels.
+
+Note: The current implementation for ti814x and ti816x relies on
+CONFIG_ARCH_TI81* defines. The current patch continues to do so, but
+this should be fixed in the future. Otherwise, omap2_plus will break.
+
+Signed-off-by: Ido Yariv <ido@wizery.com>
+---
+ arch/arm/mach-omap2/devices.c         |   14 ++++++++++++++
+ arch/arm/plat-omap/include/plat/dma.h |   14 ++++++++++++--
+ arch/arm/plat-omap/include/plat/mmc.h |   24 +++++++++++++++++++++---
+ 3 files changed, 47 insertions(+), 5 deletions(-)
+
+diff --git a/linux-2.6.37-psp04.04.00.01/arch/arm/mach-omap2/devices.c b/linux-2.6.37-psp04.04.00.01/arch/arm/mach-omap2/devices.c
+index 1fcd40b..365b806 100644
+--- a/linux-2.6.37-psp04.04.00.01/arch/arm/mach-omap2/devices.c
++++ b/linux-2.6.37-psp04.04.00.01/arch/arm/mach-omap2/devices.c
+@@ -1076,12 +1076,26 @@ void __init omap2_init_mmc(struct omap_mmc_platform_data **mmc_data,
+ 				irq = TI81XX_IRQ_SD;
+ 			} else if (cpu_is_ti814x()) {
+ 				base = TI814X_MMC1_BASE;
++#ifdef CONFIG_TI8148EVM_WL12XX
++				irq = TI81XX_IRQ_SD;
++#else
+ 				irq = TI814X_IRQ_SD1;
++#endif
+ 			}
+ 			break;
+ 		case 1:
++#ifdef CONFIG_TI8148EVM_WL12XX
++			if (cpu_is_ti814x()) {
++				base = TI814X_MMC2_BASE;
++				irq = TI814X_IRQ_SD1;
++			} else {
++				base = OMAP2_MMC2_BASE;
++				irq = INT_24XX_MMC2_IRQ;
++			}
++#else
+ 			base = OMAP2_MMC2_BASE;
+ 			irq = INT_24XX_MMC2_IRQ;
++#endif
+ 			break;
+ 		case 2:
+ 			if (!cpu_is_omap44xx() && !cpu_is_omap34xx())
+diff --git a/linux-2.6.37-psp04.04.00.01/arch/arm/plat-omap/include/plat/dma.h b/linux-2.6.37-psp04.04.00.01/arch/arm/plat-omap/include/plat/dma.h
+index 6e02755..ba69f34 100644
+--- a/linux-2.6.37-psp04.04.00.01/arch/arm/plat-omap/include/plat/dma.h
++++ b/linux-2.6.37-psp04.04.00.01/arch/arm/plat-omap/include/plat/dma.h
+@@ -185,8 +185,13 @@
+ #define OMAP24XX_DMA_SPI1_TX3		52	/* E_DMA_52 */
+ #define OMAP24XX_DMA_SPI1_RX3		53	/* E_DMA_53 */
+ 
+-#define OMAP24XX_DMA_MMC1_RX		3
+-#define OMAP24XX_DMA_MMC1_TX		2
++#ifdef CONFIG_TI8148EVM_WL12XX
++#define OMAP24XX_DMA_MMC1_TX		24
++#define OMAP24XX_DMA_MMC1_RX		25
++#else
++#define OMAP24XX_DMA_MMC1_RX           3
++#define OMAP24XX_DMA_MMC1_TX           2
++#endif
+ #endif
+ 
+ #else
+@@ -215,8 +220,13 @@
+ #define OMAP24XX_DMA_SPI2_TX1		45	/* S_DMA_44 */
+ #define OMAP24XX_DMA_SPI2_RX1		46	/* S_DMA_45 */
+ #endif
++#ifdef CONFIG_TI8148EVM_WL12XX
++#define OMAP24XX_DMA_MMC2_TX		2
++#define OMAP24XX_DMA_MMC2_RX		3
++#else
+ #define OMAP24XX_DMA_MMC2_TX		47	/* S_DMA_46 */
+ #define OMAP24XX_DMA_MMC2_RX		48	/* S_DMA_47 */
++#endif
+ #define OMAP24XX_DMA_UART1_TX		49	/* S_DMA_48 */
+ #define OMAP24XX_DMA_UART1_RX		50	/* S_DMA_49 */
+ #define OMAP24XX_DMA_UART2_TX		51	/* S_DMA_50 */
+diff --git a/linux-2.6.37-psp04.04.00.01/arch/arm/plat-omap/include/plat/mmc.h b/linux-2.6.37-psp04.04.00.01/arch/arm/plat-omap/include/plat/mmc.h
+index 1d9ff36..bee5068 100644
+--- a/linux-2.6.37-psp04.04.00.01/arch/arm/plat-omap/include/plat/mmc.h
++++ b/linux-2.6.37-psp04.04.00.01/arch/arm/plat-omap/include/plat/mmc.h
+@@ -36,12 +36,30 @@
+ #define OMAP4_MMC5_BASE		0x480d5000
+ #define OMAP4_MMC_REG_OFFSET	0x100
+ 
+-#define TI81XX_NR_MMC		1
++#ifdef CONFIG_TI8148EVM_WL12XX
++#define TI816X_NR_MMC		1
++#else
++#define TI81XX_NR_MMC          1
++#endif
+ #define TI81XX_HSMMC_SIZE	0x10000
+ #define TI816X_MMC1_BASE	0x48060100 /* TI816X MMC/SD config base */
+ #define TI816X_MMC1_HL_BASE	0x48060000 /* TI816X HL configuration*/
+-#define TI814X_MMC1_BASE	0x481D8100 /* TI814X MMC/SD config base */
+-#define TI814X_MMC1_HL_BASE	0x481D8000 /* TI814X HL configuration*/
++#ifdef CONFIG_TI8148EVM_WL12XX
++#define TI814X_NR_MMC		2
++#define TI814X_MMC1_BASE	0x48060100 /* TI814X MMC1/SD1 config base */
++#define TI814X_MMC1_HL_BASE	0x48060000 /* TI814X HL configuration*/
++#define TI814X_MMC2_BASE	0x481D8100 /* TI814X MMC2/SD2 config base */
++#define TI814X_MMC2_HL_BASE	0x481D8000 /* TI814X HL configuration*/
++
++#ifdef CONFIG_ARCH_TI814X
++#define TI81XX_NR_MMC		TI814X_NR_MMC
++#else /* TI816X */
++#define TI81XX_NR_MMC		TI816X_NR_MMC
++#endif
++#else
++#define TI814X_MMC1_BASE       0x481D8100 /* TI814X MMC/SD config base */
++#define TI814X_MMC1_HL_BASE    0x481D8000 /* TI814X HL configuration*/
++#endif
+ 
+ #define HSMMC5			(1 << 4)
+ #define HSMMC4			(1 << 3)
+-- 
+1.7.0.4
+

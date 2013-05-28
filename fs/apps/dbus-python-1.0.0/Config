@@ -1,0 +1,6 @@
+config FS_APPS_DBUS_PYTHON
+        bool "dbus-python-1.0.0"
+	select FS_APPS_PYTHON
+	select FS_APPS_DBUSGLIB
+        help
+	Python DBus binding

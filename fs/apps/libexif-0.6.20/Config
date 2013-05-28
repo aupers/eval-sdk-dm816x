@@ -1,0 +1,4 @@
+config FS_APPS_LIBEXIF
+	bool "libexif-0.6.20"
+	help
+	Library to read and write EXIF metainformation from and to image files.

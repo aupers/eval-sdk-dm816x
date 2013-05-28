@@ -1,0 +1,2 @@
+HOST_REQUIRED="valac"
+TARGET_REQUIRED="gstreamer readline dbus-glib gst-plugins-base"

@@ -1,0 +1,9 @@
+choice 
+    prompt "Initramfs source"
+    depends on FS_TARGET_INITRAMFS
+    
+config FS_TARGET_INITRAMFS_FULL_FS
+	bool "Create an initramfs with all content from fs/fs/"
+	depends on FS_TARGET_INITRAMFS
+
+endchoice

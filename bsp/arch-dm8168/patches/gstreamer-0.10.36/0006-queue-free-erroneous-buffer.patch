@@ -1,0 +1,13 @@
+--- gstreamer-0.10.36.orig/src/plugins/elements/gstqueue.c	2011-01-06 22:45:35.000000000 +0530
++++ gstreamer-0.10.36/src/plugins/elements/gstqueue.c	2011-11-18 17:35:40.431361170 +0530
+@@ -1173,7 +1173,8 @@ next:
+        * task function does not shut down. */
+       queue->unexpected = TRUE;
+       result = GST_FLOW_OK;
+-    }
++    }else if(result == GST_FLOW_WRONG_STATE)
++        gst_buffer_unref (buffer);
+   } else {
+     GstEvent *event = GST_EVENT_CAST (data);
+     GstEventType type = GST_EVENT_TYPE (event);
+

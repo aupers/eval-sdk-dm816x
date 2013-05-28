@@ -1,0 +1,5 @@
+config FS_APPS_WIRELESS_TOOLS
+	bool "wireless_tools 29"
+	default n
+	help
+	    Standard Linux wireless tools

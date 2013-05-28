@@ -1,0 +1,5 @@
+config FS_APPS_LAME
+	bool "lame-3.98.4"
+	help
+	Lame Aint MP3 Encoder
+	LAME is considered the best MP3 encoder at mid-high bitrates and at VBR

@@ -1,0 +1,7 @@
+config FS_APPS_LIBPNG
+	bool "libpng-1.5.0"
+	select FS_APPS_ZLIB
+	default n
+	help
+	  Library for handling PNG (Portable Network Graphics)
+	  images.

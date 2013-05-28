@@ -1,0 +1,27 @@
+AUTOTOOLS_BUILD_DIR?=$(HOST_ARCH)
+AUTOTOOLS_PARAMS+=--prefix=$(LOCALDIR)
+AUTOTOOLS_HOST=
+CONFIG_SITE=
+
+include $(CLASSES)/autotools.defs
+
+.PHONY: src patch build clean install uninstall distclean
+
+build: autotools_build
+
+clean: autotools_clean
+	$(V) rm -f installed
+
+src: rrfetched
+
+patch: rrpatched
+
+install:: installed
+
+# The logic for logic apps expects a file named installed
+installed: autotools_install
+	$(V) touch $@
+
+uninstall: autotools_uninstall
+
+distclean: clean rrfetched_clean

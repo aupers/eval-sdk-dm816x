@@ -1,0 +1,54 @@
+Index: net-snmp-5.6.rc2/src/agent/snmp_agent.c
+===================================================================
+--- net-snmp-5.6.rc2.orig/src/agent/snmp_agent.c	2011-03-17 09:03:32.350688942 -0600
++++ net-snmp-5.6.rc2/src/agent/snmp_agent.c	2011-03-17 09:05:02.090367033 -0600
+@@ -1285,6 +1285,7 @@
+ 
+     DEBUGMSGTL(("snmp_agent", "final port spec: \"%s\"\n", buf));
+     st = buf;
++	int openedPorts = 0;
+     do {
+         /*
+          * Specification format: 
+@@ -1317,22 +1318,28 @@
+         if (transport == NULL) {
+             snmp_log(LOG_ERR, "Error opening specified endpoint \"%s\"\n",
+                      cptr);
+-            return 1;
+-        }
+-
+-        if (netsnmp_register_agent_nsap(transport) == 0) {
+-            snmp_log(LOG_ERR,
+-                     "Error registering specified transport \"%s\" as an "
+-		     "agent NSAP\n", cptr);
+-            return 1;
+-        } else {
+-            DEBUGMSGTL(("snmp_agent",
+-                        "init_master_agent; \"%s\" registered as an agent "
+-			"NSAP\n", cptr));
++            //return 1;
+         }
++		if(transport !=NULL){
++			openedPorts++;
++			if (netsnmp_register_agent_nsap(transport) == 0) {
++				snmp_log(LOG_ERR,
++						 "Error registering specified transport \"%s\" as an "
++				 "agent NSAP\n", cptr);
++				return 1;
++			} else {
++				DEBUGMSGTL(("snmp_agent",
++							"init_master_agent; \"%s\" registered as an agent "
++				"NSAP\n", cptr));
++			}
++		}
+     } while(st && *st != '\0');
+     SNMP_FREE(buf);
+-
++    if(openedPorts==0){
++		snmp_log(LOG_ERR, "Error opening ports\n");
++		return 1;
++		}
++	
+ #ifdef USING_AGENTX_MASTER_MODULE
+     if (netsnmp_ds_get_boolean(NETSNMP_DS_APPLICATION_ID, 
+ 			       NETSNMP_DS_AGENT_AGENTX_MASTER) == 1)

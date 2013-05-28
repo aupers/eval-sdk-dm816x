@@ -1,0 +1,83 @@
+config PROPRIETARY_TI_CODECENGINE
+	bool
+	select PROPRIETARY_TI_XDC
+	default n
+
+config PROPRIETARY_TI_EZSDK5
+	bool
+	default y
+
+config PROPRIETARY_EZSDK_HAS_DSP
+	bool
+	default y
+
+config PROPRIETARY_TI_CODECENGINE_DM8148
+	bool "Texas Instruments CodecEngine for DM814x"
+	select SYSVIPC
+	select PROPRIETARY_TI_CODECENGINE
+	select PROPRIETARY_EZSDK_HAS_DSP
+	depends on BSP_ARCH_DM8148
+	default n
+	help
+	    CodecEngine is the multimedia codec framework used on Davinci Platform.
+
+config PROPRIETARY_TI_CODECENGINE_DM8168
+	bool "Texas Instruments CodecEngine for DM816x"
+	select SYSVIPC
+	select PROPRIETARY_TI_CODECENGINE
+	select PROPRIETARY_EZSDK_HAS_DSP
+	depends on BSP_ARCH_DM8168
+	default n
+	help
+	    CodecEngine is the multimedia codec framework used on Davinci Platform.
+
+config PROPRIETARY_EXTERNAL_AUDIO_CODECS_SUPPORT
+	bool "Support external AAC and MP3 audio codecs"
+	depends on PROPRIETARY_TI_CODECENGINE_DM8168 || PROPRIETARY_TI_CODECENGINE_DM8148
+	default n
+	help
+	    If this option is enabled, you will need to copy the external codecs (AAC and MP3)
+	    into the component-sources directory in the EZSDK.
+
+config PROPRIETARY_EZSDK_RESERVED_MEMORY
+	bool "Reserve memory from the kernel for codec engine and friends automatically"
+	default n
+	depends on PROPRIETARY_TI_CODECENGINE
+	help
+	    If this option is enabled, the RidgeRun SDK will add to your kernel
+	    cmdline the argument mem=XX to reserve memory and you will be able to
+	    configure the amount of memory to reserve.
+	    Say no if you are passing a mem=XX parameter to the kernel by yourself
+
+config PROPRIETARY_EZSDK_MEM_VALUE
+	hex "Amount of reserved memory from the kernel"
+	depends on PROPRIETARY_EZSDK_RESERVED_MEMORY
+	default 0x1D00000
+	help
+	    Amount of memory to be reserved for coprocessors (cmem, dsp, video buffers, etc).
+	    The use of this memory may vary between the platform you are using.
+
+config PROPRIETARY_EZSDK_AUTO_SETUP_CMEM
+	bool "Automatically setup CMEM at the beggining of the reserved memory area"
+	default n
+	depends on PROPRIETARY_TI_CODECENGINE
+	select SH_MATH_SUPPORT_64
+	help
+	    If this option is enabled, the RidgeRun SDK will set the CMEM reserved memory
+	    at one configured start address within the reserved memory area. Say no if you
+	    want to specify the location of cmem yourself
+
+config PROPRIETARY_EZSDK_CMEM_START_ADDRESS
+	hex "CMEM start address"
+	default 0x96C00000
+	depends on !PROPRIETARY_EZSDK_AUTO_SETUP_CMEM && PROPRIETARY_TI_CODECENGINE
+	help
+	    Starting address point to position CMEM
+
+config PROPRIETARY_EZSDK_CMEM_RESERVED_MEMORY
+	hex "Amount of reserved memory for cmemk"
+	depends on PROPRIETARY_TI_CODECENGINE
+	default 0x1400000
+	help
+	    Amount of memory to allocate for CMEM
+

@@ -1,0 +1,24 @@
+--- gst-plugins-bad-0.10.23.orig/src/gst/mpegvideoparse/mpegvideoparse.c	2010-12-24 17:29:38.000000000 +0530
++++ gst-plugins-bad-0.10.23/src/gst/mpegvideoparse/mpegvideoparse.c	2012-01-15 17:06:11.053523827 +0530
+@@ -550,7 +550,12 @@ gst_mpeg4vparse_push (GstMpeg4VParse * p
+             parse->last_report = timestamp;
+           }
+         }
+-      }
++      }	  
++	  if (parse->pending_segment != NULL) {
++	    /* Send new segment event received after flush/seek etc.*/
++		gst_pad_push_event (parse->srcpad, parse->pending_segment);
++		parse->pending_segment = NULL;
++	  }
+       gst_buffer_set_caps (out_buf, GST_PAD_CAPS (parse->srcpad));
+       gst_pad_push (parse->srcpad, out_buf);
+     }
+@@ -806,6 +811,7 @@ gst_mpeg4vparse_sink_event (GstPad * pad
+ 
+   switch (GST_EVENT_TYPE (event)) {
+     case GST_EVENT_FLUSH_STOP:
++	  res = gst_pad_event_default (pad, event);	
+       parse->last_report = GST_CLOCK_TIME_NONE;
+       gst_adapter_clear (parse->adapter);
+       parse->state = PARSE_NEED_START;

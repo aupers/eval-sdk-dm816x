@@ -1,0 +1,6 @@
+#!/bin/sh
+
+if [ -x /sbin/sysctl -a -f /etc/sysctl.conf ] ; then
+    sysctl -p /etc/sysctl.conf > /dev/null 2>&1
+    echo done.
+fi

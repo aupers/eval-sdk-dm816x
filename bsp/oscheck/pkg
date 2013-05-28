@@ -1,0 +1,249 @@
+#!/bin/bash
+OPTION=""
+PKGNAME=""
+HOST_REQUIRED=$DEVDIR/bsp/oscheck/host.required
+HOST_TARGET_REQ=$DEVDIR/fs/hostreqs
+SDK_DIRS="$DEVDIR/fs/apps $DEVDIR/fs/arch $DEVDIR/fs/mach $DEVDIR/installer
+          $DEVDIR/fs/fstargets $DEVDIR/fs/myapps $DEVDIR/proprietary"
+
+
+# "Global variables" or things we will use throught the script.
+SYSID=""   # Name of the distribution and base name of files.
+SYSFILE="" # Absolute path to the file of the running host distribution.
+QUERY=""
+INSTALL=""
+REMOVE=""
+LISTINSTPKG=""
+LISTNOINSTPKG=""
+PRE_INSTALL_COMMANDS=""
+MISSING=""
+MISSING_LIST=""
+HOSTPKG=""
+
+function get_systemid {
+ SYSID=`cat $DEVDIR/.system.id`
+ DISTRO=`cat $DEVDIR/.distro.id`
+}
+
+function get_line {
+ PKG="$1"
+ if test -f $DEVDIR/bsp/oscheck/$SYSID 
+  then LINE=`grep ^$PKG? $DEVDIR/bsp/oscheck/$SYSID`
+  else LINE=""
+ fi
+ if test -z $LINE
+  then LINE=`grep ^$PKG? $DEVDIR/bsp/oscheck/$DISTRO.common`
+ fi
+}
+
+function set_system {
+ get_systemid 
+ SYSFILE="$DEVDIR/bsp/oscheck/$SYSID"
+}
+
+function set_tools {
+ if test -e $DEVDIR/bsp/oscheck/$DISTRO.tools
+ then
+  source $DEVDIR/bsp/oscheck/$DISTRO.tools
+ else
+  echo "There are no tools defined for $DISTRO or $SYSID"
+  exit 1
+ fi
+}
+
+function get_host_specific_package {
+ PKG="$1"
+ get_line $PKG
+ SYSPKG=`echo $LINE | awk -F? '{print $2}'`
+ if test -z "$SYSPKG"
+  then echo " >> $PKG is NOT defined for $DISTRO.common or $SYSID"
+  exit 1
+ fi
+}
+
+function get_host_required_installation_commands {
+ PKG="$1"
+ get_line $PKG
+ INSTALLATION_COMMANDS=`echo "$LINE" | awk -F? '{$1=$2=""; print $0}'`
+}
+
+function query_pkg {
+ PKG="$1"
+ get_host_specific_package $PKG
+ host_query "$SYSPKG" #>/dev/null 2>&1 
+ TEST="$?"
+ if test "$TEST" = "0"
+  then 
+    if $2 
+     then
+      echo "    $1 ($SYSPKG) is installed"
+    fi
+ elif test "$TEST" = "1"
+  then echo -e " >> $1 ($SYSPKG) is \033[31mNOT\033[0m installed"
+  MISSING="$MISSING $SYSPKG"
+  INSTALLATION_COMMANDS=""
+  get_host_required_installation_commands $PKG
+  if [ ! -z "$INSTALLATION_COMMANDS" ] ; then
+   PRE_INSTALL_COMMANDS="$INSTALLATION_COMMANDS $PRE_INSTALL_COMMANDS"
+  fi
+ fi
+}
+
+function query_host_pkg {
+  if test -f $DEVDIR/bsp/oscheck/local.tools.$SYSID ; then 
+    SOURCE=`grep ^$1? $DEVDIR/bsp/oscheck/local.tools.$SYSID | awk -F? '{print $2}'`;
+  else 
+    SOURCE=`grep ^$1? $DEVDIR/bsp/oscheck/local.tools.common | awk -F? '{print $2}'`;
+  fi
+
+  if test -z $SOURCE ; then 
+	false;
+  else
+    if [ -f $DEVDIR/fs/host-apps/$SOURCE/installed ] ; then
+	true;
+    else 
+	echo "    Checking dependencies for $SOURCE";
+	$DEVDIR/bsp/scripts/metainfo -o -f -p $DEVDIR/fs/host-apps/$SOURCE >> $SOURCE.reqs;
+	walk_pkg_list $SOURCE.reqs false;
+    # Restore the source variable as it could has been destroyed by the previous call
+    if test -f $DEVDIR/bsp/oscheck/local.tools.$SYSID ; then 
+      SOURCE=`grep ^$1? $DEVDIR/bsp/oscheck/local.tools.$SYSID | awk -F? '{print $2}'`;
+    else 
+ 	  SOURCE=`grep ^$1? $DEVDIR/bsp/oscheck/local.tools.common | awk -F? '{print $2}'`;
+    fi
+	rm -f $SOURCE.reqs ;
+	if test -n "$MISSING" ; then
+	    return;
+	fi;
+	echo "    Building internal SDK version of $SOURCE...";
+	if ! make -sC $DEVDIR/fs/host-apps/$SOURCE build install ; then
+	    echo -e "   Failed to build $SOURCE... \033[31maborting\033[0m"
+	    echo "    Please build with VERBOSE=1 to see the error"
+	    exit -1;
+	fi
+    fi
+  fi
+}
+
+function install_pkg {
+ get_host_specific_package $1
+ echo "Installing $SYSPKG under $SYSID"
+} 
+
+# Walks thru the package list, the format
+# should be an alias name for each line
+function walk_pkg_list {
+ PKGLIST="$1"
+ for i in `cat $PKGLIST` ; do
+  if ! query_host_pkg  `echo $i | sed -e "s/?.*//"` $2 ; then
+    query_pkg `echo $i | sed -e "s/?.*//"` $2 ;
+  fi
+ done
+}
+
+function req_pkg { 
+ PKG="$1"
+ echo "Checking for host packages required by the SDK build system:"
+ walk_pkg_list $HOST_REQUIRED true
+ if [ -f $DEVDIR/toolchain/$TOOLCHAIN/host.required ] ; then
+     walk_pkg_list $DEVDIR/toolchain/$TOOLCHAIN/host.required true
+ fi
+ if [ -f $DEVDIR/bsp/arch/host.required ] ; then
+     walk_pkg_list $DEVDIR/bsp/arch/host.required true
+ fi
+ if [ -f $DEVDIR/bsp/mach/host.required ] ; then
+     walk_pkg_list $DEVDIR/bsp/mach/host.required true
+ fi
+}
+
+function host_pkg {
+ echo "    Checking for host packages required by the SDK target applications..."
+
+ # First, create a repository 
+ rm -f $HOST_TARGET_REQ
+ for d in $SDK_DIRS ; do
+   for i in $d/* ; do
+     if test -d $i ; then 
+       $DEVDIR/bsp/scripts/metainfo -o -p $i >> $HOST_TARGET_REQ
+     fi 
+   done
+ done
+  
+ # Walk through the repository and check the status of each one. 
+ walk_pkg_list $HOST_TARGET_REQ false
+}
+
+# Set the system identification 
+# and other wide used variables
+set_system 
+set_tools
+
+usage="
+usage: pkg [-d] [-q] [-r] [-o] [-p <package name>]
+  -d  enable debug output
+  -q  query packages
+  -i install packages
+  -r require packages
+  -o host packages
+  -p install package
+"
+
+# What to do?
+while getopts  ":dqirop:" options
+do
+ case $options in
+  d ) set -x;;
+  q ) QUERYPKG="true";;
+  i ) INSTALLPKG="true";;
+  r ) REQPKG="true";;
+  o ) HOSTPKG="true";;
+  p ) PKG=$OPTARG;;
+  * ) echo -e "$usage"
+   exit 1;;
+ esac
+done
+
+
+
+
+# Query installed pkg
+if test -n "$QUERYPKG"
+ then query_pkg $PKG
+fi
+
+# Install pkg
+if test -n "$INSTALLPKG"
+ then install_pkg $PKG
+fi
+
+# Query the status of all the REQUIRED packages
+if test -n "$REQPKG"
+ then req_pkg
+ if test -n "$MISSING"
+  then 
+  echo -e " There are missing packages, please \033[32minstall\033[0m them with the following commands:"
+  echo
+  if [ ! -z "$PRE_INSTALL_COMMANDS" ] ; then
+    echo -e "$PRE_INSTALL_COMMANDS"
+  fi
+  echo " $INSTALL$MISSING"
+  echo
+  exit 1
+ fi
+fi
+
+# Check what host packages the target packages
+# need to be installed 
+if test -n "$HOSTPKG"
+ then host_pkg
+ if test -n "$MISSING"
+  then echo -e "\nThere are missing packages, please install them:"
+  echo " $INSTALL$MISSING"
+  exit 1
+ else
+  echo "    Host machine has all required packages."
+ fi
+fi 
+
+#get_parts $PKGNAME
+

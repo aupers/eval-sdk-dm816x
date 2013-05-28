@@ -1,0 +1,29 @@
+Index: OpenCV-2.1.0/src/3rdparty/libpng/pngrtran.c
+===================================================================
+--- OpenCV-2.1.0.orig/src/3rdparty/libpng/pngrtran.c	2011-02-14 16:34:21.646538232 -0600
++++ OpenCV-2.1.0/src/3rdparty/libpng/pngrtran.c	2011-02-14 16:34:24.526537740 -0600
+@@ -594,9 +594,9 @@
+ /* Expand grayscale images of less than 8-bit depth to 8 bits. */
+ /* Deprecated as of libpng-1.2.9 */
+ void PNGAPI
+-png_set_gray_1_2_4_to_8(png_structp png_ptr)
++png_set_expand_gray_1_2_4_to_8(png_structp png_ptr)
+ {
+-   png_debug(1, "in png_set_gray_1_2_4_to_8\n");
++   png_debug(1, "in png_set_expand_gray_1_2_4_to_8\n");
+    if(png_ptr == NULL) return;
+    png_ptr->transformations |= (PNG_EXPAND | PNG_EXPAND_tRNS);
+ }
+Index: OpenCV-2.1.0/src/src/highgui/grfmt_png.cpp
+===================================================================
+--- OpenCV-2.1.0.orig/src/src/highgui/grfmt_png.cpp	2011-02-14 16:34:51.062667586 -0600
++++ OpenCV-2.1.0/src/src/highgui/grfmt_png.cpp	2011-02-14 16:35:02.718347981 -0600
+@@ -223,7 +223,7 @@
+                 png_set_palette_to_rgb( png_ptr );
+ 
+             if( m_color_type == PNG_COLOR_TYPE_GRAY && m_bit_depth < 8 )
+-                png_set_gray_1_2_4_to_8( png_ptr );
++                png_set_expand_gray_1_2_4_to_8( png_ptr );
+ 
+             if( CV_MAT_CN(m_type) > 1 && color )
+                 png_set_bgr( png_ptr ); // convert RGB to BGR

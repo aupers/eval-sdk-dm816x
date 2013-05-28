@@ -1,0 +1,39 @@
+Index: gst-plugins-good-0.10.31/src/sys/v4l2/gstv4l2object.c
+===================================================================
+--- gst-plugins-good-0.10.31.orig/src/sys/v4l2/gstv4l2object.c	2013-02-22 11:58:18.000000000 -0600
++++ gst-plugins-good-0.10.31/src/sys/v4l2/gstv4l2object.c	2013-02-22 12:17:52.686824452 -0600
+@@ -1817,7 +1817,7 @@
+   s = gst_structure_copy (template);
+   gst_structure_set (s, "width", G_TYPE_INT, (gint) width,
+       "height", G_TYPE_INT, (gint) height,
+-      "interlaced", G_TYPE_BOOLEAN, interlaced,
++      /*"interlaced", G_TYPE_BOOLEAN, interlaced, */
+       "pixel-aspect-ratio", GST_TYPE_FRACTION, 1, 1, NULL);
+ 
+   if (G_IS_VALUE (&rates)) {
+@@ -2078,7 +2078,7 @@
+     else
+       gst_structure_set (tmp, "height", GST_TYPE_INT_RANGE, min_h, max_h, NULL);
+ 
+-    gst_structure_set (tmp, "interlaced", G_TYPE_BOOLEAN, interlaced, NULL);
++    // gst_structure_set (tmp, "interlaced", G_TYPE_BOOLEAN, interlaced, NULL);
+     gst_structure_set (tmp, "pixel-aspect-ratio",
+         GST_TYPE_FRACTION, 1, 1, NULL);
+ 
+@@ -2125,7 +2125,7 @@
+     fmt.fmt.pix.width = *width;
+     fmt.fmt.pix.height = *height;
+     fmt.fmt.pix.pixelformat = pixelformat;
+-    fmt.fmt.pix.field = V4L2_FIELD_INTERLACED;
++    fmt.fmt.pix.field = V4L2_FIELD_SEQ_TB;
+     r = v4l2_ioctl (fd, VIDIOC_TRY_FMT, &fmt);
+   }
+ 
+@@ -2171,6 +2171,7 @@
+     case V4L2_FIELD_NONE:
+       *interlaced = FALSE;
+       break;
++    case V4L2_FIELD_SEQ_TB:
+     case V4L2_FIELD_INTERLACED:
+     case V4L2_FIELD_INTERLACED_TB:
+     case V4L2_FIELD_INTERLACED_BT:

@@ -1,0 +1,49 @@
+#!/usr/bin/perl
+
+use integer;
+use Term::ANSIColor qw(:constants);
+$Term::ANSIColor::AUTORESET = 1;
+
+use lib "$ENV{'DEVDIR'}/installer/u-boot-installer/";
+
+our $LOG_DIRECTORY = "$DEVDIR/logs";
+our $LOG_INSTALL_FILE = "$LOG_DIRECTORY/install.log";
+our $UBLIMAGE = "$DEVDIR/images/ubl.nandbin";
+our $UBOOTIMAGE = "$DEVDIR/images/bootloader.nandbin";
+our $UBOOTIMAGE_UPGRADE = "$DEVDIR/images/upgrade_bootloader.bin";
+our $KERNELIMAGE = "$DEVDIR/images/kernel.uImage";
+our $FSIMAGE = "$DEVDIR/images/fsimage.uImage";
+our $ENABLE_DEBUG = $ENV{'VERBOSE'} || 0;
+our $TARGET_FS_TYPE="noinstall";
+
+# Configure FS type
+if ($CONFIG_FS_TARGET_NFSROOT eq "y") {
+    $TARGET_FS_TYPE="noinstall";
+} elsif ($CONFIG_FS_TARGET_SD eq "y") {
+    $TARGET_FS_TYPE="sd";
+} elsif ($CONFIG_FS_TARGET_INITRD eq "y") {
+    $TARGET_FS_TYPE="initrd";
+} elsif ($CONFIG_FS_TARGET_JFFS2FS eq "y") {
+    $TARGET_FS_TYPE="jffs2";
+} elsif ($CONFIG_FS_TARGET_UBIFS eq "y") {
+    $TARGET_FS_TYPE="ubifs";
+} elsif ($CONFIG_FS_TARGET_CRAMFS eq "y") {
+    $TARGET_FS_TYPE="cramfs";
+} elsif ($CONFIG_FS_TARGET_ROMFS eq "y") {
+    $TARGET_FS_TYPE="romfs";
+}
+
+if ($CONFIG_INSTALLER_MODE_ATTACHED_BOARD eq "y") {
+    require "methods/attached_board/installer";
+} elsif ($CONFIG_INSTALLER_MODE_SD_CARD eq "y") {
+    require "methods/sd_card/installer";
+} elsif ($CONFIG_INSTALLER_MODE_SD_CARD_INSTALLER eq "y") {
+    require "methods/attached_board/installer";
+    require "methods/sd_card/installer";
+} else {
+    print RED "Error: ";
+    print "No valid deployment mode selected";
+    exit 1;
+}
+
+print GREEN "\n  Installation completed\n\n";

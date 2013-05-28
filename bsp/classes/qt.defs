@@ -1,0 +1,80 @@
+#$L$
+# Copyright (C) 2011 Ridgerun (http://www.ridgerun.com).
+#$L$
+
+#! \defgroup qt_class QT Class
+#! \ingroup classes
+#! \section intro Introduction
+#! The QT class provides logic for (cross)compiling QT-based applications with the SDK. It's assumed that the following variables are used and conform to the standard way of defining a build directory, a source directory and others. If the script somehow subverts this convention, this helper class may not work at all.
+#!
+#! \section public_params Public Parameters
+#! The following is a list of parameters that may be set according to an application's specific requirements.
+#! <ul>
+#! <li>
+#! <b>QT_PROJECT_FILE:</b> Qmake Project file. Unless specified, the variable will be set to whichever project file is found first within the fetched directory.
+#!
+#! <li>
+#! <b>QT_BUILD_DIR:</b> The directory in which the build process will be executed.
+#!
+#! <li>
+#! <b>QT_SRC_DIR:</b> The directory that contains the configure script.
+#!
+#! <li>
+#! <b>QMAKE_OPTIONS:</b> Variable that holds any required options that will be passed to the qmake command.
+#!
+#! <li>
+#! <b>QMAKE:</b> Location of the qmake executable.
+#!
+#! </ul>
+
+include $(CLASSES)/flags.defs
+include $(CLASSES)/force_build.defs
+
+QT_BUILD_DIR?=$(ARCH)
+QT_SRC_DIR?=src
+QT_PROJECT_FILE?=$(notdir $(shell ls -t $(QT_SRC_DIR)/*.pro | tail -1))
+ARCH_SUFFIX?=
+
+
+#Internal QMAKE options
+QMAKE_OPTIONS?=
+ifeq ($(MAKECMDGOALS),sim)
+QMAKE_OPTIONS+=QMAKE_LFLAGS_RPATH="-Wl,-rpath -Wl,$(SIMROOT)/"
+endif
+QMAKE ?= $(FSDEVROOT)/usr/bin/qmake $(QMAKE_OPTIONS)
+
+$(BUILT_FLAG)${ARCH_SUFFIX}: $(FETCHED_FLAG) $(PATCHED_FLAG) $(QT_BUILD_DIR)/Makefile
+	$(V)$(MAKE) -j $(BSP_NCPU) -C $(QT_BUILD_DIR)
+	$(V) touch $(BUILT_FLAG)
+
+force_build_execute: $(BUILT_FLAG)${ARCH_SUFFIX}
+
+FETCHER_EXTRACT_DIRECTORY_NAME=$(QT_SRC_DIR)
+include $(CLASSES)/fetcher.defs
+
+$(QT_BUILD_DIR)/Makefile:
+	$(V) mkdir -p $(QT_BUILD_DIR)
+	$(V) if [ $(QT_BUILD_DIR) != $(QT_SRC_DIR) ] ; then  \
+	  cd $(QT_BUILD_DIR) && $(QMAKE) ../$(QT_SRC_DIR)/$(QT_PROJECT_FILE) $(QOUT) $(ERRQOUT) ; \
+	 else \
+	  cd $(QT_BUILD_DIR)&& $(QMAKE) $(QT_PROJECT_FILE) $(QOUT) $(ERRQOUT) ; \
+	 fi
+
+qt_clean: unpatch
+	$(V) if [ $(QT_BUILD_DIR) != $(QT_SRC_DIR) ] ; then  \
+	    rm -Rf $(QT_BUILD_DIR) ; \
+	else \
+	    if [ -f $(QT_BUILD_DIR)/Makefile ] ; then \
+	        $(MAKE) -j $(BSP_NCPU) -C $(QT_BUILD_DIR) clean ; \
+	    fi ; \
+	    rm -f $(QT_BUILD_DIR)/Makefile ; \
+	fi
+	$(V) rm -Rf $(BUILT_FLAG)* $(INSTALLED_FLAG)* $(PATCHED_FLAG) sim
+
+$(INSTALLED_FLAG)${ARCH_SUFFIX}:
+	$(V)$(MAKE) -C $(QT_BUILD_DIR) install INSTALL_ROOT=$(FSDEVROOT) $(QOUT)
+	$(V)touch $(INSTALLED_FLAG)
+
+qt_uninstall:
+	$(V)$(MAKE) -C $(QT_BUILD_DIR) uninstall $(QOUT)
+	$(V)rm -f $(INSTALLED_FLAG)

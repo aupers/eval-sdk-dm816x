@@ -1,0 +1,118 @@
+DVSDKURL?=http://software-dl.ti.com/dsps/dsps_public_sw/sdo_sb/targetcontent/dvsdk/DVSDK_4_00/4_02_00_06/index_FDS.html
+# Graphics SDKs are huge, so let's avoid them until we add support for them
+DVSDK_TARBALL_EXCLUSIONS_PATTERNS?=bin docs etc example-applications filesystem gstreamer-ti_svn* linux-devkit psp usr \*graphics_sdk_4\*
+
+include $(CLASSES)/common.defs
+include $(CLASSES)/fetcher.defs
+include $(CLASSES)/dvsdk.defs
+
+ifeq ($(DVSDK_PLATFORM),)
+ $(error ====== DVSDK_PLATFORM variable isn't defined on RidgeRun's dvsdk makefile =====)
+endif
+#============================================================================================
+# Adding targets according to the configured platform
+#============================================================================================
+
+DVSDK_TARGETS=cmem_v4
+
+ifeq ($(DVSDK_PLATFORM),dm3730)
+DVSDK_TARGETS+=sdma_v4 dsplink_v4 lpm_v4 c6accel_v4 codecs_v4 dvtb_v4
+endif
+
+ifeq ($(DVSDK_PLATFORM),omap35x)
+DVSDK_TARGETS+=sdma_v4 dsplink_v4 lpm_v4 c6accel_v4 codecs_v4
+endif
+
+ifeq ($(DVSDK_PLATFORM),dm6446)
+DVSDK_TARGETS+=dsplink_v4 $(EXTERNAL_CODECS)
+endif
+
+ifeq ($(DVSDK_PLATFORM),omapl138)
+DVSDK_TARGETS+=dsplink_v4 c6accel_v4 codecs_v4
+endif
+
+ifeq ($(DVSDK_PLATFORM),dm365)
+DVSDK_TARGETS+=dm365mm_v4 irq_v4 edma_v4
+CMEM_TCMSETTINGS=allowOverlap=1 phys_start_1=0x00001000 phys_end_1=0x00008000 pools_1=1x28672
+endif
+
+ifeq ($(DVSDK_PLATFORM),dm368)
+DVSDK_TARGETS+=dm365mm_v4 irq_v4 edma_v4
+CMEM_TCMSETTINGS=allowOverlap=1 phys_start_1=0x00001000 phys_end_1=0x00008000 pools_1=1x28672
+endif
+
+# all DVSDKs need DMAI built
+DVSDK_TARGETS+=ce_check_for_rebuild dmai_v4
+
+export BUILDING_SOFTWARE_OUTSIDE_DEVDIR=y
+
+build: dvsdk rrpatched rrconfig coprocessors.init 
+	@# We re-run make since this time Rules.make exist, so we can pull his variables in
+	$(V)$(MAKE) $(DVSDK_TARGETS)
+
+#============================================================================================
+# coprocessor.init creates the init script that will be used to load all the
+# necessary modules into the target board, also a previous stage to check if the
+# parameters for CMEM has been properly configured is made
+#============================================================================================
+
+.PHONY: coprocessors.init coprocessors.init.in
+coprocessors.init: coprocessors.init.in
+
+ifneq ($(CONFIG_PROPRIETARY_DVSDK_RESERVED_MEMORY),)
+	$(V) if [ $(shell printf %d $(CONFIG_PROPRIETARY_DVSDK_MEM_VALUE)) -gt  $(shell printf %d $(CONFIG_BSP_ARCH_SDRAM_SIZE)) ] ; then \
+	    $(ECHO) "$(ERROR_COLOR)ERROR:$(NORMAL_COLOR) Amount of reserved memory for coprocessors $(CONFIG_PROPRIETARY_DVSDK_MEM_VALUE) is greater than the RAM size $(CONFIG_BSP_ARCH_SDRAM_SIZE) \nAborting.\n" ; \
+	    exit 255 ; \
+	fi
+
+	$(V) if [ $(shell printf %d $(CONFIG_PROPRIETARY_DVSDK_CMEM_RESERVED_MEMORY)) -gt $(shell printf %d $(CONFIG_PROPRIETARY_DVSDK_MEM_VALUE)) ] ; then \
+	    $(ECHO) "$(ERROR_COLOR)ERROR:$(NORMAL_COLOR) Amount of reserved memory for CMEM $(CONFIG_PROPRIETARY_DVSDK_CMEM_RESERVED_MEMORY) is greater than the reserved memory $(CONFIG_PROPRIETARY_DVSDK_MEM_VALUE) \nAborting.\n" ; \
+	    exit 255 ; \
+	fi
+endif
+ifeq ($(CONFIG_PROPRIETARY_DVSDK_AUTO_SETUP_CMEM),)
+	$(V) if [ $(shell printf %d $(CONFIG_BSP_ARCH_SDRAM_BASE)) -gt $(shell printf %d $(CONFIG_PROPRIETARY_DVSDK_CMEM_START_ADDRESS)) ] ; then \
+	    $(ECHO) "$(ERROR_COLOR)ERROR:$(NORMAL_COLOR) The CMEM start address that has been configured $(CONFIG_PROPRIETARY_DVSDK_CMEM_START_ADDRESS) is less than the RAM base address $(CONFIG_BSP_ARCH_SDRAM_BASE) \nAborting.\n" ; \
+	    exit 255 ; \
+	fi
+
+	$(V) if [ $(shell printf %d $(CONFIG_PROPRIETARY_DVSDK_CMEM_START_ADDRESS)) -gt $(shell printf %d $$(( $(CONFIG_BSP_ARCH_SDRAM_BASE) + $(CONFIG_BSP_ARCH_SDRAM_SIZE) )) ) ] ; then \
+	    $(ECHO) "$(ERROR_COLOR)ERROR:$(NORMAL_COLOR) The CMEM start address configured $(CONFIG_PROPRIETARY_DVSDK_CMEM_START_ADDRESS) is beyond the RAM end $$(( $(CONFIG_BSP_ARCH_SDRAM_BASE) + $(CONFIG_BSP_ARCH_SDRAM_SIZE) )) \nAborting.\n" ; \
+	    exit 255 ; \
+	fi
+
+	$(V)END_CMEM=$(CONFIG_PROPRIETARY_DVSDK_CMEM_START_ADDRESS)+$(CONFIG_PROPRIETARY_DVSDK_CMEM_RESERVED_MEMORY) ; \
+	if [ $(shell printf %d $(END_CMEM)) -gt $(shell printf %d $$(( $(CONFIG_BSP_ARCH_SDRAM_BASE) + $(CONFIG_BSP_ARCH_SDRAM_SIZE) ))) ] ; then \
+	    $(ECHO) "$(ERROR_COLOR)ERROR:$(NORMAL_COLOR) The CMEM end address is beyond than RAM end $$(( $(CONFIG_BSP_ARCH_SDRAM_BASE) + $(CONFIG_BSP_ARCH_SDRAM_SIZE) )) \nAborting.\n" ; \
+	    exit 255 ; \
+	fi
+endif
+
+	$(V)sed -e 's?@KERNELVERSION@?$(KERNELVERSION)?g' \
+	    -e 's?@CMEM_START@?$(CONFIG_PROPRIETARY_DVSDK_CMEM_START_ADDRESS)?g' \
+	    -e 's?@RAM_BASE@?$(CONFIG_BSP_ARCH_SDRAM_BASE)?g' \
+	    -e 's?@RAM_END@?$(shell printf '0x%x' $$(( $(CONFIG_BSP_ARCH_SDRAM_BASE) + $(CONFIG_BSP_ARCH_SDRAM_SIZE) )))?g' \
+	    -e 's?@RAM_END_INT@?$(shell printf '%d' $$(( $(CONFIG_BSP_ARCH_SDRAM_BASE) + $(CONFIG_BSP_ARCH_SDRAM_SIZE) )))?g' \
+	    -e 's?@CMEM_SIZE@?$(CONFIG_PROPRIETARY_DVSDK_CMEM_RESERVED_MEMORY)?g' \
+	    -e 's?@CMEM_TCMSETTINGS@?$(CMEM_TCMSETTINGS)?g' \
+	    $< > $@
+
+real_clean: $(DVSDK_TARGETS:=_clean) dvsdk_clean
+
+clean:
+	$(V)if [ -e $(FETCHER_EXTRACT_DIRECTORY_NAME) ] ; then \
+	  $(MAKE) real_clean ; \
+	fi
+	$(V) rm -f coprocessors.init
+	$(V) find . -name $(BUILT_FLAG) | xargs rm -f {} ;
+
+distclean: clean dvsdk_distclean rrfetched_clean
+
+install: targets_install rrsdk_install dvsdk_cmdline
+	$(V)$(MAKE) -C $(DEVDIR)/fs depmod
+
+targets_install: build
+	@# We re-run make since this time Rules.make exist, so we can pull his variables in
+	$(V)$(MAKE) $(DVSDK_TARGETS:=_install)
+
+uninstall: $(DVSDK_TARGETS:=_uninstall)

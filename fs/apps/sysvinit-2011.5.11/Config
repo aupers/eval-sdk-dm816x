@@ -1,0 +1,7 @@
+
+config FS_APPS_SYSVINIT
+	bool "System V init"
+	default y
+	help
+	    This will provide a RidgeRun-created SysV init system
+

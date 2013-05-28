@@ -1,0 +1,7 @@
+config FS_TARGET_UBIFS_SUBPAGESIZE
+    int "UBIFS sub-page size"
+    depends on BSP_ARCH_SUPPORTS_NAND_SUBPAGES && FS_TARGET_UBIFS
+    default 512
+    help
+        Defines the sub-page size of your flash device. For details on this value see:
+        http://www.linux-mtd.infradead.org/doc/ubi.html#L_subpage

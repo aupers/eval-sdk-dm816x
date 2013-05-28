@@ -1,0 +1,11 @@
+config FS_APPS_LTT_CONTROL
+	bool "ltt-control-0.89"
+	# This package work only and only with certain versions of the patches
+	# for the kernel, so we need explicit support from an ARCH variable
+	# for compatibility list see:
+	# http://git.lttng.org/?p=lttv.git;a=blob_plain;f=doc/developer/lttng-lttv-compatibility.html;hb=HEAD
+	depends on BSP_ARCH_SUPPORTS_LTT_CONTROL_0_89
+	select FS_APPS_LTT_MODULES
+	select ASH_GETOPTS
+	help
+	    LTTng control tools

@@ -1,0 +1,6 @@
+config FS_APPS_POPT
+	bool "popt-1.16"
+	default n
+	help
+	    popt is a library that is used to parse command line options
+	    

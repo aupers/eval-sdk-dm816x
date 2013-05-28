@@ -1,0 +1,4 @@
+configuration_for_sdk.patch
+uboot_env_in_sdcard.patch
+skip_env_on_sd_boot.patch
+add_quick_boot_support.patch

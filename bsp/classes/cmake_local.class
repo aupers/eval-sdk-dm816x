@@ -1,0 +1,19 @@
+CMAKE_BUILD_DIR?=$(HOST_ARCH)
+CMAKE_TOOLCHAIN_FILE?=
+CMAKE_INSTALL_PREFIX?=$(LOCALDIR)
+
+include $(CLASSES)/cmake.defs
+
+.PHONY: patched build clean install uninstall distclean
+
+build: cmake_build
+
+clean: cmake_clean
+
+patched: rrsdk_patched
+
+install: cmake_install rrsdk_install
+
+uninstall: cmake_uninstall rrsdk_uninstall
+
+distclean: clean rrfetched_clean

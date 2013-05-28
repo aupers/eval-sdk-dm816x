@@ -1,0 +1,10 @@
+#
+# Ridgerun cramfs target options configuration
+#
+
+config FS_TARGET_CRAMFS_SWAP
+	bool "Change cramfs endianness"
+	depends on FS_TARGET_CRAMFS
+	help
+	    CRAMFS image is built on the endian of the host machine
+	    (usually little endian on x86 host).

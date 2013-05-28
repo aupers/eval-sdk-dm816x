@@ -1,0 +1,30 @@
+#!/bin/sh
+set -e
+
+runparts ()
+{
+    dir=$1
+    shift
+    mode=$1
+    shift
+
+    if [ ! -d "$dir" ] ; then
+        echo "E: '$dir' does not exist.  Stop."
+        exit 1
+    fi
+
+    for script in `ls $dir | grep '^S[0-9][0-9][a-zA-Z0-9]*$' 2>/dev/null` ; do
+        path=$dir/$script
+        if [ -x "$path" ] ; then
+            "$path" "$mode" || true
+        else
+            sh "$path" "$mode" || true
+        fi
+    done
+}
+
+for part in mod sysv local ; do
+    if [ -x /etc/rc.$part ] ; then
+        /etc/rc.$part
+    fi
+done

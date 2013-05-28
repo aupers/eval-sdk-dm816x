@@ -1,0 +1,15 @@
+Index: u-boot-2010.06/src/drivers/mtd/nand/ti81xx_nand.c
+===================================================================
+--- u-boot-2010.06.orig/src/drivers/mtd/nand/ti81xx_nand.c	2012-03-22 23:10:52.000000000 -0600
++++ u-boot-2010.06/src/drivers/mtd/nand/ti81xx_nand.c	2013-04-30 12:00:26.349307107 -0600
+@@ -990,8 +990,9 @@
+ 	elm_init();
+ 
+ 	nand_curr_device = 0;
++#if 0 //Don't change ECC mode, leave it in SW
+ 	ti81xx_nand_switch_ecc(NAND_ECC_HW, 2);
+-
++#endif
+ 	return 0;
+ }
+ 

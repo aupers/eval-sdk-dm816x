@@ -1,0 +1,83 @@
+Index: busybox/src/Config.in
+===================================================================
+--- busybox.orig/src/Config.in	2011-01-16 12:19:53.000000000 -0600
++++ busybox/src/Config.in	2011-02-11 09:13:18.818537619 -0600
+@@ -3,7 +3,7 @@
+ # see scripts/kbuild/config-language.txt.
+ #
+ 
+-mainmenu "BusyBox Configuration"
++#mainmenu "BusyBox Configuration"
+ 
+ config HAVE_DOT_CONFIG
+ 	bool
+Index: busybox/src/miscutils/Config.src
+===================================================================
+--- busybox.orig/src/miscutils/Config.src	2011-01-16 12:19:54.000000000 -0600
++++ busybox/src/miscutils/Config.src	2011-02-11 09:13:18.818537619 -0600
+@@ -569,7 +569,7 @@
+ 	  As readahead(2) blocks until each file has been read, it is best to
+ 	  run this applet as a background job.
+ 
+-config RFKILL
++config BB_RFKILL
+ 	bool "rfkill"
+ 	default n  # doesn't build on Ubuntu 9.04
+ 	depends on PLATFORM_LINUX
+Index: busybox/src/miscutils/Kbuild.src
+===================================================================
+--- busybox.orig/src/miscutils/Kbuild.src	2011-01-16 12:19:54.000000000 -0600
++++ busybox/src/miscutils/Kbuild.src	2011-02-11 09:13:18.818537619 -0600
+@@ -1,4 +1,3 @@
+-# Makefile for busybox
+ #
+ # Copyright (C) 1999-2005 by Erik Andersen <andersen@codepoet.org>
+ #
+@@ -36,7 +35,7 @@
+ lib-$(CONFIG_MT)          += mt.o
+ lib-$(CONFIG_RAIDAUTORUN) += raidautorun.o
+ lib-$(CONFIG_READAHEAD)   += readahead.o
+-lib-$(CONFIG_RFKILL)      += rfkill.o
++lib-$(CONFIG_BB_RFKILL)      += rfkill.o
+ lib-$(CONFIG_RUNLEVEL)    += runlevel.o
+ lib-$(CONFIG_RX)          += rx.o
+ lib-$(CONFIG_SETSID)      += setsid.o
+Index: busybox/src/include/applets.src.h
+===================================================================
+--- busybox.orig/src/include/applets.src.h	2011-01-16 12:21:31.000000000 -0600
++++ busybox/src/include/applets.src.h	2011-02-11 09:13:18.818537619 -0600
+@@ -291,7 +291,7 @@
+ IF_RESET(APPLET(reset, _BB_DIR_USR_BIN, _BB_SUID_DROP))
+ IF_RESIZE(APPLET(resize, _BB_DIR_USR_BIN, _BB_SUID_DROP))
+ IF_RESTORECON(APPLET_ODDNAME(restorecon, setfiles, _BB_DIR_SBIN, _BB_SUID_DROP, restorecon))
+-IF_RFKILL(APPLET(rfkill, _BB_DIR_USR_SBIN, _BB_SUID_DROP))
++IF_BB_RFKILL(APPLET(rfkill, _BB_DIR_USR_SBIN, _BB_SUID_DROP))
+ IF_RM(APPLET_NOFORK(rm, rm, _BB_DIR_BIN, _BB_SUID_DROP, rm))
+ IF_RMDIR(APPLET_NOFORK(rmdir, rmdir, _BB_DIR_BIN, _BB_SUID_DROP, rmdir))
+ IF_ROUTE(APPLET(route, _BB_DIR_SBIN, _BB_SUID_DROP))
+Index: busybox/src/Makefile.flags
+===================================================================
+--- busybox.orig/src/Makefile.flags	2011-02-11 10:34:18.838290462 -0600
++++ busybox/src/Makefile.flags	2011-02-11 10:35:36.106600957 -0600
+@@ -57,15 +57,18 @@
+ # be fixed..
+ #CFLAGS += $(call cc-option,-Wconversion,)
+ 
++# Modification for RidgeRun SDK:
++# We disabled optimizations on busybox, since they
++# may cause alignment traps for IPV6 on ARM
+ ifneq ($(CONFIG_DEBUG),y)
+-CFLAGS += $(call cc-option,-Os,)
++#CFLAGS += $(call cc-option,-Os,)
+ else
+ CFLAGS += $(call cc-option,-g,)
+ #CFLAGS += "-D_FORTIFY_SOURCE=2"
+ ifeq ($(CONFIG_DEBUG_PESSIMIZE),y)
+-CFLAGS += $(call cc-option,-O0,)
++#CFLAGS += $(call cc-option,-O0,)
+ else
+-CFLAGS += $(call cc-option,-Os,)
++#CFLAGS += $(call cc-option,-Os,)
+ endif
+ endif
+ 

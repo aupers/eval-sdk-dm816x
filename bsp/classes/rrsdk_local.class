@@ -1,0 +1,17 @@
+ifeq ($(DEVDIR),)
+$(error ====== DEVDIR variable is empty, invoke this Makefile from the BSP root, or provide the path to it =====)
+endif
+
+VERBOSE?=0
+export CFLAGS=
+export LDFLAGS=
+
+include $(DEVDIR)/bsp/mach/bspconfig
+include $(DEVDIR)/bsp/classes/common.defs
+include $(CLASSES)/rrsdk_local.defs
+
+# These exports need to happen after including common.defs, where they
+# would be defined at a FSDEVROOT offset for cross-compilation, and we
+# need this to be local
+export PKG_CONFIG_LIBDIR=$(LOCALDIR)/lib/pkgconfig:/usr/lib/pkgconfig
+export PKG_CONFIG_PATH=$(LOCALDIR)/lib/pkgconfig:/usr/lib/pkgconfig

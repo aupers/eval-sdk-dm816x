@@ -1,0 +1,24 @@
+Index: ezsdk-5_05_02_00/ezsdk/component-sources/omx_05_02_00_48/include/OMX_TI_Video.h
+===================================================================
+--- ezsdk-5_05_02_00.orig/ezsdk/component-sources/omx_05_02_00_48/include/OMX_TI_Video.h	2012-05-12 14:32:34.551340527 -0600
++++ ezsdk-5_05_02_00/ezsdk/component-sources/omx_05_02_00_48/include/OMX_TI_Video.h	2012-05-12 14:34:12.851340550 -0600
+@@ -57,6 +57,7 @@
+ #include "OMX_Core.h"
+ 
+ #ifdef _VIDEO_M3_DYNAMIC_CONFIG
++#include <xdc/std.h>
+ #include <ti/sdo/ce/video2/videnc2.h>
+ #include <ti/sdo/ce/video3/viddec3.h>
+ #ifdef CODEC_H264ENC
+Index: ezsdk-5_05_02_00/ezsdk/component-sources/omx_05_02_00_48/src/ti/omx/interfaces/openMaxv11/OMX_TI_Video.h
+===================================================================
+--- ezsdk-5_05_02_00.orig/ezsdk/component-sources/omx_05_02_00_48/src/ti/omx/interfaces/openMaxv11/OMX_TI_Video.h	2012-05-12 14:33:15.526467851 -0600
++++ ezsdk-5_05_02_00/ezsdk/component-sources/omx_05_02_00_48/src/ti/omx/interfaces/openMaxv11/OMX_TI_Video.h	2012-05-12 14:34:48.691087051 -0600
+@@ -57,6 +57,7 @@
+ #include "OMX_Core.h"
+ 
+ #ifdef _VIDEO_M3_DYNAMIC_CONFIG
++#include <xdc/std.h>
+ #include <ti/sdo/ce/video2/videnc2.h>
+ #include <ti/sdo/ce/video3/viddec3.h>
+ #ifdef CODEC_H264ENC

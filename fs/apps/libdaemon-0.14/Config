@@ -1,0 +1,5 @@
+config FS_APPS_LIBDAEMON
+	bool "libdaemon-0.14"
+	default n
+	help
+	 Libdaemon is a lightweight C library that eases the writing of UNIX daemons. 

@@ -1,0 +1,40 @@
+#
+# Ridgerun BSP Configuration file for toolchain
+# all definitions on this subtree must prefix with TOOLCHAIN_
+#
+
+menu "Toolchain configurations"
+
+config TOOLCHAIN_PATH
+	string "Toolchain binaries path"
+	default "/opt/codesourcery/arm-2009q1-203"
+	help
+	    Path on the file system of the toolchain binaries
+
+config TOOLCHAIN_NOARCH_FLAGS
+	string "Toolchain architecture independent flags"
+	default "-Wall -Os"
+	help
+	    Toolchain architecture independent flags
+
+source bsp/mach/ConfigToolchain
+
+config TOOLCHAIN_SIMULATOR_FLAGS
+	string "Flags to use when compiling code to simulate on host machine"
+	default "-Os -Wall"
+
+config TOOLCHAIN_DEPENDENY_ON_FUTEX
+	bool
+	default y
+	select FUTEX # This toolchain is NPTL, and requires futex support on the kernel
+
+config TOOLCHAIN_CCACHE
+	bool "Use ccache while compiling"
+	default y
+	help
+		Using ccache usually will make recompilations faster.
+		Project homepage:
+		http://ccache.samba.org/
+
+endmenu
+

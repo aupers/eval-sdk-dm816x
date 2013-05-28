@@ -1,0 +1,61 @@
+#
+# Ridgerun file system configuration files
+# all definitions on this subtree must prefix with FS_
+#
+
+menu "File System Configuration"
+
+# File system target configuration
+
+comment "File system target image configuration  ---"
+
+source fs/fstargets/Config
+
+choice
+	prompt "File system image target"
+source fs/fstargets/ConfigExtra
+endchoice
+
+source fs/fstargets/ConfigExtra.options
+
+config FS_STRIPFS
+	bool "Strip the target file system binaries (may render debug useless)"
+	help
+	  Enabling this option will strip the file system binaries of 
+          all debug and other symbols. 
+          If you are debugging applications, with gdb or oprofile, disable 
+          this option. 
+
+config FS_FSROOT
+	string "Target file system destination directory -- leave blank to use $DEVDIR/fs/fs"
+	default ""
+	help
+	  If you are using a source code management system, like ClearCase, or file
+	  system that doesn't allow certian files to be created, such as device files,
+	  then you can have the target file system $FSROOT located in a directory other
+	  that within in the development directory $DEVDIR.  If this value is not blank,
+	  the the actual directory used for $FSROOT is the directory specified here, plus
+	  the basename of the $DEVDIR, plus "fs".  For example, if $FS_FSROOT is
+	  /opt/target_file_systems and $DEVDIR is $HOME/work/dm385sdk, then the target
+	  file system can be found in /opt/target_file_systems/dm385sdk/fs.  You also
+	  should change busybox install directory CONFIG_PREFIX to "arm".
+
+comment "File system contents ---"
+menu "Select target's file system software"
+
+source fs/apps/ConfigExtra
+
+source fs/arch/ConfigExtra
+
+source fs/mach/ConfigExtra
+
+endmenu
+
+source toolchain/Config.fs
+
+config FS_INTERNALS
+	bool
+	default y
+	select WC
+
+endmenu

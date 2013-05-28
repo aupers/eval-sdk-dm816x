@@ -1,0 +1,6 @@
+config FS_APPS_LIBVORBIS
+	bool "libvorbis-1.3.2"
+	select FS_APPS_LIBOGG
+	help
+	Vorbis is the name of a specific audio compression 
+	scheme that's designed to be contained in Ogg.

@@ -1,0 +1,94 @@
+From 15c17ea368079fd5de19868af6d9ffad1cb09f3a Mon Sep 17 00:00:00 2001
+From: Rob Clark <rob@ti.com>
+Date: Wed, 19 May 2010 17:33:46 -0500
+Subject: [PATCH 07/11] use GstQueryBuffers to get buffer requirements
+
+---
+ sys/v4l2/gstv4l2sink.c |   40 ++++++++++++++++++++++++++++++++++++++++
+ sys/v4l2/gstv4l2sink.h |    1 +
+ 2 files changed, 41 insertions(+), 0 deletions(-)
+
+Index: gst-plugins-good-0.10.31/src/sys/v4l2/gstv4l2sink.c
+===================================================================
+--- gst-plugins-good-0.10.31.orig/src/sys/v4l2/gstv4l2sink.c	2013-02-22 11:12:01.062832337 -0600
++++ gst-plugins-good-0.10.31/src/sys/v4l2/gstv4l2sink.c	2013-02-22 11:34:11.982829680 -0600
+@@ -385,6 +385,7 @@
+ 
+   /* number of buffers requested */
+   v4l2sink->num_buffers = PROP_DEF_QUEUE_SIZE;
++  v4l2sink->num_buffers_can_change = TRUE;
+   v4l2sink->min_queued_bufs = PROP_DEF_MIN_QUEUED_BUFS;
+ 
+   v4l2sink->probed_caps = NULL;
+@@ -820,6 +821,7 @@
+ gst_v4l2sink_set_caps (GstBaseSink * bsink, GstCaps * caps)
+ {
+   GstV4l2Sink *v4l2sink = GST_V4L2SINK (bsink);
++  GstQuery *query;
+   gint w = 0, h = 0;
+   gboolean interlaced;
+   struct v4l2_fmtdesc *format;
+@@ -867,6 +869,39 @@
+     return FALSE;
+   }
+ 
++  /* query to find if anyone upstream using these buffers has any
++   * minimum requirements:
++   */
++  query = gst_query_new_buffers (caps);
++  if (gst_element_query (GST_ELEMENT (v4l2sink), query)) {
++    gint min_buffers, min_width, min_height;
++
++    gst_query_parse_buffers_count (query, &min_buffers);
++
++    /* XXX need to account for some buffers used by queue, etc.. probably
++     * queue should handle query, pass on to sink pad, and then add some
++     * number of buffers to the min, so this value is dynamic depending
++     * on the pipeline?
++     */
++    if (min_buffers != -1) {
++      min_buffers += 3 + v4l2sink->min_queued_bufs;
++    }
++
++    if (min_buffers > v4l2sink->num_buffers) {
++      v4l2sink->num_buffers_can_change = FALSE;
++      v4l2sink->num_buffers = min_buffers;
++    }
++
++    gst_query_parse_buffers_dimensions (query, &min_width, &min_height);
++    if (min_width > w) {
++      w = min_width;
++    }
++    if (min_height > h) {
++      h = min_height;
++    }
++  }
++  gst_query_unref (query);
++
+   if (!gst_v4l2_object_set_format (v4l2sink->v4l2object, format->pixelformat,
+           w, h, interlaced)) {
+     /* error already posted */
+@@ -956,6 +991,11 @@
+       GST_INFO_OBJECT (v4l2sink, "outputting buffers via mmap()");
+ 
+       if (v4l2sink->num_buffers != v4l2sink->pool->buffer_count) {
++        if (!v4l2sink->num_buffers_can_change) {
++          GST_WARNING_OBJECT (v4l2sink,
++              "I can't handle a differing number of buffers!!!!");
++          return GST_FLOW_ERROR;
++        }
+         v4l2sink->num_buffers = v4l2sink->pool->buffer_count;
+         g_object_notify (G_OBJECT (v4l2sink), "queue-size");
+       }
+Index: gst-plugins-good-0.10.31/src/sys/v4l2/gstv4l2sink.h
+===================================================================
+--- gst-plugins-good-0.10.31.orig/src/sys/v4l2/gstv4l2sink.h	2013-02-22 11:11:59.686832340 -0600
++++ gst-plugins-good-0.10.31/src/sys/v4l2/gstv4l2sink.h	2013-02-22 11:12:02.566832334 -0600
+@@ -58,6 +58,7 @@
+   GstCaps *current_caps;        /* the current negotiated caps */
+   GstV4l2BufferPool *pool;
+   guint32 num_buffers;
++  gboolean num_buffers_can_change;
+   guint32 min_queued_bufs;
+ 
+   gint video_width, video_height;      /* original (unscaled) video w/h */

@@ -1,0 +1,6 @@
+
+config USER_APPS_HELLO
+	bool "Hello World example"
+	default n
+	help
+	    Example application to show the bsp usage.

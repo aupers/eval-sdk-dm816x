@@ -1,0 +1,12 @@
+Index: libmad-0.15.1b/src/configure.ac
+===================================================================
+--- libmad-0.15.1b.orig/src/configure.ac	2011-03-23 15:21:32.955060236 -0600
++++ libmad-0.15.1b/src/configure.ac	2011-03-23 15:22:17.103355218 -0600
+@@ -140,7 +140,6 @@
+     case "$optimize" in
+ 	-O|"-O "*)
+ 	    optimize="-O"
+-	    optimize="$optimize -fforce-mem"
+ 	    optimize="$optimize -fforce-addr"
+ 	    : #x optimize="$optimize -finline-functions"
+ 	    : #- optimize="$optimize -fstrength-reduce"

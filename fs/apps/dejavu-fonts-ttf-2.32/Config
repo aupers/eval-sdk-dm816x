@@ -1,0 +1,4 @@
+config FS_APPS_DEJAVU_FONTS
+	bool "Dejavu fonts ttf 2.29"
+	help
+	This option copy the dejavu fonts ttf to /usr/share

@@ -1,0 +1,44 @@
+Index: ezsdk-5_04_01_04/ezsdk/board-support/media-controller-utils_3_00_00_05/makefile
+===================================================================
+--- ezsdk-5_04_01_04.orig/ezsdk/board-support/media-controller-utils_3_00_00_05/makefile	2012-05-12 14:31:18.531340538 -0600
++++ ezsdk-5_04_01_04/ezsdk/board-support/media-controller-utils_3_00_00_05/makefile	2012-05-12 14:31:59.482477268 -0600
+@@ -45,7 +45,7 @@
+ 	$(call makesubdir,src/firmware_loader,a8host,$(PLATFORM))
+ 	$(call makesubdir,src/sys_top,a8host,$(PLATFORM))
+ 	$(call makesubdir,src/prcm_config,a8host,$(PLATFORM))
+-
++	$(call makesubdir,src/mm_host_util,a8host,$(PLATFORM))
+ dsp:
+ 	$(call makesubdir,src/ldrmemcfg,c6xdsp,$(PLATFORM))
+ 
+Index: ezsdk-5_04_01_04/ezsdk/board-support/media-controller-utils_3_00_00_05/src/mm_host_util/makefile
+===================================================================
+--- ezsdk-5_04_01_04.orig/ezsdk/board-support/media-controller-utils_3_00_00_05/src/mm_host_util/makefile	2012-05-12 14:31:18.523340665 -0600
++++ ezsdk-5_04_01_04/ezsdk/board-support/media-controller-utils_3_00_00_05/src/mm_host_util/makefile	2012-05-12 14:31:59.482477268 -0600
+@@ -3,7 +3,7 @@
+ #HOST_CODEGEN_INSTALL_DIR = _your_host_code_gen_install_
+ 
+ FIRMWARE_LOADER_INSTALL_DIR = ../
+-DESTDIR = ./
++DEST_DIR = ./
+ HOST_CODEGEN_INSTALL_DIR = 
+ 
+ # Include EZSDK Rules.make if it exists
+@@ -19,7 +19,7 @@
+ 	./memsegdef_dm81xxbm mm_dm81xxbm.bin
+ 
+ memsegdef_dm81xxbm: memsegdef_dm81xxbm.o mm_host_util_main.o
+-	$(HOST_CODEGEN_INSTALL_DIR)gcc -o $(DESTDIR)/memsegdef_dm81xxbm memsegdef_dm81xxbm.o mm_host_util_main.o
++	$(HOST_CODEGEN_INSTALL_DIR)gcc -o $(DEST_DIR)/memsegdef_dm81xxbm memsegdef_dm81xxbm.o mm_host_util_main.o
+   
+ memsegdef_dm81xxbm.o: memsegdef_dm81xxbm.c
+ 	$(HOST_CODEGEN_INSTALL_DIR)gcc $(ALL_CFLAGS) -c memsegdef_dm81xxbm.c
+@@ -31,7 +31,7 @@
+ 	./memsegdef_dm81xxbm_512M mm_dm81xxbm_512M.bin
+ 
+ memsegdef_dm81xxbm_512M: memsegdef_dm81xxbm_512M.o mm_host_util_main.o
+-	$(HOST_CODEGEN_INSTALL_DIR)gcc -o $(DESTDIR)/memsegdef_dm81xxbm_512M memsegdef_dm81xxbm_512M.o mm_host_util_main.o
++	$(HOST_CODEGEN_INSTALL_DIR)gcc -o $(DEST_DIR)/memsegdef_dm81xxbm_512M memsegdef_dm81xxbm_512M.o mm_host_util_main.o
+   
+ memsegdef_dm81xxbm_512M.o: memsegdef_dm81xxbm_512M.c
+ 	$(HOST_CODEGEN_INSTALL_DIR)gcc $(ALL_CFLAGS) -c memsegdef_dm81xxbm_512M.c

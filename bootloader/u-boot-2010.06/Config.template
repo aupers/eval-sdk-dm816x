@@ -1,0 +1,37 @@
+#
+# U-boot Bootloader configuration files
+# all definitions on this subtree must prefix with UBOOT_ or BTLR_
+#
+
+comment "RAM Memory Map"
+
+config UBOOT_RAM_ADDRS
+	string "U-boot RAM address"
+	default 0x81080000 
+	help
+	    This is the address in RAM memory where u-boot is located.
+
+comment "OneNAND flash memory settings"
+	depends on UBOOT_ONENAND_FLASH_MEMORY
+
+comment "NAND flash memory settings"
+	depends on UBOOT_NAND_FLASH_MEMORY
+
+comment "NOR flash memory settings"
+	depends on UBOOT_NOR_FLASH_MEMORY
+
+comment "SPI flash memory settings"
+	depends on UBOOT_SPI_FLASH_MEMORY
+
+config UBOOT_FLASH_SIZE
+	string "Flash memory size"
+	depends on UBOOT_NOR_FLASH_MEMORY
+
+config UBOOT_FLASH_BLK_SIZE
+	string "Flash memory block size"
+	depends on UBOOT_NOR_FLASH_MEMORY
+
+config UBOOT_FLASH_BASE_ADDRS 
+	string "Flash memory base address"
+	depends on UBOOT_NOR_FLASH_MEMORY
+

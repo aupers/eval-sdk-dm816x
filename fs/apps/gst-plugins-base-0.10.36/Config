@@ -1,0 +1,6 @@
+config FS_APPS_GSTREAMER_PLUGINS_BASE
+	bool "gstreamer-plugins-base 0.10.36"
+	select FS_APPS_GSTREAMER
+	select FS_APPS_LIBOIL
+	help
+	This option enabled the core base plugins for gstreamer

@@ -1,0 +1,9 @@
+config FS_APPS_RIDGERUN_UI_DEMO
+	bool "RidgeRun Qt UI Demo Application"
+	default n
+	select FS_APPS_QT
+	select FS_APPS_QT_DBUS
+	select FS_APPS_DBUS
+	help
+		Ridgerun Sample QML/Qt UI Application.
+

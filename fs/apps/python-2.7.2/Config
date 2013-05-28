@@ -1,0 +1,4 @@
+config FS_APPS_PYTHON
+	bool "python-2.7.2"
+	help
+	Python is a widely-used general-purpose scripting language.

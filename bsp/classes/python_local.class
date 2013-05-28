@@ -1,0 +1,20 @@
+
+.PHONY: patched build clean install uninstall distclean
+
+build: $(FETCHED_FLAG) $(PATCHED_FLAG)
+
+clean:
+
+patched: $(PATCHED_FLAG)
+
+install: python_install
+
+uninstall:
+
+distclean: clean unpatch $(FETCHED_FLAG)_clean
+
+PYTHON_SITE_PACKAGES?=$(LOCALDIR)/lib/python$(PYTHON_HOST_VERSION)/site-packages
+PYTHON_SCRIPT_DIR?=$(LOCALDIR)/bin
+
+include $(CLASSES)/python.defs
+include $(CLASSES)/fetcher.defs

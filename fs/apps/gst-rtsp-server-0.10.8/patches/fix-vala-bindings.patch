@@ -1,0 +1,13 @@
+Index: gst-rtsp-server-0.10.8/src/bindings/vala/gst-rtsp-server-0.10.vapi
+===================================================================
+--- gst-rtsp-server-0.10.8.orig/src/bindings/vala/gst-rtsp-server-0.10.vapi	2011-07-04 17:45:23.300419117 -0600
++++ gst-rtsp-server-0.10.8/src/bindings/vala/gst-rtsp-server-0.10.vapi	2011-07-04 17:45:37.452977554 -0600
+@@ -107,7 +107,7 @@
+ 		public weak GLib.HashTable mappings;
+ 		[CCode (has_construct_function = false)]
+ 		public RTSPMediaMapping ();
+-		public void add_factory (string path, Gst.RTSPMediaFactory factory);
++		public void add_factory (string path, owned Gst.RTSPMediaFactory factory);
+ 		public Gst.RTSPMediaFactory? find_factory (Gst.RTSPUrl url);
+ 		[NoWrapper]
+ 		public virtual Gst.RTSPMediaFactory? find_media (Gst.RTSPUrl url);

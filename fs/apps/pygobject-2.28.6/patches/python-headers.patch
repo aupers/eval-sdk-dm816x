@@ -1,0 +1,57 @@
+Index: pygobject-2.28.6/src/m4/python.m4
+===================================================================
+--- pygobject-2.28.6.orig/src/m4/python.m4
++++ pygobject-2.28.6/src/m4/python.m4
+@@ -41,18 +41,27 @@
+ dnl function also defines PYTHON_INCLUDES
+ AC_DEFUN([AM_CHECK_PYTHON_HEADERS],
+ [AC_REQUIRE([AM_PATH_PYTHON])
+-AC_MSG_CHECKING(for headers required to compile python extensions)
+-dnl deduce PYTHON_INCLUDES
+-py_prefix=`$PYTHON -c "import sys; sys.stdout.write(sys.prefix)"`
+-py_exec_prefix=`$PYTHON -c "import sys; sys.stdout.write(sys.exec_prefix)"`
+-PYTHON_CONFIG=`which $PYTHON`-config
+-if test -x "$PYTHON_CONFIG"; then
+-PYTHON_INCLUDES=`$PYTHON_CONFIG --includes 2>/dev/null`
++AC_ARG_VAR([PYTHON_INCLUDES], [CPPFLAGS for Python, overriding output of python2.x-config --includes, e.g. "-I/opt/misc/include/python2.7"])
++
++if test "${PYTHON_INCLUDES+set}" = set; then
++  AC_MSG_NOTICE([PYTHON_INCLUDES overridden to: $PYTHON_INCLUDES])
+ else
+-PYTHON_INCLUDES="-I${py_prefix}/include/python${PYTHON_VERSION}"
+-if test "$py_prefix" != "$py_exec_prefix"; then
+-  PYTHON_INCLUDES="$PYTHON_INCLUDES -I${py_exec_prefix}/include/python${PYTHON_VERSION}"
+-fi
++  dnl deduce PYTHON_INCLUDES
++  AC_MSG_CHECKING(for Python headers using $PYTHON-config --includes)
++  PYTHON_INCLUDES=`$PYTHON-config --includes`
++  if test $? = 0; then
++    AC_MSG_RESULT($PYTHON_INCLUDES)
++  else
++    AC_MSG_RESULT([failed, will try another way])
++    py_prefix=`$PYTHON -c "import sys; print sys.prefix"`
++    py_exec_prefix=`$PYTHON -c "import sys; print sys.exec_prefix"`
++    AC_MSG_CHECKING(for Python headers in $py_prefix and $py_exec_prefix)
++    PYTHON_INCLUDES="-I${py_prefix}/include/python${PYTHON_VERSION}"
++    if test "$py_prefix" != "$py_exec_prefix"; then
++      PYTHON_INCLUDES="$PYTHON_INCLUDES -I${py_exec_prefix}/include/python${PYTHON_VERSION}"
++    fi
++    AC_MSG_RESULT($PYTHON_INCLUDES)
++  fi
+ fi
+ AC_SUBST(PYTHON_INCLUDES)
+ dnl check if the headers exist:
+Index: pygobject-2.28.6/src/autogen.sh
+===================================================================
+--- /dev/null
++++ pygobject-2.28.6/src/autogen.sh
+@@ -0,0 +1,9 @@
++#!/bin/sh
++# you can either set the environment variables AUTOCONF, AUTOHEADER, AUTOMAKE,
++# ACLOCAL, AUTOPOINT and/or LIBTOOLIZE to the right versions, or leave them
++# unset and get the defaults
++
++autoreconf --verbose --force --install --make || {
++ echo 'autogen.sh failed';
++ exit 1;
++}

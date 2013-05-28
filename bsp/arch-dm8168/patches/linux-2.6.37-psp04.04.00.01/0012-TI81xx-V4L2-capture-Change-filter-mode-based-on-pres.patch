@@ -1,0 +1,155 @@
+From 96b6b95b3258936e2747605c7470f1c81131c69b Mon Sep 17 00:00:00 2001
+From: Hardik Shah <hardik.shah@ti.com>
+Date: Mon, 9 Apr 2012 11:37:46 +0530
+Subject: [PATCH 3/5] TI81xx V4L2 capture: Change filter mode based on preset_detected
+
+IR#SDOCM00086261: Solved
+
+HeadLine: Filter is always selected for 1080P60 mode
+Description:
+There is a filter between TVP7002 and VIP capture port.
+Filter needs to be set based on selection of the input capture mode.
+Currently filter is always selected for 1080P60 mode.
+No artifacts are seen on any of the boards used for testing.
+But ideally filter should be selected based on mode.
+
+Signed-off-by: Hardik Shah <hardik.shah@ti.com>
+---
+ drivers/media/video/ti81xx/ti81xxvin_main.c |   42 ++++++++++++++++++++++----
+ drivers/media/video/ti81xx/ti81xxvin_pvt.h  |    4 +-
+ 2 files changed, 37 insertions(+), 9 deletions(-)
+
+diff --git a/linux-2.6.37-psp04.04.00.01/drivers/media/video/ti81xx/ti81xxvin_main.c b/linux-2.6.37-psp04.04.00.01/drivers/media/video/ti81xx/ti81xxvin_main.c
+index 6669d84..9751f63 100644
+--- a/linux-2.6.37-psp04.04.00.01/drivers/media/video/ti81xx/ti81xxvin_main.c
++++ b/linux-2.6.37-psp04.04.00.01/drivers/media/video/ti81xx/ti81xxvin_main.c
+@@ -414,7 +414,7 @@ static int ti81xxvin_update_std_info(struct ti81xxvin_instance_obj *inst,
+ 	struct v4l2_mbus_framefmt *mbus_framefmt)
+ {
+ 	struct ti81xxvin_buffer_obj *buf_obj = &inst->buf_obj;
+-	struct ti81xxvin_obj *vid_ch = &inst->video;
++	struct ti81xxvin_vid_obj *vid_ch = &inst->video;
+ 	struct ti81xxvin_buffer_params *buf_params_cfg;
+ 
+ 	ti81xxvin_dbg(2, debug, "ti81xxvin_update_std_info\n");
+@@ -1207,7 +1207,7 @@ static int vidioc_g_input(struct file *file, void *priv, unsigned int *index)
+ {
+ 	struct ti81xxvin_fh *fh = priv;
+ 	struct ti81xxvin_instance_obj *inst = fh->instance;
+-	struct ti81xxvin_obj *vid_ch = &inst->video;
++	struct ti81xxvin_vid_obj *vid_ch = &inst->video;
+ 
+ 	*index = vid_ch->input_idx;
+ 
+@@ -1227,7 +1227,7 @@ static int vidioc_s_input(struct file *file, void *priv, unsigned int index)
+ 	struct ti81xxvin_fh *fh = priv;
+ 	struct ti81xxvin_instance_obj *inst = fh->instance;
+ 	struct ti81xxvin_buffer_obj *buf_obj = &inst->buf_obj;
+-	struct ti81xxvin_obj *vid_ch = &inst->video;
++	struct ti81xxvin_vid_obj *vid_ch = &inst->video;
+ 	struct ti81xxvin_subdev_info *subdev_info;
+ 	int ret = 0, sd_index = 0;
+ 
+@@ -1288,6 +1288,10 @@ static int vidioc_query_dv_preset(struct file *file,
+ 	struct ti81xxvin_buffer_obj *buf_obj = &inst->buf_obj;
+ 	int ret = 0;
+ 	struct v4l2_mbus_framefmt mbus_framefmt;
++	struct ti81xxvin_config *config = ti81xxvin_dev->platform_data;
++	struct ti81xxvin_subdev_info *subdev_info;
++	int sd_index;
++
+ 
+ 	ti81xxvin_dbg(2, debug, "vidioc_query_dv_preset\n");
+ 
+@@ -1295,7 +1299,8 @@ static int vidioc_query_dv_preset(struct file *file,
+ 		return -ERESTARTSYS;
+ 
+ 	/* Call querystd function of decoder device */
+-	ret = v4l2_subdev_call(ti81xxvin_obj.sd[inst->curr_sd_index], video,
++	sd_index = inst->curr_sd_index;
++	ret = v4l2_subdev_call(ti81xxvin_obj.sd[sd_index], video,
+ 			query_dv_preset, qpreset);
+ 	if (ret < 0) {
+ 		ti81xxvin_dbg(1, debug, "Failed to set dv format"
+@@ -1306,7 +1311,7 @@ static int vidioc_query_dv_preset(struct file *file,
+ 	inst->video.cur_std_id = V4L2_STD_UNKNOWN;
+ 	inst->video.cur_dv_preset = *qpreset;
+ 
+-	ret = v4l2_subdev_call(ti81xxvin_obj.sd[inst->curr_sd_index], video,
++	ret = v4l2_subdev_call(ti81xxvin_obj.sd[sd_index], video,
+ 			g_mbus_fmt, &mbus_framefmt);
+ 	/* Get the information about the standard */
+ 	if (ti81xxvin_update_std_info(inst, &mbus_framefmt)) {
+@@ -1314,6 +1319,29 @@ static int vidioc_query_dv_preset(struct file *file,
+ 		ti81xxvin_err("Error getting the standard info\n");
+ 		goto vidioc_query_dv_preset_exit;
+ 	}
++	subdev_info = config->subdev_info;
++	if (subdev_info[sd_index].ti81xxvin_set_mode) {
++		switch (inst->video.cur_dv_preset.preset) {
++		case V4L2_DV_1080P60:
++		case V4L2_DV_1080P50:
++			ret = subdev_info[sd_index].ti81xxvin_set_mode(
++					FVID2_STD_1080P_60);
++		break;
++		case V4L2_DV_720P60:
++		case V4L2_DV_720P50:
++			ret = subdev_info[sd_index].ti81xxvin_set_mode(
++					FVID2_STD_720P_60);
++		break;
++		case V4L2_DV_1080I60:
++		case V4L2_DV_1080I50:
++			ret = subdev_info[sd_index].ti81xxvin_set_mode(
++					FVID2_STD_1080I_60);
++		break;
++		default:
++			ret = subdev_info[sd_index].ti81xxvin_set_mode(
++					FVID2_STD_1080P_60);
++		}
++	}
+ 	/* Configure the default format information according to the std
+ 	 * selected
+ 	 */
+@@ -1754,7 +1782,7 @@ static int vidioc_streamon(struct file *file, void *priv,
+ 	struct ti81xxvin_fh *fh = priv;
+ 	struct ti81xxvin_instance_obj *inst = fh->instance;
+ 	struct ti81xxvin_buffer_obj *buf_obj = &inst->buf_obj;
+-	struct ti81xxvin_obj *vid_ch;
++	struct ti81xxvin_vid_obj *vid_ch;
+ 	int ret = 0;
+ 	struct videobuf_buffer *vb;
+ 	u32 addr, offset;
+@@ -2145,7 +2173,7 @@ static int ti81xxvin_open(struct file *filep)
+ 	struct ti81xxvin_config *config = ti81xxvin_dev->platform_data;
+ 	struct video_device *vdev = video_devdata(filep);
+ 	struct ti81xxvin_buffer_obj *buf_obj;
+-	struct ti81xxvin_obj *vid_inst;
++	struct ti81xxvin_vid_obj *vid_inst;
+ 	struct ti81xxvin_instance_obj *inst;
+ 	struct ti81xxvin_fh *fh;
+ 	int i, ret = 0;
+diff --git a/linux-2.6.37-psp04.04.00.01/drivers/media/video/ti81xx/ti81xxvin_pvt.h b/linux-2.6.37-psp04.04.00.01/drivers/media/video/ti81xx/ti81xxvin_pvt.h
+index 8bc5243..b2428c5 100644
+--- a/linux-2.6.37-psp04.04.00.01/drivers/media/video/ti81xx/ti81xxvin_pvt.h
++++ b/linux-2.6.37-psp04.04.00.01/drivers/media/video/ti81xx/ti81xxvin_pvt.h
+@@ -85,7 +85,7 @@ struct ti81xxvin_buffer_params {
+ 	u32 bytesperline;		/* required bytes per line */
+ };
+ 
+-struct ti81xxvin_obj {
++struct ti81xxvin_vid_obj {
+ 	enum v4l2_field buf_field;
+ 	/* Currently selected or default dv standard */
+ 	struct v4l2_dv_preset cur_dv_preset;
+@@ -148,7 +148,7 @@ struct ti81xxvin_instance_obj {
+ 	/* buf_obj object array */
+ 	struct ti81xxvin_buffer_obj buf_obj;
+ 	/* video object */
+-	struct ti81xxvin_obj video;
++	struct ti81xxvin_vid_obj video;
+ 	struct vps_capt_ctrl *captctrl;
+ 	/* Flag to indicate whether FVID2_dequeue call can be made to
+ 	 * firware
+-- 
+1.7.0.4
+

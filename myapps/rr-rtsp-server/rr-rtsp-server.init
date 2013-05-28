@@ -1,0 +1,21 @@
+#!/bin/sh -e
+
+case "$1" in
+start)
+    echo "Starting RTSP server"
+    /usr/bin/rr_rtsp_server "( videotestsrc ! dmaienc_h264 copyOutput=true ! rtph264pay pt=96 name=pay0 )" &
+    ;;
+
+stop)
+    echo "Stoping RTSP server"
+    killall rr_rtsp_server
+    ;;
+
+*)
+    echo "Usage: /etc/init.d/rr_rtsp_server {start|stop}"
+    exit 1
+    ;;
+esac
+
+exit 0
+

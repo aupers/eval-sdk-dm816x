@@ -1,0 +1,78 @@
+include $(DEVDIR)/bsp/mach/Make.conf
+#Rules.make
+
+################# FIELDS MODIFIABLE BY RIDGERUN ###############################
+############### All the fields below are mandatory ############################
+# Set home area 
+HOME=$(DEVDIR)
+
+# Set installation folder (typically, OMAP35x_Graphics_***)
+GRAPHICS_INSTALL_DIR=$(HOME)/proprietary/graphics-sdk-4_04_00_02/sgxsdk
+
+# Location of demo executables and install information
+GFX_DEMOS_EXECPATH=$(GRAPHICS_INSTALL_DIR)/gfxsdkdemos
+
+# Toolchain path
+CSTOOL_DIR=$(CONFIG_TOOLCHAIN_PATH)
+CSTOOL_PREFIX=$(CSTOOL_DIR)/bin/arm-none-linux-gnueabi-
+CSTOOL_PATH=$(CSTOOL_DIR)/bin
+CSTOOL_LIBSTDC++_PATH=$(CSTOOL_DIR)/arm-none-linux-gnueabi/libc/usr/lib
+CROSS_COMPILE=$(CSTOOL_PREFIX)
+
+# Set the kernel installation path
+KERNEL_INSTALL_DIR=$(KERNELDIR)
+
+# Target NFS root file system location
+TARGETFS_INSTALL_DIR=$(FSROOT)
+
+######################### PRE-DEFINED VARIABLES ###############################
+######################## NOT MODIFIABLE BY USER ###############################
+
+PLATFORM=LinuxOMAP3
+
+GFX_OGLES_SDKPATH=$(GRAPHICS_INSTALL_DIR)/GFX_Linux_SDK/OGLES/SDKPackage
+
+GFX_OGLES2_SDKPATH=$(GRAPHICS_INSTALL_DIR)/GFX_Linux_SDK/OGLES2/SDKPackage
+
+GFX_OVG_SDKPATH=$(GRAPHICS_INSTALL_DIR)/GFX_Linux_SDK/OVG/SDKPackage
+
+GFX_REL_ES3_LIB_SRCPATH=$(GRAPHICS_INSTALL_DIR)/gfx_rel_es3.x
+
+GFX_DBG_ES3_LIB_SRCPATH=$(GRAPHICS_INSTALL_DIR)/gfx_dbg_es3.x
+
+GFX_REL_ES5_LIB_SRCPATH=$(GRAPHICS_INSTALL_DIR)/gfx_rel_es5.x
+
+GFX_DBG_ES5_LIB_SRCPATH=$(GRAPHICS_INSTALL_DIR)/gfx_dbg_es5.x
+
+GFX_REL_ES6_LIB_SRCPATH=$(GRAPHICS_INSTALL_DIR)/gfx_rel_es6.x
+
+GFX_DBG_ES6_LIB_SRCPATH=$(GRAPHICS_INSTALL_DIR)/gfx_dbg_es6.x
+
+GFX_REL_ES7_LIB_SRCPATH=$(GRAPHICS_INSTALL_DIR)/gfx_rel_es7.x
+
+GFX_DBG_ES7_LIB_SRCPATH=$(GRAPHICS_INSTALL_DIR)/gfx_dbg_es7.x
+
+GFX_REL_ES2_LIB_SRCPATH=$(GRAPHICS_INSTALL_DIR)/gfx_rel_es2.x
+
+GFX_DBG_ES2_LIB_SRCPATH=$(GRAPHICS_INSTALL_DIR)/gfx_dbg_es2.x
+
+GFX_OGLES_REL_LIB_DESTPATH=$(GFX_OGLES_SDKPATH)/Builds/OGLES/LinuxOMAP3
+
+GFX_OGLES2_REL_LIB_DESTPATH=$(GFX_OGLES2_SDKPATH)/Builds/OGLES2/LinuxOMAP3
+
+GFX_OVG_REL_LIB_DESTPATH=$(GFX_OVG_SDKPATH)/Builds/OVG/LinuxOMAP3
+
+GFX_KERNMOD_SRCPATH=$(GRAPHICS_INSTALL_DIR)/GFX_Linux_KM
+
+GFX_PKG_TARGETFS_PATH = $(GRAPHICS_INSTALL_DIR)/targetfs
+
+GFX_LIBRARY_TARGET_PATH = $(TARGETFS_INSTALL_DIR)/opt/gfxlibraries
+
+GFX_DEVMEM2_SRCPATH = $(GRAPHICS_INSTALL_DIR)/tools/devmem2
+
+# Where to copy the resulting executables and data to (when executing 'make
+# install') in a proper file structure. This EXEC_DIR should either be visible
+# from the target, or you will have to copy this (whole) directory onto the
+# target filesystem.
+EXEC_DIR=$(FSROOT)/opt/gfxsdkdemos
+################################################################################

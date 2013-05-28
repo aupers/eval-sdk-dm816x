@@ -1,0 +1,8 @@
+config FS_APPS_PYTHON_FLASK
+	bool "flask 0.9 (python)"
+	select FS_APPS_PYTHON
+	select FS_APPS_PYTHON_WERKZEUG
+	select FS_APPS_PYTHON_JINJA2
+	help
+	Flask is a lightweight web application framework written in Python.
+	Flask is based on the Werkzeug WSGI toolkit and Jinja2 template engine.

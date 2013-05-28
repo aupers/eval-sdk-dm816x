@@ -1,0 +1,155 @@
+#!/bin/sh
+# Tool to print all the files that are part of the RidgeRun
+# SDK build system
+# Todd Fischer 10/11/2012
+#
+# This tool is intended as an example to list most
+# of the files that are part of the RidgeRun SDK build system.
+# If a file is left out of FLIST, obviously this tool will not
+# properly list the file.
+
+#----------------------------------------------
+# usage
+#----------------------------------------------
+usage()
+{
+	echo
+	echo "usage:"
+	echo "  rrfiles [--help] [--debug] [--target <devdir>] [<cmd> <cmd-parms>*]"
+	echo
+
+	echo "This tool is intended to be used after a fresh development directory"
+	echo "has been created and the 'make src patched' command has been run."
+	echo "Do not run this tool on a development directory that has been built."
+	echo
+
+	echo "List all RidgeRun SDK build system files"
+	echo "   --help                  	Display this text"
+	echo "   --debug                  	Print commands before execution"
+	echo "   --target      <devdir>      	SDK development directory."
+	echo "                                     Uses \$DEVDIR if not specified"
+	echo "   <cmd> <cmd-parms>*             Command to run on each file.  In"
+	echo "                                     <cmd-parms> '{}' is replaced with the"
+	echo "                                     file name."
+	echo
+
+	echo "Examples:"
+	echo '   1) List all the files that are part of the RidgeRun SDK build system'
+	echo '          $DEVDIR/bsp/scripts/rrfiles'
+	echo '   2) Delete all files that are part of the RidgeRun SDK build system'
+	echo '          $DEVDIR/bsp/scripts/rrfiles rm -f {}'
+	echo '   3) Compare all build system files in two development directories'
+	echo '          $DEVDIR/bsp/scripts/rrfiles meld $DEVDIR/{} $HOME/work/sdk2/{}'
+	echo
+}
+
+# FLIST is the superset of all files from all architectures and machines.
+# 1) Some development directories will not have all these files.
+# 2) For a given directory, use two entries - one for file and one for subdirs
+# 3) Any match that contains /src/ is excluded
+# 4) No need to include symbolic links as the script lists those automatically
+# 5) No need to include patches directories as the script lists those automatically
+# 6) The script will filter out duplicates
+
+FLIST='
+Makefile
+bootloader/{Config,Makefile,metainfo}
+bootloader/u-boot-*/{Config.template,Makefile}
+bootloader/u-boot-*/ti-flash-utils/Makefile
+bsp
+documentation/doxygen.conf
+fs/{Config,Makefile,toolchain*}
+fs/{fstargets,overlay}
+fs/apps/Makefile
+fs/apps/*/{Apps.defs,Config,Makefile,metainfo,*.init*}
+fs/apps/*/extras_overlay
+fs/host-apps/{Config,Makefile,metainfo}
+fs/host-apps/*/{Apps.defs,Config,Makefile,metainfo,*.init*}
+installer
+kernel/{Config,Makefile,metainfo}
+myapps
+proprietary/{Config,Makefile,metainfo}
+proprietary/*/{Apps.defs,Config,*.init*,extras_overlay,Makefile,metainfo}
+toolchain
+'
+
+TARGET=$DEVDIR
+
+#----------------------------------------------
+# parse_options
+#----------------------------------------------
+parse_options()
+{
+while [ -n "$1" ] ; do
+	case "$1" in
+	--debug )
+                set -x
+                DEBUG=true
+                echo "DEBUG set"
+                shift
+                ;;
+
+	--help )
+		usage
+		exit -1
+		;;
+
+	--target )
+		shift
+		TARGET=$1
+		shift
+		;;
+	esac
+done
+}
+
+#----------------------------------------------
+# main
+#----------------------------------------------
+
+parse_options $*
+
+if [ -z "$TARGET" ] ; then
+	usage
+	echo "ERROR: must defined DEVDIR or specify --target option"
+	exit 1
+fi
+
+if [ ! -d "$TARGET" ] ; then
+	usage
+	echo "ERROR: target must be a directory: $TARGET"
+	exit 1
+fi
+
+if [ ! -f "$TARGET/bsp/classes/rrsdk.class" ] ; then
+	usage
+	echo "ERROR: target must be a RidgeRun SDK development directory: $TARGET"
+	exit 1
+fi
+
+# run all listing actions in a sub-process so we can filter the output
+(
+	cd $TARGET
+
+	# List all symbolic links
+	find . -type l
+
+	# List all files in a directory named patches
+	find . -name patches | xargs -I {} find {} -type f
+
+
+	# turn list of globbable files into an array
+	ALIST=($FLIST)
+
+	# To avoid sending too many parameters to ls, we loop passing
+	# one entry at a time.  Globbing 
+	#    [http://tldp.org/LDP/abs/html/globbingref.html] 
+	# didn't work unless I used eval.  The cat - causes one file per line.
+
+	for (( I = 0; I < ${#ALIST[@]}; I += 1)); do 
+		ls -d `eval echo ${ALIST[$I]}` 2> /dev/null | xargs -I {} find {} -not -type d
+	done
+) | sed -e 's!^./!!' | fgrep -v /.svn | fgrep -v /src/ |sort | uniq
+
+
+#echo ${ALIST[@]}

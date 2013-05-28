@@ -1,0 +1,9 @@
+#!/bin/sh
+
+echo "RidgeRun SysV init..."
+
+for i in `ls /etc/rc.d/S* 2>/dev/null` ; do
+    if [ -e $i ] ; then
+	$i start 2>/dev/null  || echo "SysV Init WARNING: Error while running $i..." ;
+    fi ;
+done

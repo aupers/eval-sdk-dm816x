@@ -1,0 +1,25 @@
+include $(CLASSES)/autotools.class
+include $(CLASSES)/flags.defs
+
+GSTREAMER_VERSION?=gstreamer-0.10
+
+install:: gstplugin_install
+	$(V) $(ECHO) "Installing generated gstreamer plugins...";
+	$(V) for i in `cat gstplugin_install` ; do \
+	  install -m 755 $$i $(FSROOT)/usr/lib/$(GSTREAMER_VERSION)/ ; \
+	  echo Installing `basename $$i` $(QOUT) ; \
+	done
+
+gstplugin_install: $(INSTALLED_FLAGS)
+	$(V) $(ECHO) "Discovering generated gstreamer plugins...";
+	$(V) rm -f gstplugin_install
+	$(V) for i in `find $(AUTOTOOLS_BUILD_DIR) -name *la` ; do \
+	  if grep -q "libdir='.*/usr/lib/$(GSTREAMER_VERSION)'" $$i && \
+	     [[ $$i =~ "/.libs/" ]] && \
+	     [ -f $(FSDEVROOT)/usr/lib/$(GSTREAMER_VERSION)/`basename $$i .la`.so ] ; then \
+	    echo $(FSDEVROOT)/usr/lib/$(GSTREAMER_VERSION)/`basename $$i .la`.so >> gstplugin_install ; \
+	  fi ; \
+	done
+
+clean::
+	$(V) rm -Rf gstplugin_install

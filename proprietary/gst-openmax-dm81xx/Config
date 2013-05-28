@@ -1,0 +1,6 @@
+config PROPRIETARY_GST_OMX_DM81XX
+	bool "gst-openmax-dm81xx"
+	select PROPRIETARY_LIBOMX_DM81XX
+	depends on PROPRIETARY_TI_CODECENGINE_DM8168 || PROPRIETARY_TI_CODECENGINE_DM8148
+	help
+	    Gst OpenMax plugin for dm81xx platform

@@ -1,0 +1,11 @@
+#!/bin/sh
+
+if test -x /sbin/mdev ; then
+    # Populate the device tree
+    /sbin/mdev -s
+
+    # Set mdev as hotplug manager
+    echo "/sbin/mdev" > /sys/kernel/uevent_helper
+else
+    echo /sbin/mdev not found or not executable
+fi

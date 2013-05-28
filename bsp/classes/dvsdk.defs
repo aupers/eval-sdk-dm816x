@@ -1,0 +1,703 @@
+#
+# Makefile rules to dealing with typical dvsdk logic
+#
+
+#! \defgroup dvsdk_defs DVSDK Class
+#! \ingroup classes
+#! \section intro Introduction
+#! The DVSDK definitions file provides logic dealing with typical dvsdk logic.
+#!
+#! \section public_params Public Parameters
+#! The following is a list of parameters that may be set according to an application's specific requirements.
+#! <ul>
+#! <li>
+#! <b>FORCE_DVSDK_COPY:</b> set to yes if you want to force the SDK into copying the DVSDK inside the RidgeRun SDK.
+#! This is useful if you are sharing your DVSDK between multiple development environments. Defaults to no.
+#!
+#! <li>
+#! <b>DVSDK_COPY_EXCLUSIONS_PATTERNS:</b> This are the files that should not be copied from the DVSDK to save disk space.
+#! This variable is usually defined by the DVSDK class file for the specific files on the DVSDK version. Only relevant
+#! if FORCE_DVSDK_COPY=yes
+#!
+#! <li>
+#! <b>DVSDKURL:</b> URL from which the user can obtain a copy of the required DVSDK.
+#!
+#! <li>
+#! <b>RULES_MAKE:</b> Location of the Rules.make file within the dvsdk directory for integrity checking.
+#!
+#! <li>
+#! <b>DVSDK_SEARCH_PATH:</b> List of paths in which to look for a valid DVSDK within the host machine.
+#!
+#! <li>
+#! <b>DSVSK_VERIFICATION_FILE:</b> File within the found dvsdk directory to check for its integrity.
+#!
+#! </ul>
+
+export BUILDING_FROM_RR_SDK=yes
+
+# Variables that control DVSDK interaction
+ifeq ($(DVSDK_NAME),)
+$(error ====== DVSDK_NAME variable isn't defined on RidgeRun's dvsdk makefile =====)
+endif
+DVSDKURL?=http://software-dl.ti.com/dsps/dsps_public_sw/sdo_sb/targetcontent/dvsdk/index.html
+RULES_MAKE?=$(FETCHER_EXTRACT_DIRECTORY_NAME)/Rules.make
+-include $(RULES_MAKE)
+
+# Variables that control DVSDK search
+DVSDK_SEARCH_PATH?=$(HOME)/$(DVSDK_NAME) /usr/$(DVSDK_NAME)  /usr/local/$(DVSDK_NAME) /usr/local/dvsdk
+DSVSK_VERIFICATION_FILE?=Rules.make
+
+#============================================================================================
+# Search for an existing DVSDK tarball or create one from an existing DVSDK installation.
+#============================================================================================
+
+# Fetcher variables needed to be defined
+PKG_NAME=$(DVSDK_NAME)
+FETCHER_EXTRACT_DIRECTORY_NAME=dvsdk
+
+# This variable is usually overwriten by the dvsdk class file with the respective values for the DVSDK version
+DVSDK_TARBALL_EXCLUSIONS_PATTERNS?=bin docs etc example-applications filesystem gstreamer-ti_svn* linux-devkit psp usr
+
+# DVSDK tarball name
+DVSDK_TARBALL_NAME?=$(PKG_TARBALL)
+DVSDK_TARBALL_SHA1_NAME?=$(PKG_TARBALL).sha1
+
+# Obtains info from the DVSDK tarball:
+#
+#   DVSDK_TARBALL_EXISTS
+#     - Set to 'yes' if the tarball exists. Otherwise
+#       'no'.
+#   DVSDK_TARBALL_SHA1_EXISTS
+#     - Set to 'yes' if the tarball sha1sum exists. Otherwise
+#       'no'.
+#   DVSDK_TARBALL_DIR
+#     - Set to the directory listed in DOWNLOADS,
+#       where the DVSDK tarball was found. Otherwise
+#       empty.
+#
+define dvsdk_tarball_info
+  DVSDK_TARBALL_EXISTS=no ; \
+  DVSDK_TARBALL_SHA1_EXISTS=no ; \
+  DVSDK_TARBALL_DIR= ; \
+  for path in $(DOWNLOADS); do \
+    if [ -e $$path/$(DVSDK_TARBALL_NAME) ] ; then \
+      DVSDK_TARBALL_EXISTS=yes ; \
+      DVSDK_TARBALL_DIR=$$path ; \
+      if [ -e $$path/$(DVSDK_TARBALL_SHA1_NAME) ] ; then \
+        DVSDK_TARBALL_SHA1_EXISTS=yes ; \
+      fi ; \
+      break ; \
+    fi ; \
+  done
+endef
+
+# Sets DVSDK_TARBALL_TARGET_DIR to a directory listed in DOWNLOADS, where the
+# dvsdk tarball will be placed. If no appropriate directory was found,
+# DVSDK_TARBALL_TARGET_DIR will be empty
+#
+define dvsdk_tarball_target_dir
+  DVSDK_TARBALL_TARGET_DIR= ; \
+  for path in $(DOWNLOADS); do \
+    if [ -e $$path -a -w $$path ] ; then \
+      DVSDK_TARBALL_TARGET_DIR=$$path ; \
+      break ; \
+    fi ; \
+  done
+endef
+
+# Creates a tarball with only a subset of the DVSDK files, according
+# to the exclude patterns specified in DVSDK_TARBALL_EXCLUSION_PATTERNS.
+#
+# The output is a gzip compressed file, which name is defined by
+# $(DVSDK_TARBALL_NAME).
+#
+# Side effects:
+#   - Changes directory to $(1) (cd $(1)), and does not return to the
+#     previous directory.
+#
+# Parameters:
+#   $(1): Absolute path to where the DVSDK is located
+#   $(2): Absolute path where to put the DVSDK tarball
+#
+define dvsdk_tarball_create
+  cd $(1) && \
+  tar --no-same-permissions \
+      --atime-preserve \
+      --null \
+      --absolute-names \
+      --exclude-vcs \
+      --exclude=.svn \
+      --exclude=.git \
+      --exclude=\*~ \
+      $(foreach exclusion,$(DVSDK_TARBALL_EXCLUSIONS_PATTERNS),--exclude=$(DVSDK_NAME)/$(exclusion)) \
+      --create \
+      --gzip \
+      --file=$(2)/$(DVSDK_TARBALL_NAME) \
+      ../`basename $(1)`  \
+  || \
+      { \
+        $(ECHO) "$(ERROR_COLOR)Error:$(NORMAL_COLOR) while creating $(2)/$(DVSDK_TARBALL_NAME)" ; \
+        rm -f $(2)/$(DVSDK_TARBALL_NAME) ; \
+        exit -1 ; \
+      } 
+endef
+
+# Tars the dvsdk source code
+#
+define dvsdk_tar
+  DVSDK_FOUND_INSTALLATION_DIR=no ; \
+  for PATH2TEST in $(DVSDK_SEARCH_PATH); do \
+      if [ -e $$PATH2TEST/$(DVSDK_VERIFICATION_FILE) ] ; then  \
+         \
+         if [ ! -w $$PATH2TEST ] ; then \
+            $(ECHO) "$(ERROR_COLOR)Error:$(NORMAL_COLOR) Found a dvsdk on $$PATH2TEST, but can't write into it" ; \
+            $(ECHO) "Please grant write permissions to the dvsdk directory to continue.\n" ; \
+            exit -1 ; \
+         fi ; \
+         \
+         if [ -f $$PATH2TEST/rrsdk_path ] ; then \
+             $(ECHO) "$(ERROR_COLOR)Error:$(NORMAL_COLOR) Found a dvsdk on $$PATH2TEST, but is currently on use by another RidgeRun SDK at path:" ; \
+             $(ECHO) "  `cat $$PATH2TEST/rrsdk_path`\n" ; \
+             exit -1 ; \
+         fi ; \
+         \
+         $(ECHO) "Found DVSDK at $$PATH2TEST" ; \
+         DVSDK_FOUND_INSTALLATION_DIR=yes ; \
+         \
+         $(call dvsdk_tarball_target_dir) ; \
+         \
+         if [ -z $$DVSDK_TARBALL_TARGET_DIR ] ; then \
+             $(ECHO) "$(ERROR_COLOR)Error:$(NORMAL_COLOR) Unable to find a folder suitable to put the DVSDK tarball:" ; \
+             for PATH2DOWNLOADS in $(DOWNLOADS); do \
+               $(ECHO) "  * $$PATH2DOWNLOADS" ; \
+             done ; \
+             $(ECHO) "\nPlease create and grant write permissions to one of the previous paths.\n" ; \
+             exit -1 ; \
+         fi ; \
+         \
+         pushd . > /dev/null ; \
+         \
+         $(ECHO) "Creating DVSDK tarball at $$DVSDK_TARBALL_TARGET_DIR/$(DVSDK_TARBALL_NAME)" ; \
+         $(call dvsdk_tarball_create,$$PATH2TEST,$$DVSDK_TARBALL_TARGET_DIR) ; \
+         \
+         $(ECHO) "Generating DVSDK tarball sha1sum $$DVSDK_TARBALL_TARGET_DIR/$(DVSDK_TARBALL_SHA1_NAME)" ; \
+         cd $$DVSDK_TARBALL_TARGET_DIR ; \
+         sha1sum $(DVSDK_TARBALL_NAME) > $$DVSDK_TARBALL_TARGET_DIR/$(DVSDK_TARBALL_SHA1_NAME) ; \
+         \
+         popd  > /dev/null ; \
+         \
+         break ; \
+      fi ;  \
+  done ; \
+  \
+  if [ "$$DVSDK_FOUND_INSTALLATION_DIR" = "no" ] ; then \
+    $(ECHO) "$(ERROR_COLOR)Error:$(NORMAL_COLOR) DVSDK $(DVSDK_NAME) wasn't found on the following search paths:" ; \
+    for PATH2TEST in $(DVSDK_SEARCH_PATH); do \
+      $(ECHO) "* $$PATH2TEST" ; \
+    done ; \
+    $(ECHO) "\nThe DVSDK should be installed in one of the previous paths.\nYou can download the DVSDK from the following URL:" ; \
+    $(ECHO) " $(GREEN)$(DVSDKURL)$(NORMAL_COLOR)\n" ; \
+    exit -1 ; \
+  fi 
+endef
+
+# Logic to create the dvsdk tarball manually
+#
+dvsdk_create_tar:
+	$(V) $(call dvsdk_tar)
+
+# Logic to obtain the dvsdk source code
+#
+dvsdk: dvsdk_fetch
+
+dvsdk_fetch:
+	$(V) $(call dvsdk_tarball_info) ; \
+	if [ "$$DVSDK_TARBALL_EXISTS" = "yes" ] ; then \
+	  if [ "$$DVSDK_TARBALL_SHA1_EXISTS" = "no" ] ; then \
+	    $(ECHO) "$(ERROR_COLOR)Error:$(NORMAL_COLOR) missing required sha1sum file: $$DVSDK_TARBALL_DIR/$(DVSDK_TARBALL_SHA1_NAME)" ; \
+	    exit -1 ; \
+	  fi ; \
+	elif [ -z "$(PKG_URL)" ] && [ -z "$(PKG_INTERNAL_URL)" ] ; then \
+	    $(call dvsdk_tar) ; \
+	fi ; \
+	\
+	$(MAKE) rrfetched ; \
+	\
+	if [ ! -e rrfetched ] ; then \
+	    $(ECHO) "\n" ; \
+	    $(ECHO) "$(GREEN)Attempting$(NORMAL_COLOR) to generate $(DVSDK_TARBALL_NAME)" ; \
+	    $(call dvsdk_tar) ; \
+	    $(MAKE) rrfetched ; \
+	fi
+
+dvsdk_patched: custom_rules_make rrsdk_patched
+
+src: dvsdk
+	$(V)ln -s dvsdk src
+
+rrconfig: custom_rules_make rrpatched
+
+custom_rules_make:
+	$(V) if ! [ -L $(RULES_MAKE) ] ; then \
+	    mv $(RULES_MAKE) $(RULES_MAKE).orig ; \
+	    ln -s $(shell pwd)/patches/arch/Rules.make.custom $(RULES_MAKE) ; \
+	fi
+
+dvsdk_clean: unpatch
+
+dvsdk_distclean: 
+	@#We should not clean if we are going to erase the files anyway, unlike when we are sharing the dir
+	$(V) if [ -L $(FETCHER_EXTRACT_DIRECTORY_NAME) ] ; then \
+	    $(MAKE) dvsdk_clean ; \
+	fi
+	$(V) rm -rf dvsdk/rrsdk_path dvsdk $(FETCHER_EXTRACT_DIRECTORY_NAME)
+
+dvsdk_cmdline:
+ifneq ($(CONFIG_PROPRIETARY_DVSDK_RESERVED_MEMORY),)
+	$(V) # We need to reserve $(CONFIG_PROPRIETARY_DVSDK_CMEM_RESERVED_MEMORY) for cmemk.ko
+	$(V) declare -i MSIZE="($(CONFIG_BSP_ARCH_SDRAM_SIZE)-$(CONFIG_PROPRIETARY_DVSDK_MEM_VALUE))/0x100000" ; \
+	if ! grep -q "mem=" $(CMDLINEFILE) ; then \
+	    echo -n " mem=$${MSIZE}M " >>$(CMDLINEFILE) ; \
+	else \
+	    sed -i -e "s/mem=.*M/mem=$${MSIZE}M/" $(CMDLINEFILE) ; \
+	fi
+endif
+
+#============================================================================================
+# cmem targets. Compile - install and uninstall the cmem module into the kernel
+#============================================================================================
+
+.PHONY: cmem_v4 cmem_v4_install
+cmem_v4: cmem_build
+cmem_v4_install: cmem_install
+cmem_v4_uninstall: cmem_uninstall
+cmem_v4_clean: cmem_clean
+
+.PHONY: cmem_install
+
+cmem_build:
+	$(V)$(MAKE) -C $(CMEM_INSTALL_DIR)/packages/ti/sdo/linuxutils/cmem/src/interface ../../lib/cmem.a470MV $(QOUT)
+ifneq ($(CONFIG_PROPRIETARY_TI_CMEM_DEBUG),)
+	$(V)$(MAKE) -C $(CMEM_INSTALL_DIR)/packages/ti/sdo/linuxutils/cmem/src/interface ../../lib/cmemd.a470MV $(QOUT)
+endif
+	$(V)$(MAKE) -C $(CMEM_INSTALL_DIR)/packages/ti/sdo/linuxutils/cmem/src/module release $(QOUT) $(ERRQOUT)
+	$(V) touch $@
+
+cmem_clean:
+	$(V)$(MAKE) -C $(CMEM_INSTALL_DIR)/packages/ti/sdo/linuxutils/cmem/src/module clean
+	$(V)$(MAKE) -C $(CMEM_INSTALL_DIR)/packages/ti/sdo/linuxutils/cmem/src/interface clean
+	$(V) rm -f cmem_build
+
+cmem_install:
+	$(V)install -d $(FSROOT)/lib/modules/$(KERNELVERSION)/kernel/drivers/dsp
+	$(V)install $(CMEM_INSTALL_DIR)/packages/ti/sdo/linuxutils/cmem/src/module/cmemk.ko $(FSROOT)/lib/modules/$(KERNELVERSION)/kernel/drivers/dsp
+
+cmem_uninstall:
+	$(V) rm -f $(FSROOT)/lib/modules/$(KERNELVERSION)/kernel/drivers/dsp/cmemk.ko
+
+#============================================================================================
+# Targets to build, install and clean the SDMA for the configured platform
+#============================================================================================
+
+sdma_v4: sdma_build
+sdma_v4_install: sdma_install
+sdma_v4_uninstall: sdma_uninstall
+sdma_v4_clean: sdma_clean
+
+.PHONY: sdma_install
+
+sdma_build:
+	$(V)$(MAKE) -C $(LINUXUTILS_INSTALL_DIR)/packages/ti/sdo/linuxutils/sdma/src/module release RULES_MAKE=$(PWD)/$(RULES_MAKE) $(QOUT) $(ERRQOUT)
+	$(V) touch $@
+
+sdma_clean:
+	$(V)$(MAKE) -C $(LINUXUTILS_INSTALL_DIR)/packages/ti/sdo/linuxutils/sdma/src/module clean RULES_MAKE=$(PWD)/$(RULES_MAKE)
+	$(V) rm -f sdma_build
+
+sdma_install:
+	$(V)install -d $(FSROOT)/lib/modules/$(KERNELVERSION)/kernel/drivers/dsp
+	$(V)install $(LINUXUTILS_INSTALL_DIR)/packages/ti/sdo/linuxutils/sdma/src/module/sdmak.ko $(FSROOT)/lib/modules/$(KERNELVERSION)/kernel/drivers/dsp
+
+sdma_uninstall:
+	$(V)rm -f $(FSROOT)/lib/modules/$(KERNELVERSION)/kernel/drivers/dsp/sdmak.ko
+
+#============================================================================================
+# Targets to build, install and clean the LPM for the configured platform
+#============================================================================================
+
+lpm_v4: lpm_build
+lpm_v4_install: lpm_install
+lpm_v4_uninstall: lpm_uninstall
+lpm_v4_clean: lpm_clean
+
+.PHONY: lpm_install
+
+lpm_build:
+	$(V)$(MAKE) -C $(LPM_INSTALL_DIR)/packages/ti/bios/power/modules/omap3530/lpm \
+	LINUXKERNEL_INSTALL_DIR=$(LINUXKERNEL_INSTALL_DIR) MVTOOL_PREFIX=$(CSTOOL_PREFIX) DSPLINK_REPO=$(LINK_INSTALL_DIR) $(QOUT)
+	$(V) touch $@
+
+lpm_clean:
+	$(V)if [ -e $(LINUXKERNEL_INSTALL_DIR) ] ; then \
+		$(MAKE) -C $(LPM_INSTALL_DIR)/packages/ti/bios/power/modules/omap3530/lpm \
+		LINUXKERNEL_INSTALL_DIR=$(LINUXKERNEL_INSTALL_DIR) MVTOOL_PREFIX=$(CSTOOL_PREFIX) DSPLINK_REPO=$(LINK_INSTALL_DIR) clean ; \
+	fi
+	$(V)rm -f lpm_build;
+	
+lpm_install:
+	$(V)install -d $(FSROOT)/lib/modules/$(KERNELVERSION)/kernel/drivers/dsp
+	$(V)install $(LPM_INSTALL_DIR)/packages/ti/bios/power/modules/omap3530/lpm/lpm_omap3530.ko $(FSROOT)/lib/modules/$(KERNELVERSION)/kernel/drivers/dsp
+
+lpm_uninstall:
+	$(V)rm -f $(FSROOT)/lib/modules/$(KERNELVERSION)/kernel/drivers/dsp/lpm_omap3530.ko
+
+#============================================================================================
+# Build and install targets for DSP link and dsplink samples
+#============================================================================================
+
+dsplink_v4: dsplink_build
+dsplink_v4_install: dsplink_install
+dsplink_v4_uninstall: dsplink_uninstall
+dsplink_v4_clean: dsplink_clean
+dpslink_samples_v4: dsplink_samples_build
+dsplink_samples_v4_install: dsplink_samples_install
+dsplink_samples_v4_uninstall: dsplink_samples_uninstall
+dsplink_samples_v4_clean: dsplink_samples_clean
+
+.PHONY: dsplink_install dsplink_samples_install
+export DSPLINK=$(LINK_INSTALL_DIR)/dsplink
+
+dsplink_build: dsplink_cfg dsplink_arm dsplink_dsp dsplink_dsp_genpackage dsplink_gpp_genpackage 
+	$(V) touch $@
+
+dsplink_cfg:
+	$(V) $(MAKE) -C $(FETCHER_EXTRACT_DIRECTORY_NAME) $@ $(QOUT) $(ERRQOUT)
+	$(V) touch $@
+
+dsplink_arm: dsplink_cfg
+	$(V) $(MAKE) -C $(DSPLINK)/gpp/src \
+	CROSS_COMPILE=$(CSTOOL_PREFIX) \
+	CC=$(CSTOOL_PREFIX)gcc \
+	COMPILER=$(CSTOOL_PREFIX)gcc \
+	ARCHIVER=$(CSTOOL_PREFIX)ar \
+	AR=$(CSTOOL_PREFIX)ar \
+	LD=$(CSTOOL_PREFIX)ld \
+	KERNEL_DIR=$(LINUXKERNEL_INSTALL_DIR) \
+	BASE_BUILDOS=$(LINUXKERNEL_INSTALL_DIR) \
+	all $(QOUT) $(ERRQOUT)
+	$(V) touch $@
+
+dsplink_arm_clean:
+ifeq ($(FIND_DSPLINKCONFIG), $(DSPLINK)/config/BUILD/CURRENTCFG.MK)
+	$(V) $(MAKE) -C $(DSPLINK)/gpp/src \
+	CROSS_COMPILE=$(CSTOOL_PREFIX) \
+	CC=$(CSTOOL_PREFIX)gcc \
+	AR=$(CSTOOL_PREFIX)ar \
+	LD=$(CSTOOL_PREFIX)ld \
+	COMPILER=$(CSTOOL_PREFIX)gcc \
+	ARCHIVER=$(CSTOOL_PREFIX)ar \
+	KERNEL_DIR=$(LINUXKERNEL_INSTALL_DIR) \
+	BASE_BUILDOS=$(LINUXKERNEL_INSTALL_DIR) \
+	clean $(QOUT)
+endif
+	$(V) rm -f dsplink_arm
+
+dsplink_dsp: dsplink_cfg
+	$(V) $(MAKE) -C $(DSPLINK)/dsp/src \
+	BASE_CGTOOLS=$(CODEGEN_INSTALL_DIR) \
+	BASE_SABIOS=$(BIOS_INSTALL_DIR) \
+	all $(QOUT)
+	$(V) touch $@
+
+dsplink_dsp_clean:
+ifeq ($(FIND_DSPLINKCONFIG), $(DSPLINK)/config/BUILD/CURRENTCFG.MK)
+	$(V) $(MAKE) -C $(DSPLINK)/dsp/src \
+	BASE_CGTOOLS=$(CODEGEN_INSTALL_DIR) \
+	BASE_SABIOS=$(BIOS_INSTALL_DIR) \
+	clean $(QOUT)
+endif
+	$(V) rm -f dsplink_dsp
+
+dsplink_dsp_genpackage:
+	$(V) $(XDC_INSTALL_DIR)/xdc -C $(DSPLINK)/dsp clean $(QOUT)
+	$(V) $(XDC_INSTALL_DIR)/xdc -C $(DSPLINK)/dsp .interfaces $(QOUT)
+	$(V) touch $@
+
+dsplink_gpp_genpackage:
+	$(V) $(XDC_INSTALL_DIR)/xdc -C $(DSPLINK)/gpp clean $(QOUT)
+	$(V) $(XDC_INSTALL_DIR)/xdc -C $(DSPLINK)/gpp .interfaces $(QOUT)
+	$(V) touch $@
+
+dsplink_clean: dsplink_arm_clean dsplink_dsp_clean
+	$(V) XDCPATH=$(DSPLINK) $(XDC_INSTALL_DIR)/xdc .make -PR $(DSPLINK) $(QOUT)
+	$(V) XDCPATH=$(DSPLINK) $(XDC_INSTALL_DIR)/xdc clean -PR $(DSPLINK) $(QOUT)
+	$(V) XDCPATH=$(DSPLINK) $(XDC_INSTALL_DIR)/xdc .interfaces -PR $(DSPLINK) $(QOUT)
+	$(V) rm -f dsplink_*
+
+ifeq ($(DVSDK_PLATFORM),dm3730)
+DSPLINK_BINARY_DIR=OMAP3530
+endif
+ifeq ($(DVSDK_PLATFORM),omap35x)
+DSPLINK_BINARY_DIR=OMAP3530
+endif
+ifeq ($(DVSDK_PLATFORM),dm6446)
+DSPLINK_BINARY_DIR=DAVINCI
+endif
+ifeq ($(DVSDK_PLATFORM),dm365)
+DSPLINK_BINARY_DIR=undefined
+endif
+ifeq ($(DVSDK_PLATFORM),dm368)
+DSPLINK_BINARY_DIR=undefined
+endif
+ifeq ($(DVSDK_PLATFORM),omapl138)
+DSPLINK_BINARY_DIR=OMAPL138
+endif
+ifeq ($(DSPLINK_BINARY_DIR),)
+$(error There is no definition for the DSPLINK_BINARY_DIR for this platform, please add it)
+endif
+
+dsplink_install:
+	$(V) install -d $(FSROOT)/lib/modules/$(KERNELVERSION)/kernel/drivers/dsp
+	$(V) install $(DSPLINK)/gpp/export/BIN/Linux/$(DSPLINK_BINARY_DIR)/RELEASE/dsplinkk.ko $(FSROOT)/lib/modules/$(KERNELVERSION)/kernel/drivers/dsp
+
+dsplink_uninstall:
+	$(V) rm -f $(FSROOT)/lib/modules/$(KERNELVERSION)/kernel/drivers/dsp/dsplinkk.ko
+
+dsplink_samples_build:
+	$(V) $(MAKE) -C $(FETCHER_EXTRACT_DIRECTORY_NAME) dsplink_samples $(QOUT)
+	$(V) touch $@
+
+dsplink_samples_clean:
+	$(V) $(MAKE) -C $(FETCHER_EXTRACT_DIRECTORY_NAME) $@ $(QOUT)
+	$(V) rm -f dsplink_samples_build
+
+dsplink_samples_install:
+	$(V) install -d $(FSROOT)/usr/share/ti/ti-dsplink-examples
+	$(V) cp $(DSPLINK)/gpp/export/BIN/Linux/$(DSPLINK_BINARY_DIR)/RELEASE/*gpp $(FSROOT)/usr/share/ti/ti-dsplink-examples
+	$(V) for file in $(shell find $(DSPLINK)/dsp/export -name *.out); do \
+	    cp $$file $(FSROOT)/usr/share/ti/ti-dsplink-examples ; \
+	done
+
+dsplink_samples_uninstall:
+	$(V) rm -rf $(FSROOT)/usr/share/ti/ti-dsplink-examples
+
+#============================================================================================
+# Targets to build, install and clean the c6accel for the configured platform
+#============================================================================================
+
+c6accel_v4: c6accel_build
+c6accel_v4_install: c6accel_install
+c6accel_v4_uninstall: c6accel_uninstall
+c6accel_v4_clean: c6accel_clean
+
+.PHONY: c6accel_install
+
+c6accel_build:
+	$(V) $(MAKE) -C $(FETCHER_EXTRACT_DIRECTORY_NAME) c6accel $(QOUT) $(ERRQOUT)
+	$(V) touch $@
+
+c6accel_clean:
+	$(V) $(MAKE) -C $(FETCHER_EXTRACT_DIRECTORY_NAME) $@ $(QOUT) $(ERRQOUT)
+	$(V) rm -f c6accel_build
+
+# By default do not install the c6accel samples
+c6accel_install:
+	#$(V) $(MAKE) -C $(FETCHER_EXTRACT_DIRECTORY_NAME) $@ $(QOUT)
+
+c6accel_uninstall:
+	$(V)rm -rf $(FSROOT)/usr/share/ti/c6accel-apps
+
+#============================================================================================
+# Build the Davinci Multimedia Application Interface for the configured platform
+#============================================================================================
+
+# This variable is exported to be accessible from all Makefiles within the DVSDK
+export CONFIG_PROPRIETARY_TI_DMAI_DEMOS
+
+dmai_v4: dmai_build
+dmai_v4_install: dmai_install
+dmai_v4_uninstall: dmai_uninstall
+dmai_v4_clean: dmai_clean
+
+.PHONY: dmai_install
+
+dmai_build:
+	$(V) $(MAKE) -C $(FETCHER_EXTRACT_DIRECTORY_NAME) dmai $(QOUT) $(ERRQOUT)
+	$(V) touch $@
+
+dmai_clean:
+	$(V) $(MAKE) -C $(FETCHER_EXTRACT_DIRECTORY_NAME) $@ $(QOUT) $(ERRQOUT)
+	$(V) rm -f dmai_build
+
+dmai_install:
+	$(V) $(MAKE) -C $(FETCHER_EXTRACT_DIRECTORY_NAME) $@ $(QOUT)
+
+dmai_uninstall:
+	$(V)rm -rf $(FSROOT)/usr/share/ti/ti-dmai-apps
+
+#============================================================================================
+# Build the Codec Engine package for the configured platform
+#============================================================================================
+
+codec_engine: ce_build
+codec_engine_install: ce_install
+codec_engine_uninstall: ce_uninstall
+codec_engine_clean: ce_clean
+
+.PHONY: ce_install
+
+# rebuild codec engine if the needed Makefile is present
+
+ce_check_for_rebuild: $(if $(wildcard dvsdk/codec-engine*/Makefile),ce_build,)
+ce_check_for_rebuild_clean: $(if $(wildcard dvsdk/codec-engine*/Makefile),ce_clean,)
+ce_check_for_rebuild_install:
+ce_check_for_rebuild_uninstall:
+
+ce_build:
+	# first do a clean since dvsdk comes with codec engine pre-built
+	$(V) $(MAKE) -C $(FETCHER_EXTRACT_DIRECTORY_NAME) ce_clean $@ $(QOUT) $(ERRQOUT)
+	$(V) touch $@
+
+ce_clean:
+	$(V) $(MAKE) -C $(FETCHER_EXTRACT_DIRECTORY_NAME) $@ $(QOUT) $(ERRQOUT)
+	$(V) rm -f ce_build
+
+ce_install:
+
+ce_uninstall:
+
+#============================================================================================
+# Targets to build, install and clean codecs for the configured platform
+#============================================================================================
+
+codecs_v4: codecs_build
+codecs_v4_install: codecs_install
+codecs_v4_uninstall: codecs_uninstall
+codecs_v4_clean: codecs_clean
+
+.PHONY: codecs_install
+
+codecs_build:
+	$(V) $(MAKE) -C $(FETCHER_EXTRACT_DIRECTORY_NAME) codecs_clean $(QOUT)
+	$(V) $(MAKE) -C $(FETCHER_EXTRACT_DIRECTORY_NAME) codecs $(QOUT)
+	$(V) touch $@
+
+codecs_clean:
+	$(V) $(MAKE) -C $(FETCHER_EXTRACT_DIRECTORY_NAME) $@ $(QOUT) $(ERRQOUT)
+	$(V) rm -f codecs_build
+
+codecs_install:
+	$(V) $(MAKE) -C $(FETCHER_EXTRACT_DIRECTORY_NAME) $@ $(QOUT)
+
+codecs_uninstall:
+	$(V)rm -rf $(FSROOT)/usr/share/ti/codecs-server
+
+#============================================================================================
+# Build the dm365mm kernel module (if the configured platform is dm365). Also,
+# an explicit cleanup target is defined.cmem targets. Compile - install and uninstall the cmem module into the kernel
+#===========================================================================================
+
+.PHONY: dm365mm_v4 dm365mm_v4_install
+dm365mm_v4: dm365mm_build
+dm365mm_v4_install: dm365mm_install
+dm365mm_v4_uninstall: dm365mm_uninstall
+dm365mm_v4_clean: dm365mm_clean
+
+.PHONY: dm365mm_install
+
+dm365mm_build:
+	$(V) $(MAKE) -C $(FETCHER_EXTRACT_DIRECTORY_NAME) dm365mm $(QOUT) $(ERRQOUT)
+	$(V) touch $@
+
+dm365mm_clean:
+	$(V) $(MAKE) -C $(FETCHER_EXTRACT_DIRECTORY_NAME) $@ $(QOUT) $(ERRQOUT)
+	$(V) rm -f dm365mm_build
+
+dm365mm_install:
+	$(V) $(MAKE) -C $(FETCHER_EXTRACT_DIRECTORY_NAME) dm365mm_install
+
+dm365mm_uninstall:
+	$(V) rm -f $(FSROOT)/lib/modules/$(KERNELVERSION)/kernel/drivers/dsp/dm365mmap.ko
+
+#==============================================================================
+# Build the irq kernel module for the configured platform, and make sure the
+# kernel_binaries directory is kept in sync. Also, an explicit cleanup target
+# is defined.
+#==============================================================================
+
+.PHONY: irq_v4 irq_v4_install irq_v4_clean
+irq_v4: irq_build
+irq_v4_install: irq_install
+irq_v4_clean: irq_clean
+
+.PHONY: irq_install
+
+irq_build:
+	$(V) $(MAKE) -C $(FETCHER_EXTRACT_DIRECTORY_NAME) irq $(QOUT) $(ERRQOUT)
+	$(V) touch $@
+
+irq_clean:
+	$(V) $(MAKE) -C $(FETCHER_EXTRACT_DIRECTORY_NAME) $@ $(QOUT) $(ERRQOUT)
+	$(V) rm -f irq_build
+
+irq_install:
+	$(V) $(MAKE) -C $(FETCHER_EXTRACT_DIRECTORY_NAME) irq_install
+
+irq_uninstall:
+	$(V) rm -f $(FSROOT)/lib/modules/$(KERNELVERSION)/kernel/drivers/dsp/irqk.ko
+
+
+#==============================================================================
+# Build the edma kernel module for the configured platform, and make sure the
+# kernel_binaries directory is kept in sync. Also, an explicit cleanup target
+# is defined.
+#==============================================================================
+
+.PHONY: edma_v4 edma_v4_install edma_v4_clean
+edma_v4: edma_build
+edma_v4_install: edma_install
+edma_v4_clean: edma_clean
+edma_v4_uninstall: edma_uninstall
+
+.PHONY: edma_install
+
+edma_build:
+	$(V) $(MAKE) -C $(FETCHER_EXTRACT_DIRECTORY_NAME) edma $(QOUT) $(ERRQOUT) 
+	$(V) touch $@
+
+edma_clean:
+	$(V) $(MAKE) -C $(FETCHER_EXTRACT_DIRECTORY_NAME) $@ $(QOUT) $(ERRQOUT)
+	$(V) rm -f edma_build
+
+edma_install:
+	$(V) $(MAKE) -C $(FETCHER_EXTRACT_DIRECTORY_NAME) edma_install
+
+edma_uninstall:
+	$(V) rm -f  $(FSROOT)/lib/modules/$(KERNELVERSION)/kernel/drivers/dsp/edmak.ko
+
+#==============================================================================
+# Build the Digital Video Test Bench for the configured platform. Also, an
+# explicit cleanup target is defined.
+#==============================================================================
+
+.PHONY: dvtb_v4 dvtb_v4_install dvtb_v4_clean
+dvtb_v4: dvtb_build
+dvtb_v4_install: dvtb_install
+dvtb_v4_clean: dvtb_clean
+dvtb_v4_uninstall: dvtb_uninstall
+
+.PHONY: dvtb_install
+
+dvtb_build:
+	$(V) $(MAKE) -C dvsdk dvtb $(QOUT) $(ERRQOUT) 
+	$(V) touch $@
+
+dvtb_clean:
+	$(V) $(MAKE) -C dvsdk $@ $(QOUT) $(ERRQOUT)
+	$(V) rm -f dvtb_build
+
+dvtb_install:
+	$(V) $(MAKE) -C dvsdk dvtb_install
+
+dvtb_uninstall:
+	$(V) rm -f  $(FSROOT)/usr/share/ti/dvtb

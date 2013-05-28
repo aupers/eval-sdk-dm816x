@@ -1,0 +1,17 @@
+if INSTALLER_MODE_SD_CARD
+comment "Install on SD card options"
+config INSTALLER_UBOOT_PARTITION_SIZE
+	string "Size of U-Boot VFAT partition (in MB)"
+	default 39
+	help
+		The first partition on the SD card is a VFAT file system
+		containing the uboot environement variables and the kernel.
+		If other files need to be saved in the first partition, increase
+		the size.  Note: Windows only mounts the first VFAT partition,
+		so if you need to save files on the SD card that are readable by
+		a Windows machine, use this setting to make room for those
+		files.  If your root file system is initramfs, then the kernel
+		image file will also contain the entire root file system, so
+		the U-Boot VFAT partition will need to be larger.
+
+endif # INSTALLER_MODE_SD_CARD

@@ -1,0 +1,8 @@
+config FS_APPS_FONTCONFIG
+	bool "fontconfig-2.8.0"
+	select FS_APPS_FREETYPE
+	select FS_APPS_EXPAT
+	select FS_APPS_LIBXML2
+	help
+	  Fontconfig is a library for font customization and configuration.
+

@@ -1,0 +1,15 @@
+include $(CLASSES)/cmake.defs
+
+.PHONY: patch build clean install uninstall distclean
+
+build: cmake_build
+
+clean: cmake_clean
+
+patch: rrpatched
+
+install: cmake_install rrsdk_install
+
+uninstall: cmake_uninstall rrsdk_uninstall
+
+distclean: clean rrfetched_clean

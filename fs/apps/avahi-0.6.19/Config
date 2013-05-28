@@ -1,0 +1,7 @@
+config FS_APPS_AVAHI
+	bool "avahi-0.6.19"
+	select FS_APPS_LIBDAEMON
+	select FS_APPS_EXPAT
+	default n
+	help
+	  Avahi is an implementation of the Zeroconf networking standard

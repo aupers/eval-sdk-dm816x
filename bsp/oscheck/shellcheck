@@ -1,0 +1,41 @@
+#!/bin/bash
+# 
+# The dash shell has different syntax than bash.  All SDK testing
+# is done with the bash shell.  This script verifies bash is the
+# shell being used.
+#
+# There is a shell environment variable called SHELL, but I have
+# seen it report incorrect results
+
+# set -x
+
+# find out what shell 'sh' points to
+
+FQPN_SHELL=`which sh`
+
+if [ -L "$FQPN_SHELL" ] ; then
+    SHELL_NAME=`ls -l $FQPN_SHELL | sed  's|.*-> ||'`
+    SHELL_NAME=`basename $SHELL_NAME`
+else
+    SHELL_NAME=`basename $FQPN_SHELL`
+fi
+
+# find out if bash is installed
+
+FQPN_BASH_SHELL=`which bash`
+
+if ! which bash >/dev/null ; then
+    echo "bash shell not installed.  Please run:"
+    echo "    sudo apt-get install bash"
+    exit 255
+fi
+
+# find out if 'sh' points to bash
+
+if [ "$SHELL_NAME" != "bash" ] ; then
+    echo "bash is not your default shell"
+    echo "Please run:"
+    echo "    sudo rm /bin/sh"
+    echo "    sudo ln -s $FQPN_BASH_SHELL /bin/sh"
+    exit 255
+fi

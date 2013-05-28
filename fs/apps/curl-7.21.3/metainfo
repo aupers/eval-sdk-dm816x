@@ -1,0 +1,5 @@
+NAME="CURL"
+DEFS_INCLUDE="$(FSDEVROOT)/usr/include"
+DEFS_LIB="$(FSDEVROOT)/usr/lib"
+DEFS_SIM_INCLUDE="$(SIMROOT)/usr/include"
+DEFS_SIM_LIB="$(SIMROOT)/usr/lib"

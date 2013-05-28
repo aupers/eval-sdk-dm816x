@@ -1,0 +1,21 @@
+#
+# Ridgerun initrd target options configuration
+#
+
+choice 
+    prompt "Initrd filesystem type"
+    depends on FS_TARGET_INITRD
+
+config FS_TARGET_INITRD_EXT2
+	bool "Extended 2 File system (ext2)"
+	select EXT2_FS
+	depends on FS_TARGET_INITRD
+	help
+	    Create a extended 2 (ext2) file system for initrd
+
+#config FS_TARGET_INITRD_CRAMFS
+#	bool "Compressed RAM File system (CRAMFS)"
+#	help
+#	    Create a CRAM file system for initrd
+
+endchoice

@@ -1,0 +1,4 @@
+# We pull in libtool and pkg-config because otherwise
+# the local automake won't work using the native versions
+# due the mess on directories
+HOST_REQUIRED="libtool pkg-config"

@@ -1,0 +1,10 @@
+#
+# Ridgerun Installer configuration files
+# all definitions on this subtree must prefix with INSTALLER_
+#
+
+menu "Installer Configuration"
+
+source installer/ConfigExtra
+
+endmenu

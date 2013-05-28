@@ -1,0 +1,14 @@
+
+config FS_APPS_BUSYBOX
+	bool "busybox-1.18.2"
+	help
+	    Busybox is a set of tools for embedded systems that provides 
+	    basic unix commands with small footprint
+
+menu "Busybox configuration"
+depends on FS_APPS_BUSYBOX
+
+source fs/apps/busybox/src/Config.in
+
+endmenu
+

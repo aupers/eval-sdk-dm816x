@@ -1,0 +1,89 @@
+Index: busybox/src/networking/ifupdown.c
+===================================================================
+--- busybox.orig/src/networking/ifupdown.c	2011-01-16 12:19:54.000000000 -0600
++++ busybox/src/networking/ifupdown.c	2011-02-18 09:35:24.786287641 -0600
+@@ -404,6 +404,76 @@
+ }
+ # endif
+ 
++# if ENABLE_FEATURE_IFUPDOWN_EXTERNAL_DHCP
++struct dhcp6_client_t {
++	const char *name;
++	const char *startcmd;
++	const char *stopcmd;
++};
++
++static const struct dhcp6_client_t ext_dhcp6_clients[] = {
++	{ "dhclient",
++		"dhclient -6 -pf /var/run/dhclient.%iface%.pid %iface%",
++		"kill -9 `cat /var/run/dhclient.%iface%.pid` 2>/dev/null",
++	},
++};
++# endif /* FEATURE_IFUPDOWN_EXTERNAL_DHCPC */
++
++# if ENABLE_FEATURE_IFUPDOWN_EXTERNAL_DHCP
++static int FAST_FUNC dhcp6_up(struct interface_defn_t *ifd, execfn *exec)
++{
++	unsigned i;
++#  if ENABLE_FEATURE_IFUPDOWN_IP
++	/* ip doesn't up iface when it configures it (unlike ifconfig) */
++	if (!execute("ip link set[[ addr %hwaddress%]] %iface% up", ifd, exec))
++		return 0;
++#  else
++	/* needed if we have hwaddress on dhcp iface */
++	if (!execute("ifconfig %iface%[[ hw %hwaddress%]] up", ifd, exec))
++		return 0;
++#  endif
++	for (i = 0; i < ARRAY_SIZE(ext_dhcp6_clients); i++) {
++		if (exists_execable(ext_dhcp6_clients[i].name))
++			return execute(ext_dhcp6_clients[i].startcmd, ifd, exec);
++	}
++	bb_error_msg("no dhcp6 clients found");
++	return 0;
++}
++# else
++static int FAST_FUNC dhcp6_up(struct interface_defn_t *ifd UNUSED_PARAM,
++		execfn *exec UNUSED_PARAM)
++{
++	return 0; /* no dhcp6 support */
++}
++# endif
++
++# if ENABLE_FEATURE_IFUPDOWN_EXTERNAL_DHCP
++static int FAST_FUNC dhcp6_down(struct interface_defn_t *ifd, execfn *exec)
++{
++	int result = 0;
++	unsigned i;
++
++	for (i = 0; i < ARRAY_SIZE(ext_dhcp6_clients); i++) {
++		if (exists_execable(ext_dhcp6_clients[i].name)) {
++			result = execute(ext_dhcp6_clients[i].stopcmd, ifd, exec);
++			if (result)
++				break;
++		}
++	}
++
++	if (!result)
++		bb_error_msg("warning: no dhcp6 clients found and stopped");
++
++	return ((result == 3) ? 3 : 0);
++}
++# else
++static int FAST_FUNC dhcp6_down(struct interface_defn_t *ifd UNUSED_PARAM,
++		execfn *exec UNUSED_PARAM)
++{
++	return 0; /* no dhcp6 support */
++}
++# endif
++
+ static const struct method_t methods6[] = {
+ # if ENABLE_FEATURE_IFUPDOWN_IP
+ 	{ "v4tunnel" , v4tunnel_up     , v4tunnel_down   , },
+@@ -411,6 +481,7 @@
+ 	{ "static"   , static_up6      , static_down6    , },
+ 	{ "manual"   , manual_up_down6 , manual_up_down6 , },
+ 	{ "loopback" , loopback_up6    , loopback_down6  , },
++	{ "dhcp"     , dhcp6_up        , dhcp6_down      ,},
+ };
+ 
+ static const struct address_family_t addr_inet6 = {

@@ -1,0 +1,187 @@
+# This script simplifies the process of cross-compiling
+# autotools based applications with the SDK
+# The .configured target will take care of properly configuring
+# the application
+
+#! \defgroup autotools_class Autotools Class
+#! \ingroup classes
+#! \section intro Introduction
+#! The autotools class provides logic for (cross)compiling autotools applications
+#!
+#! \section public_params Public Parameters
+#! The following is a list of parameters that may be set according to an application's specific requirements.
+#! <ul>
+#! <li>
+#! <b>AUTOTOOLS_PARAMS</b>: Extra values passed to autotools, which may include --xxx-yyy definitions or ac_something definitions.
+#!
+#! <li>
+#! <b>AUTOTOOLS_BUILD_DIR</b>: The directory in which the build will be executed, by default defined through the $(ARCH) directory, so that builds for diferent architectures may be produced without conflicts.
+#!
+#! <li>
+#! <b>AUTOTOOLS_SRC_DIR</b>: The directory which contains the package's. Set to the "src" directory by default, so there's no need to modify this variable unless another directory name is required.
+#!
+#! <li>
+#! <b>AUTOTOOLS_CORRECT_LA</b>: DEPRECATED: use CORRECT_LA instead. This variable holds all .la files that whose "wired paths" have to be corrected after using the --prefix option pointing to /usr/, due to having to use external libraries such as gstreamer. Check the Development and Integration guide for specific examples on the usage of this variable. 
+#!
+#! <li>
+#! <b>AUTOTOOLS_CORRECT_PKGCONFIG</b>: DEPRECATED: use CORRECT_PKGCONFIG instead. This variable holds all pkgconfig (.pc) files that whose "wired paths" have to be corrected after using the --prefix option pointing to /usr/, due to having to use external libraries such as gstreamer. Check the Development and Integration guide for specific examples on the usage of this variable.
+#!
+#! <li>
+#! <b>AUTOTOOLS_CORRECT_DBUS_SERVICE</b>: DEPRECATED: use CORRECT_DBUS_SERVICE instead. This variable holds all DBUS services files that whose "wired paths" have to be corrected after using the --prefix option pointing to /usr/, due to having to use external libraries such as gstreamer. Check the Development and Integration guide for specific examples on the usage of this variable.
+#!
+#! <li>
+#! <b>AUTOTOOLS_CORRECT_LA_SED_EXPRESSION</b>: DEPRECATED: use CORRECT_LA_SED_EXPRESSION instead. Sed regular expression used to parse and detect .la file names.
+#!
+#! <li>
+#! <b>AUTOTOOLS_CORRECT_PKGCONFIG_SED_EXPRESSION</b>: DEPRECATED: use CORRECT_PKGCONFIG_SED_EXPRESSION instead. Sed regular expression used to parse and detect Pkg-Config files filenames.
+#!
+#! <li>
+#! <b>AUTOTOOLS_CORRECT_DBUS_SERVICE_SED_EXPRESSION</b>: DEPRECATED: use CORRECT_DBUS_SERVICE_SED_EXPRESSION instead. Sed regular expression used to parse and detect DBUS Services filenames.
+#!
+#! <li>
+#! <b>AUTOTOOLS_CLONE_SRC</b>: In the case that the application build process misbehaves when redirecting the directory to which the file output of this process ends up in (as we do through the AUTOTOOLS_BUILD_DIR variable), this variable can be used to specify a directory name in which to clone the whole source directory, so that conflicts are still avoided when compiling for different architectures (however, this comes with the cost of having to replicate the whole source directory).
+#!
+#! <li>
+#! <b>AUTOTOOLS_AUTOGEN_GENERATION_RULE</b>: In the case that a configure script isn't provided by the source directory as extracted by the Fetcher class, however an autogen-like mechanism is implemented or provided for the package's installation, this variable holds the rule to activate such mechanism or script.
+#!
+#! <li>
+#! <b>AUTOTOOLS_AUTOGEN_PARAMS</b>: A variable that holds any parameter that may be required for the aforementioned autogen-like script or mechanism.
+#!
+#!
+#! By default the system installs all the executable data directly to
+#! FSROOT, and all the development files (header, man, info) into
+#! FSDEVROOT
+#!
+#! \section private_params Private Parameters
+#! The following is a list of private parameters that are recommended not to be modified.
+#! <ul>
+#!
+#! <li>
+#! <b>AUTOTOOLS_HOST</b>: Line to set the host for configure. By default this value is set to "--host $(TOOLCHAIN_PREFIX)", set to an empty string to compile for your desktop machine.
+#!
+#! <li>
+#! <b>AUTOTOOLS_TOOLCHAIN_PREFIX</b>: Related to the above, corresponds to the toolchain prefix that will be used for compilation.
+#!
+#! <li>
+#! <b>DESTDIR</b>: The autotools DESTDIR parameter is passed into the package's makefile when the package is installed.  Often DESTDIR is set to $(FSDEVROOT) in the Makefile that includes the autotools.class.
+#!
+#! <li>
+#! <b>AUTOTOOLS_PRECONFIG_TARGETS</b>: Optional additional Makefile targets that are ran before the autotools configure script is run.  Useful when an autotools file, such at Makefile.am, is modified by a patch file.
+#! </ul>
+
+# AUTOTOOLS_PARAMS: extra values passed to autotools:
+# may include --xxx-yyy definitions or ac_something definitions
+# AUTOTOOLS_BUILD_DIR: the directory to build 
+# AUTOTOOLS_SRC_DIR: the directory with the configure script
+# AUTOTOOLS_HOST: line to set the host for configure, by default
+# is "--host $(TOOLCHAIN_PREFIX)", set to empty to compile for your
+# desktop machine
+
+# By default the system installs all the executable data directly to
+# $(FSROOT), and all the development files (header, man, info) into
+# $(FSDEVROOT)
+
+.PHONY: update_flags clean_configure configuration autotools_clean autotools_build autotools_uninstall
+
+include $(CLASSES)/flags.defs
+include $(CLASSES)/force_build.defs
+
+# Config site for autotools
+CONFIG_SITE?=$(DEVDIR)/fs/config.site
+export CONFIG_SITE
+AUTOTOOLS_BUILD_DIR?=$(ARCH)
+AUTOTOOLS_SRC_DIR?=src
+
+CORRECT_LA?=$(AUTOTOOLS_CORRECT_LA)
+CORRECT_PKGCONFIG?=$(AUTOTOOLS_CORRECT_PKGCONFIG)
+CORRECT_DBUS_SERVICE?=$(AUTOTOOLS_CORRECT_DBUS_SERVICE)
+CORRECT_LA_SED_EXPRESSION?=$(AUTOTOOLS_CORRECT_LA_SED_EXPRESSION)
+CORRECT_PKGCONFIG_SED_EXPRESSION?=$(AUTOTOOLS_CORRECT_PKGCONFIG_SED_EXPRESSION)
+CORRECT_DBUS_SERVICE_SED_EXPRESSION?=$(AUTOTOOLS_CORRECT_DBUS_SERVICE_SED_EXPRESSION)
+
+ifneq ($(MAKECMDGOALS),sim)
+AUTOTOOLS_HOST?=--host=$(AUTOTOOLS_TOOLCHAIN_PREFIX)
+else
+CONFIG_SITE=$(DEVDIR)/fs/config.site.sim
+endif
+
+autotools_build: $(CONFIG_SITE) $(FETCHED_FLAG) $(PATCHED_FLAG) $(AUTOTOOLS_PRECONFIG_TARGETS) configuration $(BUILT_FLAG)$(ARCH_SUFFIX)
+
+$(CONFIG_SITE):
+	$(V) $(MAKE) -C $(DEVDIR)/fs $(notdir $(CONFIG_SITE))
+
+$(BUILT_FLAG)$(ARCH_SUFFIX):
+	$(V) $(MAKE) -j $(BSP_NCPU) -C $(AUTOTOOLS_BUILD_DIR) $(if $(VERBOSE:1=),,V=1) $(QOUT) $(ERRQOUT)
+	$(V) touch $(BUILT_FLAG)
+
+force_build_execute: autotools_build
+
+autotools_clean: clean_configure unpatch
+	$(V) rm -Rf $(BUILT_FLAG)* $(INSTALLED_FLAG)*
+
+autotools_install: $(INSTALLED_FLAG)$(ARCH_SUFFIX)
+
+$(INSTALLED_FLAG)$(ARCH_SUFFIX):
+ifneq ($(CORRECT_LA),)
+	$(V) for la_file in $(CORRECT_LA) ; do \
+	    lafile=`basename $$la_file` ; \
+	    file=`find $(AUTOTOOLS_BUILD_DIR) -name $$lafile | head -1` ; \
+	    if [ -L $$file ] ; then \
+	        file=`readlink -f $$file` ; \
+	    fi ; \
+	    sed -i -e "$(CORRECT_LA_SED_EXPRESSION)" $$file ; \
+	done
+endif
+	$(V) $(MAKE) -j $(BSP_NCPU) -C $(AUTOTOOLS_BUILD_DIR) install DESTDIR=$(DESTDIR) $(if $(VERBOSE:1=),V=1) $(QOUT) $(ERRQOUT)
+	$(V) touch $(INSTALLED_FLAG)
+
+autotools_uninstall:
+	$(V) $(MAKE) -j $(BSP_NCPU) -C $(AUTOTOOLS_BUILD_DIR) uninstall DESTDIR=$(DESTDIR) $(QOUT) $(ERRQOUT)
+	$(V) rm -f $(INSTALLED_FLAG)
+
+FETCHER_EXTRACT_DIRECTORY_NAME=src
+include $(CLASSES)/fetcher.defs
+
+update_flags:
+	$(V)echo "$(AUTOTOOLS_PARAMS)" > autotools_extra_flags.t$(ARCH_SUFFIX)
+	$(V)if [ ! -f autotools_extra_flags$(ARCH_SUFFIX) ] || \
+	       ! diff autotools_extra_flags.t$(ARCH_SUFFIX) \
+	              autotools_extra_flags$(ARCH_SUFFIX) >/dev/null ; then \
+	       mv autotools_extra_flags.t$(ARCH_SUFFIX) autotools_extra_flags$(ARCH_SUFFIX) ; \
+	fi
+	$(V)rm -f autotools_extra_flags.t$(ARCH_SUFFIX)
+
+configured$(ARCH_SUFFIX): $(CONFIG_SITE) autotools_extra_flags$(ARCH_SUFFIX) $(AUTOTOOLS_SRC_DIR)/configure
+ifeq ($(AUTOTOOLS_CLONE_SOURCE),yes)
+	$(V)cp -Rp $(AUTOTOOLS_SRC_DIR) $(AUTOTOOLS_BUILD_DIR)
+endif
+	$(V)mkdir -p $(AUTOTOOLS_BUILD_DIR) ; cd $(AUTOTOOLS_BUILD_DIR) && \
+	if [ -f ../$(AUTOTOOLS_SRC_DIR)/configure ] ; then \
+	../$(AUTOTOOLS_SRC_DIR)/configure $(AUTOTOOLS_HOST) \
+	$(AUTOTOOLS_PARAMS) $(QOUT) $(ERRQOUT) ; \
+	fi;
+	$(V) if [ -f $(AUTOTOOLS_BUILD_DIR)/libtool ] ; then \
+	sed -e "s?sys_lib_dlsearch_path_spec=.*?sys_lib_dlsearch_path_spec=\"$(FSDEVROOT)/lib $(FSDEVROOT)/usr/lib\"?g" \
+	  -e "s?link_all_deplibs=.*?link_all_deplibs=yes?g" \
+	$(AUTOTOOLS_BUILD_DIR)/libtool >$(AUTOTOOLS_BUILD_DIR)/libtool.new ; \
+	    mv $(AUTOTOOLS_BUILD_DIR)/libtool $(AUTOTOOLS_BUILD_DIR)/libtool.orig ; \
+	    mv $(AUTOTOOLS_BUILD_DIR)/libtool.new $(AUTOTOOLS_BUILD_DIR)/libtool ; \
+	    chmod +x $(AUTOTOOLS_BUILD_DIR)/libtool; \
+	fi
+	$(V)touch configured$(ARCH_SUFFIX) $(QOUT)
+
+$(AUTOTOOLS_SRC_DIR)/configure: $(AUTOTOOLS_AUTOGEN_GENERATION_RULE)
+	$(V) cd $(AUTOTOOLS_SRC_DIR) ; ./autogen.sh $(AUTOTOOLS_AUTOGEN_PARAMS) $(QOUT) $(ERRQOUT)
+	$(V) touch $@
+
+configuration: update_flags configured$(ARCH_SUFFIX)
+
+clean_configure:
+	$(V)rm -Rf configured* autotools_extra_flags* sim
+	$(V)if [ "$(AUTOTOOLS_BUILD_DIR)" != "src" ] ; then \
+	    rm -Rf $(AUTOTOOLS_BUILD_DIR); \
+	else \
+	    if [ -f $(AUTOTOOLS_BUILD_DIR)/Makefile ] ; then \
+	      $(MAKE) -C $(AUTOTOOLS_BUILD_DIR) distclean; \
+	    fi \
+	fi

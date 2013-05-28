@@ -1,0 +1,81 @@
+#! \defgroup cmake_class CMake Class
+#! \ingroup classes
+#! \section intro Introduction
+#! The CMake class provides logic for (cross)compiling CMake-based applications with the SDK.
+#!
+#! \section public_params Public Parameters
+#! The following is a list of parameters that may be set according to an application's specific requirements.
+#! <ul>
+#! <li>
+#! <b>CMAKE_PARAMS:</b> Extra values that may be passed to cmake as arguments.
+#!
+#! <li>
+#! <b>CMAKE_BUILD_DIR:</b> The directory in which the build process will be executed.
+#!
+#! <li>
+#! <b>CMAKE_SRC_DIR:</b> The directory that contains the configure script.
+#! 
+#! \section p_params Private Parameters
+#! The following is a list of private parameters that are recommended not to be modified.
+#!
+#! <ul>
+#!
+#! <li>
+#! <b>CMAKE_TOOLCHAIN_FILE:</b> The file location corresponding to the CMake toolchain.
+#! 
+#! <li>
+#! <b>CMAKE_INSTALL_PREFIX:</b> The installation prefix for cmake-based applications. By default this is set as FSDEV/usr/
+#! 
+
+
+
+.PHONY: update_flags clean_configure configuration cmake_clean cmake_build cmake_uninstall
+
+CMAKE_BUILD_DIR?=$(ARCH)
+CMAKE_SRC_DIR?=src
+CMAKE_TOOLCHAIN_FILE?=$(DEVDIR)/fs/toolchain.cmake
+CMAKE_INSTALL_PREFIX?=$(FSDEVROOT)/usr
+
+cmake_build: rrfetched rrpatched cmake_built
+
+$(DEVDIR)/fs/toolchain.cmake:
+	$(V)$(MAKE) -C $(DEVDIR)/fs toolchain.cmake
+
+cmake_built: cmake_configured
+	$(V) $(MAKE) -j $(BSP_NCPU) -C $(CMAKE_BUILD_DIR) $(if $(VERBOSE:1=),,V=1) $(QOUT) $(ERRQOUT)
+	$(V) touch $@
+
+cmake_clean: clean_configure unpatch
+	$(V) rm -Rf cmake_built cmake_installed
+
+cmake_install: cmake_installed
+
+cmake_installed:
+	$(V) $(MAKE) -j $(BSP_NCPU) -C $(CMAKE_BUILD_DIR) install $(if $(VERBOSE:1=),,V=1) $(QOUT) $(ERRQOUT)
+	$(V) touch $@
+
+cmake_uninstall:
+	$(V) $(MAKE) -j $(BSP_NCPU) -C $(CMAKE_BUILD_DIR) uninstall $(if $(VERBOSE:1=),,V=1) $(QOUT) $(ERRQOUT)
+	$(V) rm -f cmake_installed
+
+FETCHER_EXTRACT_DIRECTORY_NAME=src
+include $(CLASSES)/fetcher.defs
+
+cmake_configured: $(CMAKE_TOOLCHAIN_FILE)
+	$(V) mkdir -p $(CMAKE_BUILD_DIR) && cd $(CMAKE_BUILD_DIR) && \
+	cmake \
+	    -DCMAKE_TOOLCHAIN_FILE=$(CMAKE_TOOLCHAIN_FILE) \
+	    -DCMAKE_INSTALL_PREFIX=$(CMAKE_INSTALL_PREFIX) \
+	    $(CMAKE_PARAMS) \
+	    ../$(CMAKE_SRC_DIR) $(QOUT)
+	$(V) touch $@
+
+clean_configure:
+	$(V)rm -f cmake_configured
+	$(V)if [ "$(CMAKE_BUILD_DIR)" != "src" ] ; then \
+	    rm -Rf $(CMAKE_BUILD_DIR); \
+	else \
+	    if [ -f $(CMAKE_BUILD_DIR)/Makefile ] ; then \
+	      $(MAKE) -C $(CMAKE_BUILD_DIR) distclean; \
+	    fi \
+	fi

@@ -1,0 +1,83 @@
+From 1ce6843f5c6d50eba14adc5debe97cc2825fb3b8 Mon Sep 17 00:00:00 2001
+From: Hardik Shah <hardik.shah@ti.com>
+Date: Mon, 9 Apr 2012 14:10:09 +0530
+Subject: [PATCH 4/5] TI81xx v4l2 capture: v4l2 capture crashed solved
+
+IR#SDOCM00091210: Solved
+
+Headline:insmod of capture crashed if loaded before loading tvp700.ko
+Description: If we load ti81xxvin.ko before loading of tvp7002.ko
+it gives error but  modules still gets inserted. Once we remove ti81xxvin.ko
+insert tvp7002.ko and insert ti81xxvin.ko kernel crashes. This is because
+platform_driver_register returns true even if driver has returned error
+from probe functions. So inserting of driver passes even with error. This
+should not happen.
+
+Resolution: Used "platform_driver_probe" instead of platform_driver_register
+
+Signed-off-by: Hardik Shah <hardik.shah@ti.com>
+---
+ linux-2.6.37-psp04.04.00.01/drivers/media/video/ti81xx/ti81xxvid_main.c   |    3 ++-
+ linux-2.6.37-psp04.04.00.01/drivers/media/video/ti81xx/ti81xxvin_main.c   |    4 +++-
+ linux-2.6.37-psp04.04.00.01/drivers/video/ti81xx/ti81xxfb/ti81xxfb_main.c |    2 +-
+ 3 files changed, 6 insertions(+), 3 deletions(-)
+
+diff --git a/linux-2.6.37-psp04.04.00.01/drivers/media/video/ti81xx/ti81xxvid_main.c b/linux-2.6.37-psp04.04.00.01/drivers/media/video/ti81xx/ti81xxvid_main.c
+index bde6254..903b686 100644
+--- a/linux-2.6.37-psp04.04.00.01/drivers/media/video/ti81xx/ti81xxvid_main.c
++++ b/linux-2.6.37-psp04.04.00.01/drivers/media/video/ti81xx/ti81xxvid_main.c
+@@ -2478,7 +2478,8 @@ static struct platform_driver ti81xx_vidout_driver = {
+ 
+ static int __init ti81xx_vidout_init(void)
+ {
+-	if (platform_driver_register(&ti81xx_vidout_driver) != 0) {
++	if ((platform_driver_probe(&ti81xx_vidout_driver,
++				ti81xx_vidout_probe)) != 0) {
+ 		printk(KERN_ERR VIDOUT_NAME
+ 			":Could not register Video driver\n");
+ 		return -EINVAL;
+diff --git a/linux-2.6.37-psp04.04.00.01/drivers/media/video/ti81xx/ti81xxvin_main.c b/linux-2.6.37-psp04.04.00.01/drivers/media/video/ti81xx/ti81xxvin_main.c
+index 9751f63..f3cfdcf 100644
+--- a/linux-2.6.37-psp04.04.00.01/drivers/media/video/ti81xx/ti81xxvin_main.c
++++ b/linux-2.6.37-psp04.04.00.01/drivers/media/video/ti81xx/ti81xxvin_main.c
+@@ -2541,6 +2541,7 @@ static int ti81xxvin_probe(struct platform_device *pdev)
+ 
+ 		if (!ti81xxvin_obj.sd[i]) {
+ 			ti81xxvin_err("Error registering v4l2 subdevice\n");
++			err = -ENODEV;
+ 			goto probe_subdev_out;
+ 		}
+ 		if (subdevdata->ti81xxvin_select_decoder)
+@@ -2548,6 +2549,7 @@ static int ti81xxvin_probe(struct platform_device *pdev)
+ 				subdevdata->decoder_id);
+ 		if (err < 0) {
+ 			ti81xxvin_err("Error selecting decoder\n");
++			err = -ENODEV;
+ 			goto probe_subdev_out;
+ 		}
+ 		if (subdevdata->ti81xxvin_set_mode)
+@@ -2633,7 +2635,7 @@ static struct platform_driver hdvpss_driver = {
+  */
+ static __init int ti81xxvin_init(void)
+ {
+-	return platform_driver_register(&hdvpss_driver);
++	return platform_driver_probe(&hdvpss_driver, ti81xxvin_probe);
+ }
+ 
+ /**
+diff --git a/linux-2.6.37-psp04.04.00.01/drivers/video/ti81xx/ti81xxfb/ti81xxfb_main.c b/linux-2.6.37-psp04.04.00.01/drivers/video/ti81xx/ti81xxfb/ti81xxfb_main.c
+index e3b4800..d152648 100644
+--- a/linux-2.6.37-psp04.04.00.01/drivers/video/ti81xx/ti81xxfb/ti81xxfb_main.c
++++ b/linux-2.6.37-psp04.04.00.01/drivers/video/ti81xx/ti81xxfb/ti81xxfb_main.c
+@@ -1667,7 +1667,7 @@ static int __init ti81xxfb_init(void)
+ {
+ 
+ 	TFBDBG("ti81xxfb_init\n");
+-	if (platform_driver_register(&ti81xxfb_driver)) {
++	if (platform_driver_probe(&ti81xxfb_driver, ti81xxfb_probe)) {
+ 		printk(KERN_ERR "failed to register ti81xxfb driver\n");
+ 		return -ENODEV;
+ 	}
+-- 
+1.7.0.4
+

@@ -1,0 +1,63 @@
+
+ifeq ($(DEVDIR),)
+$(error ====== DEVDIR variable is empty, invoke this Makefile from the BSP root, or provide the path to it =====)
+endif
+
+include $(DEVDIR)/bsp/classes/ccache.defs
+
+ifeq ($(findstring /sbin,$(PATH)),)
+# Assume the PATH doesn't contain sbin paths and append them to the end
+export PATH := $(PATH):/usr/local/sbin:/usr/sbin:/sbin
+endif
+
+ifeq ($(MAKECMDGOALS),sim)
+export SIMULATOR=yes
+endif
+
+ifeq ($(CCACHE_ENABLE),no)
+	export USE_CCACHE=no
+else
+	export USE_CCACHE=yes
+endif
+
+# clean up invalid characters in CONFIG_TOOLCHAIN_PATH (otherwise findstring fails)
+C := $(shell echo $(CONFIG_TOOLCHAIN_PATH))
+
+BSP_PATH := $(if $(findstring xxx$(C),xxx$(PATH)),$(PATH),$(C)/bin:$(PATH))
+EXECUTE	:= export PATH=$(value BSP_PATH) ;
+
+TOOLCHAIN_PREFIX := arm-none-linux-gnueabi
+
+AUTOTOOLS_TOOLCHAIN_PREFIX := arm-none-linux-gnueabi
+TOOLCHAIN_LIB	:= $(CONFIG_TOOLCHAIN_PATH)/arm-none-linux-gnueabi/libc/lib
+TOOLCHAIN_BIN	:= $(CONFIG_TOOLCHAIN_PATH)/arm-none-linux-gnueabi/libc/usr/bin
+
+ifeq ($(SIMULATOR),yes)
+TOOLCHAIN_PREFIX = ""
+CFLAGS += $(CONFIG_TOOLCHAIN_SIMULATOR_FLAGS)
+else
+CFLAGS += $(CONFIG_TOOLCHAIN_NOARCH_FLAGS) $(CONFIG_TOOLCHAIN_ARCH_FLAGS)
+endif
+CFLAGS:=$(subst ",,$(CFLAGS))
+
+ifeq ($(USE_CCACHE),no)
+	CCACHE=
+endif
+
+CC = $(CCACHE) $(TOOLCHAIN_PREFIX)-gcc
+CPP = $(CCACHE) $(TOOLCHAIN_PREFIX)-gcc -E
+CXX = $(CCACHE) $(TOOLCHAIN_PREFIX)-g++
+
+LD = $(TOOLCHAIN_PREFIX)-ld
+AR = $(TOOLCHAIN_PREFIX)-ar
+AS = $(TOOLCHAIN_PREFIX)-as
+NM = $(TOOLCHAIN_PREFIX)-nm
+OBJCOPY = $(TOOLCHAIN_PREFIX)-objcopy
+OBJDUMP = $(TOOLCHAIN_PREFIX)-objdump
+STRIP = $(TOOLCHAIN_PREFIX)-strip
+RANLIB = $(TOOLCHAIN_PREFIX)-ranlib
+
+TOOLCHAIN_ENVIRONMENT = CC="$(CC)" LD=$(LD) CFLAGS="$(CFLAGS)" AR=$(AR) AS=$(AS) CPP="$(CPP)" CXX="$(CXX)" OBJCOPY=$(OBJCOPY) OBJDUMP=$(OBJDUMP) STRIP=$(STRIP) RANLIB=$(RANLIB) NM=$(NM)
+
+EXPORT_TOOLCHAIN_ENVIRONMENT = CC="$(CC)" CXX="$(CXX)" LD=$(LD) CFLAGS="$(CFLAGS)" AR=$(AR) AS=$(AS) CPP="$(CPP)" OBJCOPY=$(OBJCOPY) OBJDUMP=$(OBJDUMP) STRIP=$(STRIP) RANLIB=$(RANLIB) NM=$(NM)
+

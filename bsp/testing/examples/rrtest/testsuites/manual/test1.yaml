@@ -1,0 +1,29 @@
+# Comments for this test case
+
+# This define to which test suite the case belongs
+TestSuite: DVSDK
+
+# Name of the test case. Try to be descriptive but concise
+TestCase: Test case 1
+
+# Define the platform where it applies. If is not platform specific,
+# then say ALL
+Platform: ALL
+
+# Now, got lenghtly on the case description
+Summary: |
+  This is the summary of the test. Note the "pipe" character that
+  we used after the semicolon to mark a multi-line escaped sequence.
+  The extend of this string is indicated by indentation
+
+# How to reproduce it.
+# Please keep in mind to document your environment
+Steps:
+ - step 1
+ - step 2
+ - step 3
+
+# What you should be seeing
+ExpectedResults:
+ - Number 1.0
+ - A banana split with tree icecream balls

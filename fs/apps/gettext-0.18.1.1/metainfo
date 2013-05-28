@@ -1,0 +1,4 @@
+NAME="GETTEXT"
+DEFS_INCLUDE="$(FSDEVROOT)/usr/include"
+DEFS_LIB="$(FSDEVROOT)/usr/lib"
+DEFS_BIN="$(FSROOT)/usr/bin"

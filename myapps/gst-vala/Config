@@ -1,0 +1,7 @@
+
+config USER_APPS_GST_VALA
+	bool "Gstreamer example in Vala"
+	default n
+	select FS_APPS_GSTREAMER
+	help
+	    Example application to show the bsp usage.

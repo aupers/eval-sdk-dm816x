@@ -1,0 +1,2 @@
+HOST_REQUIRED="slang-xfig"
+TARGET_REQUIRED="libgpg-error"

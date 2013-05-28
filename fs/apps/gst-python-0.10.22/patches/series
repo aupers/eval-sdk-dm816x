@@ -1,0 +1,3 @@
+embed-python.patch
+import-gobject-instead-of-pygtk.patch
+python-path.patch
