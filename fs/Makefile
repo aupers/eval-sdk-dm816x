@@ -12,7 +12,6 @@ $(error ====== DEVDIR variable is empty, invoke this Makefile from the BSP root,
 endif
 
 include $(DEVDIR)/bsp/mach/Make.conf
-include $(CLASSES)/force_build.defs
 
 # Please, don't modify this without paying attention, order matters:
 # apps, toolchain and rrapps goes first as they may install generic
@@ -116,9 +115,6 @@ depmod:
 		/sbin/depmod -ae -b $(FSROOT) -F $(DEVDIR)/kernel/$(KERNEL)/System.map \
 		-v $(KERNELVERSION) $(QOUT); \
 	fi
-
-force_build_execute:
-	$(V)$(MAKE) build
 
 build: build_start $(FSROOT) $(FSDEVROOT) $(foreach COMP, $(FS_COMPONENTS), $(COMP)_build) networkconfig
 	$(V) $(ECHO) "Installing proprietary code"
@@ -298,3 +294,8 @@ $(foreach COMP, $(FS_COMPONENTS), $(eval $(call COMP_template,$(COMP),_unpatch,u
 $(foreach COMP, $(FS_COMPONENTS), $(eval $(call COMP_template,$(COMP),_clean,clean)))
 $(foreach COMP, $(FS_COMPONENTS), $(eval $(call COMP_template,$(COMP),_buildfs,buildfs)))
 $(foreach COMP, $(FS_COMPONENTS), $(eval $(call COMP_template,$(COMP),_cmdline,cmdline)))
+
+force_build_execute:
+	$(V)$(MAKE) build
+
+include $(CLASSES)/force_build.defs

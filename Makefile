@@ -7,7 +7,6 @@ COMPONENTS = toolchain kernel fs bootloader installer
 
 include bsp/mach/Make.conf
 include bsp/classes/flags.defs
-include $(CLASSES)/force_build.defs
 
 # Used to the graphical output indexation
 TABINDEX ?= \040
@@ -249,3 +248,5 @@ remove_fs:
 # Rule to remove fs/fsdev
 remove_fsdev: remove_built_flag
 	$(V)rm -rf $(DEVDIR)/fs/fsdev
+
+include $(CLASSES)/force_build.defs

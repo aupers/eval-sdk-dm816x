@@ -39,10 +39,6 @@ include $(DEVDIR)/bsp/mach/Make.conf
 
 include $(DEVDIR)/bsp/classes/dependencies.defs
 
-include $(CLASSES)/force_build.defs
-
-force_build_execute: build
-
 patch: dependency_patch
 
 build: dependency_build
@@ -60,3 +56,7 @@ preconfig:
 	done
 
 unpatch: dependency_unpatch
+
+force_build_execute: build
+
+include $(CLASSES)/force_build.defs
