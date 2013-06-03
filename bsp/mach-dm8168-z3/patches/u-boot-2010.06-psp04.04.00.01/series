@@ -1,0 +1,4 @@
+addZ3ModuleSupport.patch
+uboot_env_in_sdcard.patch
+configuration_for_sdk.patch
+skip_env_on_sd_boot.patch

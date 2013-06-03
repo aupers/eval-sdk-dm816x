@@ -1,0 +1,20 @@
+config USER_APPS_Z3_TOOLS
+	bool "Z3 Tools"
+	default y
+	select USER_APPS_DEVMEM2
+	select USER_APPS_EDID
+	help
+	    Devmem2 is a simple utility to read/write to any memory mapped locations.
+
+config USER_APPS_DEVMEM2
+	bool "devmem2 utility"
+	default y
+	depends on USER_APPS_Z3_TOOLS
+	help
+	    Devmem2 is a simple utility to read/write to any memory mapped locations.
+
+config USER_APPS_EDID
+	bool "EDID tool"
+	depends on USER_APPS_Z3_TOOLS
+	default y
+

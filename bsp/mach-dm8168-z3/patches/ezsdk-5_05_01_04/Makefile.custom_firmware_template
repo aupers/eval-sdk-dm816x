@@ -1,0 +1,23 @@
+#Override EZSDK settings
+VPSS_FIRMWARE=custom_firmware/dm816x_hdvpss.xem3
+HDVICP2_FIRMWARE=custom_firmware/dm816x_hdvicp.xem3
+
+# Download details
+EXTRA_TARGETS = custom_firmware
+
+custom_firmware:PKG_URL=https://source.ridgerun.net/packages/
+custom_firmware:PKG_TARBALL=z3_firmware_ezsdk_5_04_00_11.tar.bz2
+custom_firmware:PKG_SHA1SUM=84210ea460b7e6bd005b9505327e533da9fd4bf5
+custom_firmware:FETCHER_EXTRACT_DIRECTORY_NAME=custom_firmware
+custom_firmware:
+	$(V)rm -rf rrfetched
+	$(V)$(DEVDIR)/bsp/scripts/fetcher.sh --debug
+	$(V)touch rrfetched
+
+custom_firmware_clean:
+	$(V)rm -rf custom_firmware
+
+# Nothing to see here, move along
+# the firmware is (un)installed automatically due the *_FIRMWARE vars
+custom_firmware_install:
+custom_firmware_uninstall:

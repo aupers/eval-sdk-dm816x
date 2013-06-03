@@ -1,0 +1,928 @@
+Index: kernel/linux-2.6.37-psp04.04.00.01/arch/arm/mach-omap2/Kconfig
+===================================================================
+--- kernel.orig/linux-2.6.37-psp04.04.00.01/arch/arm/mach-omap2/Kconfig	2012-12-17 11:34:02.557090120 -0600
++++ kernel/linux-2.6.37-psp04.04.00.01/arch/arm/mach-omap2/Kconfig	2012-12-17 11:34:02.585090119 -0600
+@@ -344,6 +344,11 @@
+ 
+ config MACH_TI8168EVM
+ 	bool "TI8168 Evaluation Module"
++	default n
++	depends on ARCH_TI816X
++
++config MACH_DM8168Z3
++	bool "DM8168 Z3 Module"
+ 	default y
+ 	depends on ARCH_TI816X
+ 
+Index: kernel/linux-2.6.37-psp04.04.00.01/arch/arm/mach-omap2/Makefile
+===================================================================
+--- kernel.orig/linux-2.6.37-psp04.04.00.01/arch/arm/mach-omap2/Makefile	2012-03-22 23:12:54.000000000 -0600
++++ kernel/linux-2.6.37-psp04.04.00.01/arch/arm/mach-omap2/Makefile	2012-12-17 11:34:27.241089979 -0600
+@@ -261,6 +261,9 @@
+ obj-$(CONFIG_MACH_TI8168EVM)		+= board-ti8168evm.o \
+ 					   hsmmc.o \
+ 					   board-flash.o
++obj-$(CONFIG_MACH_DM8168Z3)		+= board-dm8168z3.o \
++					   hsmmc.o \
++					   board-flash.o
+ # Platform specific device init code
+ usbfs-$(CONFIG_ARCH_OMAP_OTG)		:= usb-fs.o
+ obj-y					+= $(usbfs-m) $(usbfs-y)
+Index: kernel/linux-2.6.37-psp04.04.00.01/arch/arm/tools/mach-types
+===================================================================
+--- kernel.orig/linux-2.6.37-psp04.04.00.01/arch/arm/tools/mach-types	2012-03-22 23:12:54.000000000 -0600
++++ kernel/linux-2.6.37-psp04.04.00.01/arch/arm/tools/mach-types	2012-12-17 11:34:02.585090119 -0600
+@@ -3220,3 +3220,4 @@
+ dds			MACH_DDS		DDS			3237
+ chalten_xa1		MACH_CHALTEN_XA1	CHALTEN_XA1		3238
+ dm385evm		MACH_DM385EVM		DM385EVM		3900
++dm8168z3		MACH_DM8168Z3		DM8168Z3		3714
+\ No newline at end of file
+Index: kernel/linux-2.6.37-psp04.04.00.01/sound/soc/davinci/davinci-evm.c
+===================================================================
+--- kernel.orig/linux-2.6.37-psp04.04.00.01/sound/soc/davinci/davinci-evm.c	2012-03-22 23:13:03.000000000 -0600
++++ kernel/linux-2.6.37-psp04.04.00.01/sound/soc/davinci/davinci-evm.c	2012-12-17 11:34:27.305089979 -0600
+@@ -63,6 +63,7 @@
+ 	else if (machine_is_davinci_da830_evm() ||
+ 				machine_is_davinci_da850_evm() ||
+ 				machine_is_ti8168evm() ||
++				machine_is_dm8168z3() ||
+ 				machine_is_ti8148evm() ||
+ 				machine_is_dm385evm())
+ 		sysclk = 24576000;
+@@ -343,7 +344,7 @@
+ 		evm_snd_dev_data = &da850_snd_soc_card;
+ 		index = 0;
+ 	} else if (machine_is_ti8168evm() || machine_is_ti8148evm()
+-					|| machine_is_dm385evm()) {
++		    || machine_is_dm385evm() || machine_is_dm8168z3()) {
+ 		ti81xx_evm_dai_fixup();
+ 		evm_snd_dev_data = &ti81xx_snd_soc_card;
+ 		index = 0;
+Index: kernel/linux-2.6.37-psp04.04.00.01/arch/arm/mach-omap2/board-dm8168z3.c
+===================================================================
+--- /dev/null	1970-01-01 00:00:00.000000000 +0000
++++ kernel/linux-2.6.37-psp04.04.00.01/arch/arm/mach-omap2/board-dm8168z3.c	2012-12-17 11:37:28.253088949 -0600
+@@ -0,0 +1,769 @@
++/*
++ * Code for TI8168 Z3.
++ *
++ * Copyright (C) 2011 RidgeRun
++ *
++ * Based on board-ti8168evm.c - Texas Instruments
++ *          and modifications made by Z3
++ *
++ * This program is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU General Public License as
++ * published by the Free Software Foundation version 2.
++ *
++ * This program is distributed "as is" WITHOUT ANY WARRANTY of any
++ * kind, whether express or implied; without even the implied warranty
++ * of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ */
++#include <linux/kernel.h>
++#include <linux/init.h>
++#include <linux/platform_device.h>
++#include <linux/i2c/at24.h>
++#include <linux/i2c-gpio.h>
++#include <linux/device.h>
++#include <linux/mtd/mtd.h>
++#include <linux/mtd/partitions.h>
++#include <linux/device.h>
++#include <linux/mtd/nand.h>
++#include <linux/spi/spi.h>
++#include <linux/spi/flash.h>
++#include <linux/mtd/physmap.h>
++#include <linux/phy.h>
++#include <linux/gpio.h>
++#include <linux/regulator/machine.h>
++#include <linux/regulator/gpio-regulator.h>
++
++#include <mach/gpio.h>
++#include <mach/hardware.h>
++#include <mach/z3_fpga.h>
++#include <mach/z3_app.h>
++
++#include <asm/mach-types.h>
++#include <asm/mach/arch.h>
++#include <asm/mach/map.h>
++
++#include <plat/mcspi.h>
++#include <plat/irqs.h>
++#include <plat/board.h>
++#include <plat/common.h>
++#include <plat/asp.h>
++#include <plat/usb.h>
++#include <plat/mmc.h>
++#include <plat/gpmc.h>
++#include <plat/nand.h>
++#include <plat/hdmi_lib.h>
++
++#include "control.h"
++
++
++#include "clock.h"
++#include "mux.h"
++#include "hsmmc.h"
++#include "board-flash.h"
++#include <mach/board-ti816x.h>
++#include "cm81xx.h"
++
++
++static struct omap2_hsmmc_info mmc[] = {
++	{
++		.mmc		= 1,
++		.caps           = MMC_CAP_4_BIT_DATA,
++		.gpio_cd	= -EINVAL,/* Dedicated pins for CD and WP */
++		.gpio_wp	= -EINVAL,
++		.ocr_mask	= MMC_VDD_33_34,
++	},
++	{}	/* Terminator */
++};
++
++static int z3_board_id_gpio = 21;
++
++#define VPS_VC_IO_EXP_RESET_DEV_MASK        (0x0Fu)
++#define VPS_VC_IO_EXP_SEL_VIN0_S1_MASK      (0x04u)
++#define VPS_VC_IO_EXP_THS7368_DISABLE_MASK  (0x10u)
++#define VPS_VC_IO_EXP_THS7368_BYPASS_MASK   (0x20u)
++#define VPS_VC_IO_EXP_THS7368_FILTER1_MASK  (0x40u)
++#define VPS_VC_IO_EXP_THS7368_FILTER2_MASK  (0x80u)
++#define VPS_VC_IO_EXP_THS7368_FILTER_SHIFT  (0x06u)
++
++/* Maximum ports supported by the PCF8575 */
++#define VPS_PCF8575_MAX_PORTS           (2u)
++
++/* Macros for accessing for ports */
++#define VPS_PCF8575_PORT0               (0u)
++#define VPS_PCF8575_PORT1               (1u)
++
++/* Macros for PCF8575 Pins */
++#define VPS_PCF8575_PIN0                (0x1)
++#define VPS_PCF8575_PIN1                (0x2)
++#define VPS_PCF8575_PIN2                (0x4)
++#define VPS_PCF8575_PIN3                (0x8)
++#define VPS_PCF8575_PIN4                (0x10)
++#define VPS_PCF8575_PIN5                (0x20)
++#define VPS_PCF8575_PIN6                (0x40)
++#define VPS_PCF8575_PIN7                (0x80)
++
++#define VPS_PCF8575_PIN10               (0x1)
++#define VPS_PCF8575_PIN11               (0x2)
++
++#define VPS_THS7375_MASK                (VPS_PCF8575_PIN10 | VPS_PCF8575_PIN11)
++
++#define VPS_THS7360_SD_MASK             (VPS_PCF8575_PIN2 | VPS_PCF8575_PIN5)
++
++#define VPS_THS7360_SF_MASK             (VPS_PCF8575_PIN0 |                    \
++					 VPS_PCF8575_PIN1 |                    \
++					 VPS_PCF8575_PIN3 |                    \
++					 VPS_PCF8575_PIN4)
++
++#define NAND_BLOCK_SIZE					SZ_128K
++
++/* Macro for GPIO voltage regulator */
++#define VR_GPIO_INSTANCE	0
++
++#ifdef CONFIG_REGULATOR_GPIO
++static struct regulator_consumer_supply ti816x_gpio_dcdc_supply[] = {
++	{
++		.supply = "vdd_avs",
++	},
++};
++
++static struct regulator_init_data gpio_pmic_init_data = {
++	.constraints = {
++		.min_uV		= 858000,
++		.max_uV		= 1397000,
++		.valid_ops_mask	= (REGULATOR_CHANGE_VOLTAGE |
++			REGULATOR_CHANGE_STATUS),
++	},
++	.num_consumer_supplies	= ARRAY_SIZE(ti816x_gpio_dcdc_supply),
++	.consumer_supplies	= ti816x_gpio_dcdc_supply,
++};
++
++/* Supported voltage values for regulators */
++static struct gpio_vr_data ti816x_vsel_table[] = {
++	{0x0,  858000}, {0x1,  907000}, {0x2,  956000}, {0x3, 1005000},
++	{0x4, 1054000}, {0x5, 1103000}, {0x6, 1152000}, {0x7, 1201000},
++	{0xc, 1250000}, {0xd, 1299000}, {0xe, 1348000}, {0xf, 1397000},
++};
++
++static struct gpio vcore_gpios[] = {
++	{ (VR_GPIO_INSTANCE * 32) + 0, GPIOF_IN, "vgpio 0"},
++	{ (VR_GPIO_INSTANCE * 32) + 1, GPIOF_IN, "vgpio 1"},
++	{ (VR_GPIO_INSTANCE * 32) + 2, GPIOF_IN, "vgpio 2"},
++	{ (VR_GPIO_INSTANCE * 32) + 3, GPIOF_IN, "vgpio 3"},
++};
++
++/* GPIO regulator platform data */
++static struct gpio_reg_platform_data gpio_vr_init_data = {
++	.name			= "VFB",
++	.pmic_init_data		= &gpio_pmic_init_data,
++	.gpio_vsel_table	= ti816x_vsel_table,
++	.num_voltages		= ARRAY_SIZE(ti816x_vsel_table),
++	.gpios			= vcore_gpios,
++	.gpio_single_bank	= true,
++	.gpio_arr_mask		= 0xF,
++	.num_gpio_pins		= ARRAY_SIZE(vcore_gpios),
++	.pmic_vout		= 600000,
++};
++
++/* VCORE for SR regulator init */
++static struct platform_device ti816x_gpio_vr_device = {
++	.name		= "gpio_vr",
++	.id		= -1,
++	.dev = {
++		.platform_data = &gpio_vr_init_data,
++	},
++};
++
++static void __init ti816x_gpio_vr_init(void)
++{
++	if (platform_device_register(&ti816x_gpio_vr_device))
++		printk(KERN_ERR "failed to register ti816x_gpio_vr device\n");
++	else
++		printk(KERN_INFO "registered ti816x_gpio_vr device\n");
++}
++#else
++static inline void ti816x_gpio_vr_init(void) {}
++#endif
++
++static struct i2c_client *pcf8575_1_client;
++static unsigned char pcf8575_1_port[2] = {0, 0};
++
++static struct i2c_client *pcf8575_2_client;
++static unsigned char pcf8575_2_port[2] = {0xFF, 0x2F};
++
++static struct i2c_client *ths7353_client;
++
++int vps_ti816x_select_video_decoder(int vid_decoder_id)
++{
++	return 0;
++}
++EXPORT_SYMBOL(vps_ti816x_select_video_decoder);
++#define I2C_RETRY_COUNT 10u
++int vps_ti816x_set_tvp7002_filter(enum fvid2_standard standard)
++{
++    return 0;
++}
++EXPORT_SYMBOL(vps_ti816x_set_tvp7002_filter);
++int pcf8575_ths7375_enable(enum ti816x_ths_filter_ctrl ctrl)
++{
++	return 0;
++}
++EXPORT_SYMBOL(pcf8575_ths7375_enable);
++
++static int z3_write_pca9557(u8 value)
++{
++	struct i2c_msg msg;
++	char buf[2];
++	int retval;
++
++	/* Write output port register */
++	buf[0] = 0x1;
++	buf[1] = pcf8575_1_port[0];
++
++	msg.buf = buf;
++	msg.addr = pcf8575_1_client->addr;
++	msg.len = 2;
++	msg.flags = 0;
++
++	retval = (i2c_transfer(pcf8575_1_client->adapter, &msg, 1));
++
++	/* Write output enable register */
++	buf[0] = 0x3;
++	buf[1] = 0x00;
++	msg.buf = buf;
++	msg.addr = pcf8575_1_client->addr;
++	msg.len = 2;
++	msg.flags = 0;
++
++	retval |= (i2c_transfer(pcf8575_1_client->adapter, &msg, 1));
++
++	return retval;
++}
++
++
++int pcf8575_ths7360_sd_enable(enum ti816x_ths_filter_ctrl ctrl)
++{
++	struct i2c_msg msg = {
++		.flags = 0,
++		.len = 2,
++	};
++
++	if ( pcf8575_1_client == NULL )
++	  return 0;
++
++	msg.addr = pcf8575_1_client->addr,
++
++	pcf8575_1_port[0] &= ~VPS_THS7360_SD_MASK;
++	switch (ctrl) {
++	case TI816X_THSFILTER_ENABLE_MODULE:
++		pcf8575_1_port[0] &= ~(VPS_THS7360_SD_MASK);
++		break;
++	case TI816X_THSFILTER_BYPASS_MODULE:
++		pcf8575_1_port[0] |= VPS_PCF8575_PIN2;
++		break;
++	case TI816X_THSFILTER_DISABLE_MODULE:
++		pcf8575_1_port[0] |= VPS_THS7360_SD_MASK;
++		break;
++	default:
++		return -EINVAL;
++	}
++
++    return z3_write_pca9557( pcf8575_1_port[0] );
++
++}
++EXPORT_SYMBOL(pcf8575_ths7360_sd_enable);
++
++int pcf8575_ths7360_hd_enable(enum ti816x_ths7360_sf_ctrl ctrl)
++{
++	struct i2c_msg msg = {
++		.flags = 0,
++		.len = 2,
++	};
++
++	if ( pcf8575_1_client == NULL )
++	  return 0;
++
++	msg.addr = pcf8575_1_client->addr,
++
++	pcf8575_1_port[0] &= ~VPS_THS7360_SF_MASK;
++
++	switch (ctrl) {
++	case TI816X_THS7360_DISABLE_SF:
++		pcf8575_1_port[0] |= VPS_PCF8575_PIN4;
++		break;
++	case TI816X_THS7360_BYPASS_SF:
++		pcf8575_1_port[0] |= VPS_PCF8575_PIN3;
++		break;
++	case TI816X_THS7360_SF_SD_MODE:
++		pcf8575_1_port[0] &= ~(VPS_THS7360_SF_MASK);
++		break;
++	case TI816X_THS7360_SF_ED_MODE:
++		pcf8575_1_port[0] |= VPS_PCF8575_PIN0;
++		break;
++	case TI816X_THS7360_SF_HD_MODE:
++		pcf8575_1_port[0] |= VPS_PCF8575_PIN1;
++		break;
++	case TI816X_THS7360_SF_TRUE_HD_MODE:
++		pcf8575_1_port[0] |= VPS_PCF8575_PIN0|VPS_PCF8575_PIN1;
++		break;
++	default:
++		return -EINVAL;
++	}
++
++    return z3_write_pca9557( pcf8575_1_port[0] );
++
++}
++EXPORT_SYMBOL(pcf8575_ths7360_hd_enable);
++
++static int pcf8575_video_probe(struct i2c_client *client,
++				const struct i2c_device_id *id)
++{
++	if (client->addr == 0x20)
++		pcf8575_1_client = client;
++	else if (client->addr == 0x21)
++		pcf8575_2_client = client;
++	else if (client->addr == 0x2e)
++		ths7353_client = client;
++        else
++                 BUG();
++	return 0;
++}
++
++static int __devexit pcf8575_video_remove(struct i2c_client *client)
++{
++	pcf8575_1_client = NULL;
++	pcf8575_2_client = NULL;
++	return 0;
++}
++
++static const struct i2c_device_id pcf8575_video_id[] = {
++	{ "pcf8575_1", 0 },
++	{ }
++};
++
++static struct i2c_driver pcf8575_driver = {
++	.driver = {
++		.name   = "pcf8575_1",
++	},
++	.probe          = pcf8575_video_probe,
++	.remove         = pcf8575_video_remove,
++	.id_table       = pcf8575_video_id,
++};
++
++int ti816x_pcf8575_init(void)
++{
++	return 0;
++}
++EXPORT_SYMBOL(ti816x_pcf8575_init);
++
++int ti816x_pcf8575_exit(void)
++{
++	i2c_del_driver(&pcf8575_driver);
++	return 0;
++}
++EXPORT_SYMBOL(ti816x_pcf8575_exit);
++
++static struct i2c_board_info __initdata z3dm816x_i2c_boardinfo0[] = {
++	{
++		I2C_BOARD_INFO("pcf8575_1", 0x1e), //actually PCA9557
++	},
++	{
++		I2C_BOARD_INFO("tlv320aic3x", 0x18), // DM8168-MOD-02 and up
++	},
++//	{
++//		I2C_BOARD_INFO("adv7611", 0x4c), // DM8168-APP-02 and up
++//	},
++};
++
++static struct i2c_board_info __initdata z3dm816x_i2c_boardinfo1[] = {
++	{
++		I2C_BOARD_INFO("tlv320aic3x", 0x18), // DM8168-MOD-02 and up
++	},
++};
++
++/* FIX ME: Check on the Bit Value */
++
++#define TI816X_EVM_CIR_UART BIT(5)
++
++static const struct i2c_device_id cpld_reg_ids[] = {
++		{ "cpld_reg0", 0, },
++		{ },
++};
++
++static int __init ti816x_evm_i2c_init(void)
++{
++	omap_register_i2c_bus(1, 100, z3dm816x_i2c_boardinfo0,
++		ARRAY_SIZE(z3dm816x_i2c_boardinfo0));
++	omap_register_i2c_bus(2, 100, z3dm816x_i2c_boardinfo1,
++		ARRAY_SIZE(z3dm816x_i2c_boardinfo1));
++	return 0;
++}
++
++/* SPI fLash information */
++struct mtd_partition ti816x_spi_partitions[] = {
++	/* All the partition sizes are listed in terms of NAND block size */
++	{
++		.name		= "U-Boot",
++		.offset		= 0,	/* Offset = 0x0 */
++		.size		= 64 * SZ_4K,
++		.mask_flags	= MTD_WRITEABLE,	/* force read-only */
++	},
++	{
++		.name		= "U-Boot Env",
++		.offset		= MTDPART_OFS_APPEND,	/* Offset = 0x40000 */
++		.size		= 2 * SZ_4K,
++	},
++	{
++		.name		= "Kernel",
++		.offset		= MTDPART_OFS_APPEND,	/* Offset = 0x42000 */
++		.size		= 640 * SZ_4K,
++	},
++	{
++		.name		= "File System",
++		.offset		= MTDPART_OFS_APPEND,	/* Offset = 0x2C2000 */
++		.size		= MTDPART_SIZ_FULL,	/* size = 1.24 MiB */
++	}
++};
++
++const struct flash_platform_data ti816x_spi_flash = {
++	.name		= "spi_flash",
++	.parts		= ti816x_spi_partitions,
++	.nr_parts	= ARRAY_SIZE(ti816x_spi_partitions),
++};
++
++struct spi_board_info __initdata ti816x_spi_slave_info[] = {
++	{
++		.modalias	= "m25p80",
++		.platform_data	= &ti816x_spi_flash,
++		.irq		= -1,
++		.max_speed_hz	= 75000000,
++		.bus_num	= 1,
++		.chip_select	= 0,
++	},
++};
++
++static void __init ti8168_evm_init_irq(void)
++{
++	omap2_init_common_infrastructure();
++	omap2_init_common_devices(NULL, NULL);
++	omap_init_irq();
++	gpmc_init();
++}
++
++static u8 ti8168_mcasp0_serializer_direction[] = {
++	RX_MODE,	INACTIVE_MODE,	INACTIVE_MODE,	INACTIVE_MODE,
++	TX_MODE,	INACTIVE_MODE,	INACTIVE_MODE,	INACTIVE_MODE,
++	INACTIVE_MODE,	INACTIVE_MODE,	INACTIVE_MODE,	INACTIVE_MODE,
++	INACTIVE_MODE,	INACTIVE_MODE,	INACTIVE_MODE,	INACTIVE_MODE,
++};
++
++static struct snd_platform_data ti8168_evm_mcasp0_data = {
++	.tx_dma_offset	= 0x46000000,
++	.rx_dma_offset	= 0x46000000,
++	.op_mode	= DAVINCI_MCASP_IIS_MODE,
++	.num_serializer = ARRAY_SIZE(ti8168_mcasp0_serializer_direction),
++	.tdm_slots	= 2,
++	.serial_dir	= ti8168_mcasp0_serializer_direction,
++	.asp_chan_q	= EVENTQ_2,
++	.version	= MCASP_VERSION_2,
++	.txnumevt	= 1,
++	.rxnumevt	= 1,
++};
++
++
++static u8 ti8168_mcasp1_serializer_direction_app_31[] = {
++	TX_MODE,	INACTIVE_MODE,	INACTIVE_MODE,	INACTIVE_MODE,
++	INACTIVE_MODE,	INACTIVE_MODE,	INACTIVE_MODE,	INACTIVE_MODE,
++	INACTIVE_MODE,	INACTIVE_MODE,	INACTIVE_MODE,	INACTIVE_MODE,
++	INACTIVE_MODE,	INACTIVE_MODE,	INACTIVE_MODE,	INACTIVE_MODE,
++};
++
++static u8 ti8168_mcasp1_serializer_direction[] = {
++	RX_MODE,	TX_MODE,	INACTIVE_MODE,	INACTIVE_MODE,
++	INACTIVE_MODE,	INACTIVE_MODE,	INACTIVE_MODE,	INACTIVE_MODE,
++	INACTIVE_MODE,	INACTIVE_MODE,	INACTIVE_MODE,	INACTIVE_MODE,
++	INACTIVE_MODE,	INACTIVE_MODE,	INACTIVE_MODE,	INACTIVE_MODE,
++};
++
++static struct snd_platform_data ti8168_evm_mcasp1_data = {
++	.tx_dma_offset	= 0x46400000,
++	.rx_dma_offset	= 0x46400000,
++	.op_mode	= DAVINCI_MCASP_IIS_MODE,
++	.num_serializer = ARRAY_SIZE(ti8168_mcasp1_serializer_direction),
++	.tdm_slots	= 2,
++	.serial_dir	= ti8168_mcasp1_serializer_direction,
++	.asp_chan_q	= EVENTQ_1,
++	.version	= MCASP_VERSION_2,
++	.txnumevt	= 1,
++	.rxnumevt	= 1,
++};
++
++static u8 ti8168_mcasp2_serializer_direction[] = {
++	TX_MODE,	RX_MODE,	INACTIVE_MODE,	INACTIVE_MODE,
++	INACTIVE_MODE,	INACTIVE_MODE,	INACTIVE_MODE,	INACTIVE_MODE,
++	INACTIVE_MODE,	INACTIVE_MODE,	INACTIVE_MODE,	INACTIVE_MODE,
++	INACTIVE_MODE,	INACTIVE_MODE,	INACTIVE_MODE,	INACTIVE_MODE,
++};
++
++static struct snd_platform_data ti8168_evm_mcasp2_data = {
++	.tx_dma_offset	= 0x46800000,
++	.rx_dma_offset	= 0x46800000,
++	.op_mode	= DAVINCI_MCASP_IIS_MODE,
++	.num_serializer = ARRAY_SIZE(ti8168_mcasp2_serializer_direction),
++	.tdm_slots	= 2,
++	.serial_dir	= ti8168_mcasp2_serializer_direction,
++	.asp_chan_q	= EVENTQ_2,
++	.version	= MCASP_VERSION_2,
++	.txnumevt	= 1,
++	.rxnumevt	= 1,
++};
++
++static struct omap_musb_board_data musb_board_data = {
++	.interface_type		= MUSB_INTERFACE_ULPI,
++#ifdef CONFIG_USB_MUSB_OTG
++	.mode           = MUSB_OTG,
++#elif defined(CONFIG_USB_MUSB_HDRC_HCD)
++	.mode           = MUSB_HOST,
++#elif defined(CONFIG_USB_GADGET_MUSB_HDRC)
++	.mode           = MUSB_PERIPHERAL,
++#endif
++	.power		= 500,
++	.instances	= 1,
++};
++
++#ifdef CONFIG_OMAP_MUX
++static struct omap_board_mux board_mux[] __initdata = {
++
++	/* PIN mux for non-muxed NOR */
++	TI816X_MUX(TIM7_OUT, OMAP_MUX_MODE1),	/* gpmc_a12 */
++	TI816X_MUX(UART1_CTSN, OMAP_MUX_MODE1),	/* gpmc_a13 */
++	TI816X_MUX(UART1_RTSN, OMAP_MUX_MODE1),	/* gpmc_a14 */
++	TI816X_MUX(UART2_RTSN, OMAP_MUX_MODE1),	/* gpmc_a15 */
++	/* REVISIT: why 2 lines configured as gpmc_a15 */
++	TI816X_MUX(SC1_RST, OMAP_MUX_MODE1),	/* gpmc_a15 */
++	TI816X_MUX(UART2_CTSN, OMAP_MUX_MODE1),	/* gpmc_a16 */
++	TI816X_MUX(UART0_RIN, OMAP_MUX_MODE1),	/* gpmc_a17 */
++	TI816X_MUX(UART0_DCDN, OMAP_MUX_MODE1),	/* gpmc_a18 */
++	TI816X_MUX(UART0_DSRN, OMAP_MUX_MODE1),	/* gpmc_a19 */
++	TI816X_MUX(UART0_DTRN, OMAP_MUX_MODE1),	/* gpmc_a20 */
++	TI816X_MUX(SPI_SCS3, OMAP_MUX_MODE0),	/* spi_scs3 */
++	TI816X_MUX(SPI_SCS2, OMAP_MUX_MODE0),	/* spi_scs2 */
++	TI816X_MUX(GP0_IO6, OMAP_MUX_MODE2),	/* gpmc_a23 */
++	TI816X_MUX(TIM6_OUT, OMAP_MUX_MODE1),	/* gpmc-a24 */
++	TI816X_MUX(SC0_DATA, OMAP_MUX_MODE1),	/* gpmc_a25 */
++	/* for controlling high address */
++	TI816X_MUX(GPMC_A27, OMAP_MUX_MODE1),	/* gpio-20 */
++      TI816X_MUX(SC1_DET, OMAP_MUX_MODE2),	/* Z3: gpio-21 for reading board id */
++	{ .reg_offset = OMAP_MUX_TERMINATOR },
++};
++#else
++#define board_mux	NULL
++#endif
++
++static struct platform_device ti8168_adv7611_1_snd_driver = {
++	.name	= "adv7611-sound",
++	.id	= 1,
++};
++
++static struct platform_device ti8168_adv7611_2_snd_driver = {
++	.name	= "adv7611-sound",
++	.id	= 2,
++};
++
++static struct platform_device ti8168_gv7601_snd_driver = {
++	.name	= "gv7601-sound",
++	.id	= -1,
++};
++
++static struct platform_device ti8168_gv7600_snd_driver = {
++	.name	= "gv7600-sound",
++	.id	= -1,
++};
++
++int __init ti_ahci_register(u8 num_inst);
++
++void z3_board_id_init(void)
++{
++        int ret;
++
++        omap_mux_init_signal( "gp0_io21", TI81XX_MUX_PULLDIS );
++
++        ret = gpio_request(z3_board_id_gpio, "BoardID");
++        if ( ret == 0 ) {
++                ret = gpio_direction_input(z3_board_id_gpio);
++        }
++        if ( ret == 0 ) {
++                /* Export to SYSFS */
++                ret = gpio_export(z3_board_id_gpio, true);
++        }
++}
++
++#ifdef CONFIG_SND_SOC_TI81XX_HDMI
++static struct snd_hdmi_platform_data ti8168_snd_hdmi_pdata = {
++	.dma_addr = TI81xx_HDMI_WP + HDMI_WP_AUDIO_DATA,
++	.channel = 53,
++	.data_type = 4,
++	.acnt = 4,
++	.fifo_level = 0x20,
++};
++
++static struct platform_device ti8168_hdmi_audio_device = {
++	.name	= "hdmi-dai",
++	.id	= -1,
++        .dev = {
++		.platform_data = &ti8168_snd_hdmi_pdata,
++        }
++};
++
++static struct platform_device ti8168_hdmi_codec_device = {
++	.name	= "hdmi-dummy-codec",
++	.id	= -1,
++};
++
++static struct platform_device *ti8168_devices[] __initdata = {
++	&ti8168_hdmi_audio_device,
++	&ti8168_hdmi_codec_device,
++};
++#endif
++
++
++void z3_register_app31_smbus(void)
++{
++        static struct i2c_gpio_platform_data __initdata smbus_i2c_device_platdata = {
++                .sda_pin	= 25,
++                .scl_pin	= 24,
++                .udelay		= 10,
++        };
++
++        static struct i2c_board_info __initdata app31_smbus_boardinfo[] = {
++                {
++                        I2C_BOARD_INFO("lmh071", 0x58),
++                },
++        };
++
++
++        static struct platform_device __initdata app31_smbus_device = {
++                .name		= "i2c-gpio",
++                .id		= 3, /* host I2C at bus 1 and 2, so start at 3 */
++                .dev = {
++                        .platform_data = &smbus_i2c_device_platdata,
++                }
++        };
++
++
++        static struct platform_device *app31_smbus_devices[] __initdata = {
++                &app31_smbus_device
++        };
++
++        /* Set pinmuxing for GPIO */
++        omap_mux_init_signal( "gp0_io22", TI81XX_MUX_PULLDIS );
++        omap_mux_init_signal( "gp0_io24", TI81XX_MUX_PULLDIS );
++        omap_mux_init_signal( "gp0_io25", TI81XX_MUX_PULLDIS );
++
++        /* Enable chip select */
++        gpio_request( 22, "asi_smbcs");
++	gpio_direction_output(22, 0x1);
++
++        /* Register */
++	i2c_register_board_info(app31_smbus_device.id,
++                                app31_smbus_boardinfo,
++                                ARRAY_SIZE(app31_smbus_boardinfo) );
++
++        /* Added bit-banging I2C device */
++	platform_add_devices(app31_smbus_devices, ARRAY_SIZE(app31_smbus_devices));
++}
++
++
++static void __init ti8168_evm_init(void)
++{
++	int bw; /* bus-width */
++
++	ti81xx_mux_init(board_mux);
++	omap_serial_init();
++	ti816x_evm_i2c_init();
++
++
++	/* initialize usb */
++	usb_musb_init(&musb_board_data);
++
++	/* nand initialisation */
++	if (cpu_is_ti81xx()) {
++		u32 *control_status = TI81XX_CTRL_REGADDR(0x40);
++		if (*control_status & (1<<16))
++			bw = 0;	/*8-bit nand if BTMODE BW pin on board is ON*/
++		else
++			bw = 2;	/*16-bit nand if BTMODE BW pin on board is OFF*/
++
++		board_nand_init(NULL,0, 0, bw);
++	} else {
++		board_nand_init(NULL,0, 0, 0);
++    }
++	omap2_hsmmc_init(mmc);
++    /* Enable 125MHz output from CLKOUT for TVP7002 external clock */
++    __raw_writel( 0x80, TI816X_CM_CLKOUT_CTRL );
++    z3_board_id_init();
++    mdelay(10);
++    z3_fpga_init(z3_board_id_gpio);
++    omap_mux_init_signal( "spi_scs0", TI81XX_MUX_PULLDIS );
++    omap_mux_init_signal( "spi_scs1", TI81XX_MUX_PULLDIS );
++    switch ( z3_fpga_board_id() ) {
++        case Z3_BOARD_ID_APP_31:
++                ti8168_evm_mcasp1_data.serial_dir   = ti8168_mcasp1_serializer_direction_app_31;
++                ti8168_evm_mcasp1_data.rrot_nibbles = 0;
++
++                ti8168_evm_mcasp0_data.rrot_nibbles = 6; /* SDI: Turn 24-bit into 32-bit */
++
++                /* Register SMBUS */
++                z3_register_app31_smbus();
++                break;
++        default:
++                break;
++        }
++	ti81xx_register_mcasp(0, &ti8168_evm_mcasp0_data);
++	ti81xx_register_mcasp(1, &ti8168_evm_mcasp1_data);
++	ti81xx_register_mcasp(2, &ti8168_evm_mcasp2_data);
++
++#if defined(CONFIG_SND_SOC_ADV7611) || defined(CONFIG_SND_SOC_ADV7611_MODULE)
++        platform_device_register( &ti8168_adv7611_1_snd_driver );
++        platform_device_register( &ti8168_adv7611_2_snd_driver );
++#endif
++#if defined(CONFIG_SND_SOC_GV7601) || defined(CONFIG_SND_SOC_GV7601_MODULE)
++        platform_device_register( &ti8168_gv7601_snd_driver );
++#endif
++#if defined(CONFIG_SND_SOC_GV7600) || defined(CONFIG_SND_SOC_GV7600_MODULE)
++        platform_device_register( &ti8168_gv7600_snd_driver );
++#endif
++
++	ti816x_gpio_vr_init();
++#ifdef CONFIG_SND_SOC_TI81XX_HDMI
++	platform_add_devices(ti8168_devices, ARRAY_SIZE(ti8168_devices));
++#endif
++	regulator_has_full_constraints();
++	regulator_use_dummy_regulator();
++}
++
++static int __init ti8168_evm_gpio_setup(void)
++{
++	/* GPIO-20 should be low for NOR access beyond 4KiB */
++	gpio_request(20, "nor");
++	gpio_direction_output(20, 0x0);
++	return 0;
++}
++/* GPIO setup should be as subsys_initcall() as gpio driver
++ * is registered in arch_initcall()
++ */
++subsys_initcall(ti8168_evm_gpio_setup);
++
++static void __init ti8168_evm_map_io(void)
++{
++	omap2_set_globals_ti816x();
++	ti81xx_map_common_io();
++}
++
++MACHINE_START(DM8168Z3, "dm8168z3")
++	.boot_params = 0x80000100,
++	.map_io		 = ti8168_evm_map_io,
++	.reserve     = ti81xx_reserve,
++	.init_irq	 = ti8168_evm_init_irq,
++	.init_machine= ti8168_evm_init,
++	.timer		 = &omap_timer,
++MACHINE_END
+Index: kernel/linux-2.6.37-psp04.04.00.01/sound/soc/davinci/davinci-mcasp.c
+===================================================================
+--- kernel.orig/linux-2.6.37-psp04.04.00.01/sound/soc/davinci/davinci-mcasp.c	2012-03-22 23:13:03.000000000 -0600
++++ kernel/linux-2.6.37-psp04.04.00.01/sound/soc/davinci/davinci-mcasp.c	2012-12-17 11:34:27.293089979 -0600
+@@ -200,6 +200,8 @@
+ #define TX_ASYNC	BIT(6)
+ #define ACLKXPOL	BIT(7)
+ 
++#define ACLKXDIVMASK    0x1f
++
+ /*
+  * DAVINCI_MCASP_ACLKRCTL_REG Receive Clock Control Register Bits
+  */
+@@ -216,6 +218,8 @@
+ #define AHCLKXPOL	BIT(14)
+ #define AHCLKXE		BIT(15)
+ 
++#define AHCLKXDIVMASK   0xfff
++
+ /*
+  * DAVINCI_MCASP_AHCLKRCTL_REG - High Frequency Receive Clock Control
+  *     Register Bits
+@@ -360,6 +364,9 @@
+ 	u8 offset = 0, i;
+ 	u32 cnt;
+ 
++        mcasp_mod_bits( dev->base + DAVINCI_MCASP_AHCLKXCTL_REG, AHCLKXDIV(7), AHCLKXDIVMASK);
++        mcasp_mod_bits( dev->base + DAVINCI_MCASP_ACLKXCTL_REG, ACLKXDIV(0), ACLKXDIVMASK);
++
+ 	mcasp_set_ctl_reg(dev->base + DAVINCI_MCASP_GBLCTLX_REG, TXHCLKRST);
+ 	mcasp_set_ctl_reg(dev->base + DAVINCI_MCASP_GBLCTLX_REG, TXCLKRST);
+ 	mcasp_set_ctl_reg(dev->base + DAVINCI_MCASP_GBLCTLX_REG, TXSERCLR);
+@@ -462,6 +469,12 @@
+ 		mcasp_clr_bits(base + DAVINCI_MCASP_RXFMCTL_REG, AFSRE);
+ 
+ 		mcasp_clr_bits(base + DAVINCI_MCASP_PDIR_REG, (0x3f << 26));
++
++        /* AHCLKX drives MCLK */
++        mcasp_mod_bits( dev->base + DAVINCI_MCASP_AHCLKXCTL_REG, AHCLKXDIV(7), AHCLKXDIVMASK);
++        mcasp_mod_bits( dev->base + DAVINCI_MCASP_ACLKXCTL_REG, ACLKXDIV(0), ACLKXDIVMASK);
++		mcasp_set_bits(base + DAVINCI_MCASP_PDIR_REG, (0x2 << 26));
++
+ 		break;
+ 
+ 	default:
+Index: kernel/linux-2.6.37-psp04.04.00.01/arch/arm/mach-omap2/devices.c
+===================================================================
+--- kernel.orig/linux-2.6.37-psp04.04.00.01/arch/arm/mach-omap2/devices.c	2012-12-17 11:34:02.117090122 -0600
++++ kernel/linux-2.6.37-psp04.04.00.01/arch/arm/mach-omap2/devices.c	2012-12-17 11:34:27.265089979 -0600
+@@ -1376,7 +1376,8 @@
+ 	platform_device_register(&ti816x_mdio_device);
+ 	clk_add_alias(NULL, dev_name(&ti816x_mdio_device.dev),
+ 			NULL, &ti816x_emac1_device.dev);
+-
++#if 0
++// Disable eth1 on Z3 module
+ 	mac_lo = omap_ctrl_readl(TI81XX_CONTROL_MAC_ID1_LO);
+ 	mac_hi = omap_ctrl_readl(TI81XX_CONTROL_MAC_ID1_HI);
+ 	ti816x_emac2_pdata.mac_addr[0] = mac_hi & 0xFF;
+@@ -1396,7 +1397,7 @@
+ 	ti816x_emac2_pdata.interrupt_disable = NULL;
+ 	ti816x_emac2_device.dev.platform_data = &ti816x_emac2_pdata;
+ 	platform_device_register(&ti816x_emac2_device);
+-
++#endif
+ 	ti816x_emac_mux();
+ }
+ #else
+Index: kernel/linux-2.6.37-psp04.04.00.01/arch/arm/mach-omap2/cm81xx.h
+===================================================================
+--- kernel.orig/linux-2.6.37-psp04.04.00.01/arch/arm/mach-omap2/cm81xx.h	2012-03-22 23:12:54.000000000 -0600
++++ kernel/linux-2.6.37-psp04.04.00.01/arch/arm/mach-omap2/cm81xx.h	2012-12-17 11:34:02.653090119 -0600
+@@ -195,6 +195,7 @@
+ 
+ /* CM_DEVICE */
+ #define TI814X_CM_CLKOUT_CTRL			TI81XX_CM_REGADDR(TI81XX_CM_DEVICE_MOD, 0x0000)
++#define TI816X_CM_CLKOUT_CTRL			TI81XX_CM_REGADDR(TI81XX_CM_DEVICE_MOD, 0x0000)
+ 
+ /* CM_DSP */
+ #define TI814X_CM_DSP_CLKSTCTRL			TI81XX_CM_REGADDR(TI814X_CM_DSP_MOD, 0x0000)
+Index: kernel/linux-2.6.37-psp04.04.00.01/arch/arm/plat-omap/include/plat/asp.h
+===================================================================
+--- kernel.orig/linux-2.6.37-psp04.04.00.01/arch/arm/plat-omap/include/plat/asp.h	2012-03-22 23:12:54.000000000 -0600
++++ kernel/linux-2.6.37-psp04.04.00.01/arch/arm/plat-omap/include/plat/asp.h	2012-12-17 11:34:02.653090119 -0600
+@@ -56,6 +56,8 @@
+ 	u8 version;
+ 	u8 txnumevt;
+ 	u8 rxnumevt;
++
++    u8 rrot_nibbles; /* additional right rotate (units of nibbles) */
+ };
+ 
+ enum {

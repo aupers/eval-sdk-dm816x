@@ -1,0 +1,17 @@
+Index: gst-plugins-good-0.10.31/src/sys/v4l2/gstv4l2src.c
+===================================================================
+--- gst-plugins-good-0.10.31.orig/src/sys/v4l2/gstv4l2src.c	2012-12-13 07:33:09.375525460 -0600
++++ gst-plugins-good-0.10.31/src/sys/v4l2/gstv4l2src.c	2012-12-14 09:59:24.884520237 -0600
+@@ -617,8 +617,10 @@
+ {
+   struct v4l2_dv_preset dv_preset;
+ 
+-  dv_preset.preset = 0x0;
+-  v4l2_ioctl (v4l2object->video_fd, VIDIOC_QUERY_DV_PRESET, &dv_preset);
++/*  dv_preset.preset = 0x0;
++  v4l2_ioctl (v4l2object->video_fd, VIDIOC_QUERY_DV_PRESET, &dv_preset); */
++
++    dv_preset.preset = V4L2_DV_1080P60;
+ 
+   switch (dv_preset.preset) {
+ 	case V4L2_DV_720P60:

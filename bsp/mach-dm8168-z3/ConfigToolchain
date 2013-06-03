@@ -1,0 +1,14 @@
+#
+# This file defines the architecture dependend flags for the toolchain
+# and is included from toolchain/$(TOOLCHAIN)/Config
+#
+# We define this file from mach and not from arch because the flags may 
+# change according to the toolchain being used (which is selected by the mach)
+#
+# all definitions on this subtree must prefix with TOOLCHAIN_
+
+config TOOLCHAIN_ARCH_FLAGS
+	string "Toolchain architecture dependent flags"
+	default "-march=armv7-a -mfpu=neon -mfloat-abi=softfp"
+	help
+	    Toolchain architecture dependent flags
