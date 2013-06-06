@@ -13,4 +13,5 @@ Documentation:
 * https://developer.ridgerun.com/wiki/index.php/Getting_Started_Guide_for_DM8168_EVM
 * https://developer.ridgerun.com/wiki/index.php/SDK_Turrialba_for_DM8168_EVM_Board
 * https://developer.ridgerun.com/wiki/index.php/SDK_Turrialba_for_DM8168_Z3_Board
+* https://developer.ridgerun.com/wiki/index.php/Gstreamer_pipelines_for_DM816x_and_DM814x
 * https://developer.ridgerun.com/wiki/index.php/RidgeRun_Turrialba_SDK_User_Guide
