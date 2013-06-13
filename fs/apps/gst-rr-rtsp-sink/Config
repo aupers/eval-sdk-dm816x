@@ -1,0 +1,11 @@
+config FS_APPS_RR_RTSP_SINK
+	bool "RidgeRun RTSP GStreamer sink element"
+        select FS_APPS_GSTREAMER
+	select FS_APPS_GSTREAMER_PLUGINS_BASE
+        select FS_APPS_GSTREAMER_RTSP_SERVER	
+       	help
+		RidgeRun RTSP server Gstreamer sink element.
+		Provides a simple mechanism for creating a GStreamer
+		pipeline where the data is sent over the network
+		using RTSP / RTP protocols.  Detailed documentation at
+		https://developer.ridgerun.com/wiki/index.php/RTSP_Sink
