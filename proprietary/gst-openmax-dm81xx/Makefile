@@ -4,7 +4,7 @@
 
 PKG_URL=git://github.com/RidgeRun/gst-openmax-dm81xx.git
 PKG_TYPE=git
-PKG_REVISION=4c18aefe476193544ab0b4bf7736d5715a522319
+PKG_REVISION=cef152c63746f8e6ad7679d4d46e448f0d2d58b0
 
 AUTOTOOLS_SRC_DIR=src
 # Prevents autogen from running configure
