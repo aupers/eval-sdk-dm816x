@@ -51,7 +51,12 @@ export EZSDK_PLATFORM_LOWERCASE=ti816x
 EZSDK_VERIFICATION_FILE=component-sources/omx_05_02_00_48
 
 #Firmware to be loaded into the M3, this must be located in /lib/firmware/
+#Needed by V4L2 capture driver
+ifeq ($(CONFIG_PROPRIETARY_EZSDK_ENABLE_V4L2_CAPTURE),y)
+VPSS_FIRMWARE?=ezsdk/board-support/prebuilt-images/dm816x-firmware_05_02_00_48/dm816x_hdvpss_v4l2.xem3
+else
 VPSS_FIRMWARE?=ezsdk/board-support/prebuilt-images/dm816x-firmware_05_02_00_48/dm816x_hdvpss.xem3
+endif
 HDVICP2_FIRMWARE?=ezsdk/board-support/prebuilt-images/dm816x-firmware_05_02_00_48/dm816x_hdvicp.xem3
 DSP_FIRMWARE?=ezsdk/board-support/prebuilt-images/dm816x-firmware_05_02_00_48/dm816x_c6xdsp.xe674
 endif

@@ -3,6 +3,7 @@
 HDVICP2_ID=1
 HDVPSS_ID=2
 DSP_ID=0
+USE_V4L2_CAPTURE=@V4L2_ENABLE@
 
 case "$1" in
 start)
@@ -65,6 +66,11 @@ start)
 	    rmmod ti81xxvo 2>/dev/null || true
 	    #TODO: ADDR and more params
 	    modprobe ti81xxvo
+	fi
+#	Needed to capture using V4L2
+	if [ -f /lib/modules/@KERNELVERSION@/kernel/drivers/media/video/ti81xx/ti81xxvin.ko -a $USE_V4L2_CAPTURE = true ] ; then
+	    rmmod ti81xxvin 2>/dev/null || true
+	    modprobe ti81xxvin
 	fi
 	
 	;;

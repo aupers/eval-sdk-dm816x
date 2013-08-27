@@ -81,3 +81,10 @@ config PROPRIETARY_EZSDK_CMEM_RESERVED_MEMORY
 	help
 	    Amount of memory to allocate for CMEM
 
+config PROPRIETARY_EZSDK_ENABLE_V4L2_CAPTURE
+	bool "Enable V4L2 capture capability"
+	depends on PROPRIETARY_TI_CODECENGINE_DM8168 || PROPRIETARY_TI_CODECENGINE_DM8148
+	default y
+	help
+	    Enable V4L2 video capture
+
