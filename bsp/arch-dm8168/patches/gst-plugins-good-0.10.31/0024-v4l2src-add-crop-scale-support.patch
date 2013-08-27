@@ -1,0 +1,201 @@
+Index: gst-plugins-good-0.10.31/src/sys/v4l2/gstv4l2object.h
+===================================================================
+--- gst-plugins-good-0.10.31.orig/src/sys/v4l2/gstv4l2object.h	2013-07-18 10:53:37.079825176 -0700
++++ gst-plugins-good-0.10.31/src/sys/v4l2/gstv4l2object.h	2013-07-18 10:54:18.045305355 -0700
+@@ -81,6 +81,9 @@
+   /* the video device */
+   char *videodev;
+ 
++  /* crop area to be selected */
++  gchar *crop_area;
++
+   /* the video-device's file descriptor */
+   gint video_fd;
+   GstPoll * poll;
+Index: gst-plugins-good-0.10.31/src/sys/v4l2/gstv4l2src.c
+===================================================================
+--- gst-plugins-good-0.10.31.orig/src/sys/v4l2/gstv4l2src.c	2013-07-18 10:50:03.623355377 -0700
++++ gst-plugins-good-0.10.31/src/sys/v4l2/gstv4l2src.c	2013-07-18 12:14:30.471330972 -0700
+@@ -68,6 +68,7 @@
+ #define PROP_DEF_DECIMATE           1
+ 
+ #define DEFAULT_PROP_DEVICE   "/dev/video0"
++#define DEFAULT_CROP_AREA     NUL
+ 
+ enum
+ {
+@@ -75,7 +76,8 @@
+   V4L2_STD_OBJECT_PROPS,
+   PROP_QUEUE_SIZE,
+   PROP_ALWAYS_COPY,
+-  PROP_DECIMATE
++  PROP_DECIMATE,
++  PROP_CROP_AREA
+ };
+ 
+ GST_IMPLEMENT_V4L2_PROBE_METHODS (GstV4l2SrcClass, gst_v4l2src);
+@@ -289,6 +291,10 @@
+       g_param_spec_int ("decimate", "Decimate",
+           "Only use every nth frame", 1, G_MAXINT,
+           PROP_DEF_DECIMATE, G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
++  g_object_class_install_property (gobject_class, PROP_CROP_AREA,
++      g_param_spec_string ("crop-area", "Select the crop area.",
++      "Selects the crop area using the format left:top:width:height",
++      NULL, G_PARAM_READWRITE));
+ 
+   basesrc_class->get_caps = GST_DEBUG_FUNCPTR (gst_v4l2src_get_caps);
+   basesrc_class->set_caps = GST_DEBUG_FUNCPTR (gst_v4l2src_set_caps);
+@@ -367,6 +373,10 @@
+       case PROP_DECIMATE:
+         v4l2src->decimate = g_value_get_int (value);
+         break;
++      case PROP_CROP_AREA:
++        v4l2src->v4l2object->crop_area =
++           g_ascii_strup(g_value_get_string(value), -1);
++        break;
+       default:
+         G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+         break;
+@@ -393,6 +403,9 @@
+       case PROP_DECIMATE:
+         g_value_set_int (value, v4l2src->decimate);
+         break;
++      case PROP_CROP_AREA:
++        g_value_set_string(value, v4l2src->v4l2object->crop_area);
++        break;
+       default:
+         G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+         break;
+Index: gst-plugins-good-0.10.31/src/sys/v4l2/v4l2src_calls.c
+===================================================================
+--- gst-plugins-good-0.10.31.orig/src/sys/v4l2/v4l2src_calls.c	2013-07-18 12:14:52.019319383 -0700
++++ gst-plugins-good-0.10.31/src/sys/v4l2/v4l2src_calls.c	2013-07-18 12:20:11.323408890 -0700
+@@ -271,11 +271,34 @@
+   format.fmt.pix.field = field;
+   format.fmt.pix.bytesperline = stride;
+  	
+-  crop.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+-  crop.c.left = 0;
+-  crop.c.top = 0;
+-  crop.c.width = maxWidth;
+-  crop.c.height = maxHeight;
++  /* Setting crop area */
++  if(v4l2object->crop_area == NULL){
++    crop.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
++    crop.c.left = 0;
++    crop.c.top = 0;
++    crop.c.width = width;
++    crop.c.height = height;
++    if(ioctl(fd, VIDIOC_S_CROP, &crop)) {
++      GST_ERROR("Setting crop failed\n");
++      return;
++    }
++  } else {
++    if(!gst_v4l2src_change_crop(v4l2object,fd,maxWidth,maxHeight))
++      return FALSE;
++  }
++
++  /* Setting scale dimensions */
++  fmt_win.type = V4L2_BUF_TYPE_VIDEO_OVERLAY;
++  fmt_win.fmt.win.w.left = 0;
++  fmt_win.fmt.win.w.top = 0;
++  fmt_win.fmt.win.w.width = width;
++  fmt_win.fmt.win.w.height = height;
++
++  if (ioctl(fd, VIDIOC_S_FMT, &fmt_win)) {
++    GST_ERROR("Setting scale size failed\n");
++    return FALSE;
++  }
++
+   if (v4l2_ioctl (fd, VIDIOC_S_FMT, &format) < 0) {
+     goto set_fmt_failed;
+   }
+@@ -468,6 +491,76 @@
+   }
+ }
+ 
++/******************************************************
++ * gst_v4l2src_change_crop():
++ *   Sets a crop area to capture.
++ * return value: TRUE on success, FALSE on error
++ ******************************************************/
++gboolean
++gst_v4l2src_change_crop(GstV4l2Object * v4l2object, gint fd, guint32 max_width, guint32 max_height)
++{
++	/* Check if the crop-area parameter has been set */
++	if(v4l2object->crop_area != NULL){
++		struct v4l2_crop crop;
++		char* crop_param;
++		gboolean error = FALSE;
++		crop.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
++		gchar v4l2src_crop_area[20];
++
++		strcpy(v4l2src_crop_area, v4l2object->crop_area);
++
++		/* Searching for LEFT param */
++		crop_param = strtok(v4l2src_crop_area,",");
++		if(crop_param == NULL){
++			error = TRUE;
++		} else {
++			crop.c.left = atoi(crop_param);
++		}
++
++		/* Searching for TOP param */
++		crop_param = strtok(NULL,"@");
++		if(crop_param == NULL){
++			error = TRUE;
++		} else {
++			crop.c.top = atoi(crop_param);
++		}
++
++		/* Searching for WIDTH param */
++		crop_param = strtok(NULL,"X");
++		if(crop_param == NULL){
++			error = TRUE;
++		} else {
++			crop.c.width = atoi(crop_param);
++		}
++
++		/* Searching for HEIGHT param */
++		crop_param = strtok(NULL,"");
++		if(crop_param == NULL){
++			error = TRUE;
++		} else {
++			crop.c.height = atoi(crop_param);
++		}
++
++        GST_ERROR("Trying to set new crop area to: (%d,%d)@%dx%d\n",crop.c.top,crop.c.left,crop.c.width,crop.c.height);
++		/* Setting crop area if there was not any error */
++		if(error){
++          GST_WARNING ("Cropping area is not valid. Format must be "
++                              "<LEFT>,<TOP>@<WIDTH>x<HEIGHT>. Setting crop area to max values.");
++          crop.c.width = max_width;
++          crop.c.height = max_height;
++          crop.c.left = 0;
++          crop.c.top = 0;
++        }
++
++        /* Setting crop area */
++        if(ioctl(fd, VIDIOC_S_CROP, &crop)) {
++          GST_ERROR ("There was an error when assigning new crop parameters.");
++
++          return FALSE;
++        }
++    }
++	return TRUE;
++}
+ 
+ /******************************************************
+  * gst_v4l2src_capture_start():
+Index: gst-plugins-good-0.10.31/src/sys/v4l2/v4l2src_calls.h
+===================================================================
+--- gst-plugins-good-0.10.31.orig/src/sys/v4l2/v4l2src_calls.h	2013-07-18 12:20:56.084243844 -0700
++++ gst-plugins-good-0.10.31/src/sys/v4l2/v4l2src_calls.h	2013-07-18 12:21:06.361676136 -0700
+@@ -42,5 +42,7 @@
+ gboolean   gst_v4l2src_capture_stop      (GstV4l2Src * v4l2src);
+ gboolean   gst_v4l2src_capture_deinit    (GstV4l2Src * v4l2src);
+ 
++gboolean gst_v4l2src_change_crop(GstV4l2Object * v4l2object, gint fd, guint32 max_width, guint32 max_height);
++
+ 
+ #endif /* __V4L2SRC_CALLS_H__ */
