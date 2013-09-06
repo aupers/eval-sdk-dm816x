@@ -1,10 +1,10 @@
 #$L$
-# Copyright (C) 2011 Ridgerun
+# Copyright (C) 2013 Ridgerun
 ##$L$
 
 PKG_URL=http://busybox.net/downloads/
-PKG_TARBALL=busybox-1.18.2.tar.bz2
-PKG_SHA1SUM=8a26a1ae813bfe5bc8b5ef6935b3f5c9660f6ed3
+PKG_TARBALL=busybox-1.20.2.tar.bz2
+PKG_SHA1SUM=dd2e3684b13c0071d480e97b569041e69538e798
 
 include ../../../bsp/classes/rrsdk.class
 

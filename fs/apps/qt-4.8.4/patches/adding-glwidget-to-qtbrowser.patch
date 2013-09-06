@@ -1,0 +1,1630 @@
+Index: qt-4.8.4/src/examples/browser/browserapplication.cpp
+===================================================================
+--- qt-4.8.4.orig/src/examples/browser/browserapplication.cpp	2013-05-20 15:11:46.479092375 -0600
++++ qt-4.8.4/src/examples/browser/browserapplication.cpp	2013-05-21 10:34:42.498975512 -0600
+@@ -48,7 +48,7 @@
+ #include "history.h"
+ #include "networkaccessmanager.h"
+ #include "tabwidget.h"
+-#include "webview.h"
++#include "graphicswebview.h"
+ 
+ #include <QtCore/QBuffer>
+ #include <QtCore/QDir>
+Index: qt-4.8.4/src/examples/browser/browsermainwindow.cpp
+===================================================================
+--- qt-4.8.4.orig/src/examples/browser/browsermainwindow.cpp	2013-05-20 15:11:46.471092377 -0600
++++ qt-4.8.4/src/examples/browser/browsermainwindow.cpp	2013-05-21 10:31:39.770978643 -0600
+@@ -51,7 +51,7 @@
+ #include "tabwidget.h"
+ #include "toolbarsearch.h"
+ #include "ui_passworddialog.h"
+-#include "webview.h"
++#include "graphicswebview.h"
+ 
+ #include <QtCore/QSettings>
+ 
+@@ -492,9 +492,9 @@
+ 
+ void BrowserMainWindow::slotAddBookmark()
+ {
+-    WebView *webView = currentTab();
+-    QString url = webView->url().toString();
+-    QString title = webView->title();
++    GraphicsWebView *graphicsWebView = currentTab();
++    QString url = graphicsWebView->url().toString();
++    QString title = graphicsWebView->title();
+     AddBookmarkDialog dialog(url, title);
+     dialog.exec();
+ }
+@@ -839,9 +839,9 @@
+     return m_tabWidget;
+ }
+ 
+-WebView *BrowserMainWindow::currentTab() const
++GraphicsWebView *BrowserMainWindow::currentTab() const
+ {
+-    return m_tabWidget->currentWebView();
++    return m_tabWidget->currentGraphicsWebView();
+ }
+ 
+ void BrowserMainWindow::slotLoadProgress(int progress)
+Index: qt-4.8.4/src/examples/browser/browsermainwindow.h
+===================================================================
+--- qt-4.8.4.orig/src/examples/browser/browsermainwindow.h	2013-05-20 15:11:46.479092375 -0600
++++ qt-4.8.4/src/examples/browser/browsermainwindow.h	2013-05-21 10:33:18.058976962 -0600
+@@ -52,7 +52,7 @@
+ class QWebFrame;
+ class TabWidget;
+ class ToolbarSearch;
+-class WebView;
++class GraphicsWebView;
+ 
+ /*!
+     The MainWindow of the Browser Application.
+@@ -69,7 +69,7 @@
+ 
+ public:
+     TabWidget *tabWidget() const;
+-    WebView *currentTab() const;
++    GraphicsWebView *currentTab() const;
+     QByteArray saveState(bool withTabs = true) const;
+     bool restoreState(const QByteArray &state);
+ 
+Index: qt-4.8.4/src/examples/browser/settings.cpp
+===================================================================
+--- qt-4.8.4.orig/src/examples/browser/settings.cpp	2013-05-20 15:11:46.471092377 -0600
++++ qt-4.8.4/src/examples/browser/settings.cpp	2013-05-21 10:28:02.574982368 -0600
+@@ -46,7 +46,7 @@
+ #include "cookiejar.h"
+ #include "history.h"
+ #include "networkaccessmanager.h"
+-#include "webview.h"
++#include "graphicswebview.h"
+ 
+ #include <QtCore/QSettings>
+ #include <QtGui/QtGui>
+@@ -317,8 +317,8 @@
+ void SettingsDialog::setHomeToCurrentPage()
+ {
+     BrowserMainWindow *mw = static_cast<BrowserMainWindow*>(parent());
+-    WebView *webView = mw->currentTab();
+-    if (webView)
+-        homeLineEdit->setText(webView->url().toString());
++    GraphicsWebView *graphicsWebView = mw->currentTab();
++    if (graphicsWebView)
++        homeLineEdit->setText(graphicsWebView->url().toString());
+ }
+ 
+Index: qt-4.8.4/src/examples/browser/tabwidget.cpp
+===================================================================
+--- qt-4.8.4.orig/src/examples/browser/tabwidget.cpp	2013-05-20 15:11:46.479092375 -0600
++++ qt-4.8.4/src/examples/browser/tabwidget.cpp	2013-05-21 11:34:52.230913654 -0600
+@@ -45,7 +45,7 @@
+ #include "browsermainwindow.h"
+ #include "history.h"
+ #include "urllineedit.h"
+-#include "webview.h"
++#include "graphicswebview.h"
+ 
+ #include <QtGui/QClipboard>
+ #include <QtGui/QCompleter>
+@@ -57,6 +57,8 @@
+ #include <QtGui/QStyle>
+ #include <QtGui/QToolButton>
+ 
++#include <QtWebKit/QWebView>
++
+ #include <QtCore/QDebug>
+ 
+ TabBar::TabBar(QWidget *parent)
+@@ -189,7 +191,7 @@
+         return;
+ 
+     QWidget *widget = this->widget(index);
+-    if (WebView *tab = qobject_cast<WebView*>(widget))
++    if (GraphicsWebView *tab = qobject_cast<GraphicsWebView*>(widget))
+         tab->reload();
+ }
+ 
+@@ -296,41 +298,41 @@
+ 
+ void TabWidget::currentChanged(int index)
+ {
+-    WebView *webView = this->webView(index);
+-    if (!webView)
++    GraphicsWebView *graphicsWebView = this->graphicsWebView(index);
++    if (!graphicsWebView)
+         return;
+ 
+     Q_ASSERT(m_lineEdits->count() == count());
+ 
+-    WebView *oldWebView = this->webView(m_lineEdits->currentIndex());
+-    if (oldWebView) {
+-        disconnect(oldWebView, SIGNAL(statusBarMessage(QString)),
++    GraphicsWebView *oldGraphicsWebView = this->graphicsWebView(m_lineEdits->currentIndex());
++    if (oldGraphicsWebView) {
++        disconnect(oldGraphicsWebView, SIGNAL(statusBarMessage(QString)),
+                 this, SIGNAL(showStatusBarMessage(QString)));
+-        disconnect(oldWebView->page(), SIGNAL(linkHovered(QString,QString,QString)),
++        disconnect(oldGraphicsWebView->page(), SIGNAL(linkHovered(QString,QString,QString)),
+                 this, SIGNAL(linkHovered(QString)));
+-        disconnect(oldWebView, SIGNAL(loadProgress(int)),
++        disconnect(oldGraphicsWebView, SIGNAL(loadProgress(int)),
+                 this, SIGNAL(loadProgress(int)));
+     }
+ 
+-    connect(webView, SIGNAL(statusBarMessage(QString)),
++    connect(graphicsWebView, SIGNAL(statusBarMessage(QString)),
+             this, SIGNAL(showStatusBarMessage(QString)));
+-    connect(webView->page(), SIGNAL(linkHovered(QString,QString,QString)),
++    connect(graphicsWebView->page(), SIGNAL(linkHovered(QString,QString,QString)),
+             this, SIGNAL(linkHovered(QString)));
+-    connect(webView, SIGNAL(loadProgress(int)),
++    connect(graphicsWebView, SIGNAL(loadProgress(int)),
+             this, SIGNAL(loadProgress(int)));
+ 
+     for (int i = 0; i < m_actions.count(); ++i) {
+         WebActionMapper *mapper = m_actions[i];
+-        mapper->updateCurrent(webView->page());
++        mapper->updateCurrent(graphicsWebView->page());
+     }
+-    emit setCurrentTitle(webView->title());
++    emit setCurrentTitle(graphicsWebView->title());
+     m_lineEdits->setCurrentIndex(index);
+-    emit loadProgress(webView->progress());
+-    emit showStatusBarMessage(webView->lastStatusBarText());
+-    if (webView->url().isEmpty())
++    emit loadProgress(graphicsWebView->progress());
++    emit showStatusBarMessage(graphicsWebView->lastStatusBarText());
++    if (graphicsWebView->url().isEmpty())
+         m_lineEdits->currentWidget()->setFocus();
+     else
+-        webView->setFocus();
++        graphicsWebView->setFocus();
+ }
+ 
+ QAction *TabWidget::newTabAction() const
+@@ -368,9 +370,9 @@
+     return lineEdit(m_lineEdits->currentIndex());
+ }
+ 
+-WebView *TabWidget::currentWebView() const
++GraphicsWebView *TabWidget::currentGraphicsWebView() const
+ {
+-    return webView(currentIndex());
++    return graphicsWebView(currentIndex());
+ }
+ 
+ QLineEdit *TabWidget::lineEdit(int index) const
+@@ -381,32 +383,32 @@
+     return 0;
+ }
+ 
+-WebView *TabWidget::webView(int index) const
++GraphicsWebView *TabWidget::graphicsWebView(int index) const
+ {
+     QWidget *widget = this->widget(index);
+-    if (WebView *webView = qobject_cast<WebView*>(widget)) {
+-        return webView;
++    if (GraphicsWebView *graphicsWebView = qobject_cast<GraphicsWebView*>(widget)) {
++        return graphicsWebView;
+     } else {
+-        // optimization to delay creating the first webview
++        // optimization to delay creating the first graphicswebview
+         if (count() == 1) {
+             TabWidget *that = const_cast<TabWidget*>(this);
+             that->setUpdatesEnabled(false);
+             that->newTab();
+             that->closeTab(0);
+             that->setUpdatesEnabled(true);
+-            return currentWebView();
++            return currentGraphicsWebView();
+         }
+     }
+     return 0;
+ }
+ 
+-int TabWidget::webViewIndex(WebView *webView) const
++int TabWidget::graphicsWebViewIndex(GraphicsWebView *graphicsWebView) const
+ {
+-    int index = indexOf(webView);
++    int index = indexOf((QWebView *) graphicsWebView);
+     return index;
+ }
+ 
+-WebView *TabWidget::newTab(bool makeCurrent)
++GraphicsWebView *TabWidget::newTab(bool makeCurrent)
+ {
+     // line edit
+     UrlLineEdit *urlLineEdit = new UrlLineEdit;
+@@ -426,7 +428,7 @@
+     m_lineEdits->addWidget(urlLineEdit);
+     m_lineEdits->setSizePolicy(lineEdit->sizePolicy());
+ 
+-    // optimization to delay creating the more expensive WebView, history, etc
++    // optimization to delay creating the more expensive GraphicsWebView, history, etc
+     if (count() == 0) {
+         QWidget *emptyWidget = new QWidget;
+         QPalette p = emptyWidget->palette();
+@@ -442,52 +444,52 @@
+         return 0;
+     }
+ 
+-    // webview
+-    WebView *webView = new WebView;
+-    urlLineEdit->setWebView(webView);
+-    connect(webView, SIGNAL(loadStarted()),
+-            this, SLOT(webViewLoadStarted()));
+-    connect(webView, SIGNAL(loadFinished(bool)),
+-            this, SLOT(webViewIconChanged()));
+-    connect(webView, SIGNAL(iconChanged()),
+-            this, SLOT(webViewIconChanged()));
+-    connect(webView, SIGNAL(titleChanged(QString)),
+-            this, SLOT(webViewTitleChanged(QString)));
+-    connect(webView, SIGNAL(urlChanged(QUrl)),
+-            this, SLOT(webViewUrlChanged(QUrl)));
+-    connect(webView->page(), SIGNAL(windowCloseRequested()),
++    // graphicswebview
++    GraphicsWebView *graphicsWebView = new GraphicsWebView;
++    urlLineEdit->setGraphicsWebView(graphicsWebView);
++    connect(graphicsWebView, SIGNAL(loadStarted()),
++            this, SLOT(graphicsWebViewLoadStarted()));
++    connect(graphicsWebView, SIGNAL(loadFinished(bool)),
++            this, SLOT(graphicsWebViewIconChanged()));
++    connect(graphicsWebView, SIGNAL(iconChanged()),
++            this, SLOT(graphicsWebViewIconChanged()));
++    connect(graphicsWebView, SIGNAL(titleChanged(QString)),
++            this, SLOT(graphicsWebViewTitleChanged(QString)));
++    connect(graphicsWebView, SIGNAL(urlChanged(QUrl)),
++            this, SLOT(graphicsWebViewUrlChanged(QUrl)));
++    connect(graphicsWebView->page(), SIGNAL(windowCloseRequested()),
+             this, SLOT(windowCloseRequested()));
+-    connect(webView->page(), SIGNAL(geometryChangeRequested(QRect)),
++    connect(graphicsWebView->page(), SIGNAL(geometryChangeRequested(QRect)),
+             this, SIGNAL(geometryChangeRequested(QRect)));
+-    connect(webView->page(), SIGNAL(printRequested(QWebFrame*)),
++    connect(graphicsWebView->page(), SIGNAL(printRequested(QWebFrame*)),
+             this, SIGNAL(printRequested(QWebFrame*)));
+-    connect(webView->page(), SIGNAL(menuBarVisibilityChangeRequested(bool)),
++    connect(graphicsWebView->page(), SIGNAL(menuBarVisibilityChangeRequested(bool)),
+             this, SIGNAL(menuBarVisibilityChangeRequested(bool)));
+-    connect(webView->page(), SIGNAL(statusBarVisibilityChangeRequested(bool)),
++    connect(graphicsWebView->page(), SIGNAL(statusBarVisibilityChangeRequested(bool)),
+             this, SIGNAL(statusBarVisibilityChangeRequested(bool)));
+-    connect(webView->page(), SIGNAL(toolBarVisibilityChangeRequested(bool)),
++    connect(graphicsWebView->page(), SIGNAL(toolBarVisibilityChangeRequested(bool)),
+             this, SIGNAL(toolBarVisibilityChangeRequested(bool)));
+-    addTab(webView, tr("(Untitled)"));
++    addTab((QWebView *) graphicsWebView, tr("(Untitled)"));
+     if (makeCurrent)
+-        setCurrentWidget(webView);
++        setCurrentWidget((QWebView *) graphicsWebView);
+ 
+-    // webview actions
++    // graphicswebview actions
+     for (int i = 0; i < m_actions.count(); ++i) {
+         WebActionMapper *mapper = m_actions[i];
+-        mapper->addChild(webView->page()->action(mapper->webAction()));
++        mapper->addChild(graphicsWebView->page()->action(mapper->webAction()));
+     }
+ 
+     if (count() == 1)
+         currentChanged(currentIndex());
+     emit tabsChanged();
+-    return webView;
++    return graphicsWebView;
+ }
+ 
+ void TabWidget::reloadAllTabs()
+ {
+     for (int i = 0; i < count(); ++i) {
+         QWidget *tabWidget = widget(i);
+-        if (WebView *tab = qobject_cast<WebView*>(tabWidget)) {
++        if (GraphicsWebView *tab = qobject_cast<GraphicsWebView*>(tabWidget)) {
+             tab->reload();
+         }
+     }
+@@ -498,18 +500,18 @@
+     if (QLineEdit *lineEdit = qobject_cast<QLineEdit*>(sender())) {
+         emit loadPage(lineEdit->text());
+         if (m_lineEdits->currentWidget() == lineEdit)
+-            currentWebView()->setFocus();
++            currentGraphicsWebView()->setFocus();
+     }
+ }
+ 
+ void TabWidget::windowCloseRequested()
+ {
+     WebPage *webPage = qobject_cast<WebPage*>(sender());
+-    WebView *webView = qobject_cast<WebView*>(webPage->view());
+-    int index = webViewIndex(webView);
++    GraphicsWebView *graphicsWebView = qobject_cast<GraphicsWebView*>(webPage->view());
++    int index = graphicsWebViewIndex(graphicsWebView);
+     if (index >= 0) {
+         if (count() == 1)
+-            webView->webPage()->mainWindow()->close();
++            graphicsWebView->webPage()->mainWindow()->close();
+         else
+             closeTab(index);
+     }
+@@ -532,8 +534,8 @@
+         index = currentIndex();
+     if (index < 0 || index >= count())
+         return;
+-    WebView *tab = newTab(false);
+-    tab->setUrl(webView(index)->url());
++    GraphicsWebView *tab = newTab(false);
++    tab->setUrl(graphicsWebView(index)->url());
+ }
+ 
+ // When index is -1 index chooses the current tab
+@@ -545,9 +547,9 @@
+         return;
+ 
+     bool hasFocus = false;
+-    if (WebView *tab = webView(index)) {
++    if (GraphicsWebView *tab = graphicsWebView(index)) {
+         if (tab->isModified()) {
+-            QMessageBox closeConfirmation(tab);
++	    QMessageBox closeConfirmation((QWebView *) tab);
+             closeConfirmation.setWindowFlags(Qt::Sheet);
+             closeConfirmation.setWindowTitle(tr("Do you really want to close this page?"));
+             closeConfirmation.setInformativeText(tr("You have modified this page and when closing it you would lose the modification.\n"
+@@ -572,52 +574,52 @@
+     QWidget *lineEdit = m_lineEdits->widget(index);
+     m_lineEdits->removeWidget(lineEdit);
+     lineEdit->deleteLater();
+-    QWidget *webView = widget(index);
++    QWidget *graphicsWebView = widget(index);
+     removeTab(index);
+-    webView->deleteLater();
++    graphicsWebView->deleteLater();
+     emit tabsChanged();
+     if (hasFocus && count() > 0)
+-        currentWebView()->setFocus();
++        currentGraphicsWebView()->setFocus();
+     if (count() == 0)
+         emit lastTabClosed();
+ }
+ 
+-void TabWidget::webViewLoadStarted()
++void TabWidget::graphicsWebViewLoadStarted()
+ {
+-    WebView *webView = qobject_cast<WebView*>(sender());
+-    int index = webViewIndex(webView);
++    GraphicsWebView *graphicsWebView = qobject_cast<GraphicsWebView*>(sender());
++    int index = graphicsWebViewIndex(graphicsWebView);
+     if (-1 != index) {
+         QIcon icon(QLatin1String(":loading.gif"));
+         setTabIcon(index, icon);
+     }
+ }
+ 
+-void TabWidget::webViewIconChanged()
++void TabWidget::graphicsWebViewIconChanged()
+ {
+-    WebView *webView = qobject_cast<WebView*>(sender());
+-    int index = webViewIndex(webView);
++    GraphicsWebView *graphicsWebView = qobject_cast<GraphicsWebView*>(sender());
++    int index = graphicsWebViewIndex(graphicsWebView);
+     if (-1 != index) {
+-        QIcon icon = BrowserApplication::instance()->icon(webView->url());
++        QIcon icon = BrowserApplication::instance()->icon(graphicsWebView->url());
+         setTabIcon(index, icon);
+     }
+ }
+ 
+-void TabWidget::webViewTitleChanged(const QString &title)
++void TabWidget::graphicsWebViewTitleChanged(const QString &title)
+ {
+-    WebView *webView = qobject_cast<WebView*>(sender());
+-    int index = webViewIndex(webView);
++    GraphicsWebView *graphicsWebView = qobject_cast<GraphicsWebView*>(sender());
++    int index = graphicsWebViewIndex(graphicsWebView);
+     if (-1 != index) {
+         setTabText(index, title);
+     }
+     if (currentIndex() == index)
+         emit setCurrentTitle(title);
+-    BrowserApplication::historyManager()->updateHistoryItem(webView->url(), title);
++    BrowserApplication::historyManager()->updateHistoryItem(graphicsWebView->url(), title);
+ }
+ 
+-void TabWidget::webViewUrlChanged(const QUrl &url)
++void TabWidget::graphicsWebViewUrlChanged(const QUrl &url)
+ {
+-    WebView *webView = qobject_cast<WebView*>(sender());
+-    int index = webViewIndex(webView);
++    GraphicsWebView *graphicsWebView = qobject_cast<GraphicsWebView*>(sender());
++    int index = graphicsWebViewIndex(graphicsWebView);
+     if (-1 != index) {
+         m_tabBar->setTabData(index, url);
+     }
+@@ -670,18 +672,18 @@
+             && event->pos().y() < (tabBar()->y() + tabBar()->height())) {
+         QUrl url(QApplication::clipboard()->text(QClipboard::Selection));
+         if (!url.isEmpty() && url.isValid() && !url.scheme().isEmpty()) {
+-            WebView *webView = newTab();
+-            webView->setUrl(url);
++            GraphicsWebView *graphicsWebView = newTab();
++            graphicsWebView->setUrl(url);
+         }
+     }
+ }
+ 
+ void TabWidget::loadUrlInCurrentTab(const QUrl &url)
+ {
+-    WebView *webView = currentWebView();
+-    if (webView) {
+-        webView->loadUrl(url);
+-        webView->setFocus();
++    GraphicsWebView *graphicsWebView = currentGraphicsWebView();
++    if (graphicsWebView) {
++        graphicsWebView->loadUrl(url);
++        graphicsWebView->setFocus();
+     }
+ }
+ 
+@@ -714,7 +716,7 @@
+ 
+     QStringList tabs;
+     for (int i = 0; i < count(); ++i) {
+-        if (WebView *tab = qobject_cast<WebView*>(widget(i))) {
++        if (GraphicsWebView *tab = qobject_cast<GraphicsWebView*>(widget(i))) {
+             tabs.append(tab->url().toString());
+         } else {
+             tabs.append(QString::null);
+Index: qt-4.8.4/src/examples/browser/tabwidget.h
+===================================================================
+--- qt-4.8.4.orig/src/examples/browser/tabwidget.h	2013-05-20 15:11:46.479092375 -0600
++++ qt-4.8.4/src/examples/browser/tabwidget.h	2013-05-21 10:24:57.470985540 -0600
+@@ -89,13 +89,13 @@
+ QT_BEGIN_NAMESPACE
+ class QAction;
+ QT_END_NAMESPACE
+-class WebView;
++class GraphicsWebView;
+ /*!
+     A proxy object that connects a single browser action
+     to one child webpage action at a time.
+ 
+     Example usage: used to keep the main window stop action in sync with
+-    the current tabs webview's stop action.
++    the current tabs graphicswebview's stop action.
+  */
+ class WebActionMapper : public QObject
+ {
+@@ -128,7 +128,7 @@
+ class QStackedWidget;
+ QT_END_NAMESPACE
+ /*!
+-    TabWidget that contains WebViews and a stack widget of associated line edits.
++    TabWidget that contains GraphicsWebViews and a stack widget of associated line edits.
+ 
+     Connects up the current tab's signals to this class's signal and uses WebActionMapper
+     to proxy the actions.
+@@ -167,10 +167,10 @@
+ 
+     QWidget *lineEditStack() const;
+     QLineEdit *currentLineEdit() const;
+-    WebView *currentWebView() const;
+-    WebView *webView(int index) const;
++    GraphicsWebView *currentGraphicsWebView() const;
++    GraphicsWebView *graphicsWebView(int index) const;
+     QLineEdit *lineEdit(int index) const;
+-    int webViewIndex(WebView *webView) const;
++    int graphicsWebViewIndex(GraphicsWebView *graphicsWebView) const;
+ 
+     QByteArray saveState() const;
+     bool restoreState(const QByteArray &state);
+@@ -182,7 +182,7 @@
+ 
+ public slots:
+     void loadUrlInCurrentTab(const QUrl &url);
+-    WebView *newTab(bool makeCurrent = true);
++    GraphicsWebView *newTab(bool makeCurrent = true);
+     void cloneTab(int index = -1);
+     void closeTab(int index = -1);
+     void closeOtherTabs(int index);
+@@ -195,10 +195,10 @@
+     void currentChanged(int index);
+     void aboutToShowRecentTabsMenu();
+     void aboutToShowRecentTriggeredAction(QAction *action);
+-    void webViewLoadStarted();
+-    void webViewIconChanged();
+-    void webViewTitleChanged(const QString &title);
+-    void webViewUrlChanged(const QUrl &url);
++    void graphicsWebViewLoadStarted();
++    void graphicsWebViewIconChanged();
++    void graphicsWebViewTitleChanged(const QString &title);
++    void graphicsWebViewUrlChanged(const QUrl &url);
+     void lineEditReturnPressed();
+     void windowCloseRequested();
+     void moveTab(int fromIndex, int toIndex);
+Index: qt-4.8.4/src/examples/browser/urllineedit.cpp
+===================================================================
+--- qt-4.8.4.orig/src/examples/browser/urllineedit.cpp	2013-05-20 15:11:46.471092377 -0600
++++ qt-4.8.4/src/examples/browser/urllineedit.cpp	2013-05-21 10:13:51.706996952 -0600
+@@ -43,7 +43,7 @@
+ 
+ #include "browserapplication.h"
+ #include "searchlineedit.h"
+-#include "webview.h"
++#include "graphicswebview.h"
+ 
+ #include <QtCore/QEvent>
+ 
+@@ -209,7 +209,7 @@
+ public:
+     UrlIconLabel(QWidget *parent);
+ 
+-    WebView *m_webView;
++    GraphicsWebView *m_graphicsWebView;
+ 
+ protected:
+     void mousePressEvent(QMouseEvent *event);
+@@ -222,7 +222,7 @@
+ 
+ UrlIconLabel::UrlIconLabel(QWidget *parent)
+     : QLabel(parent)
+-    , m_webView(0)
++    , m_graphicsWebView(0)
+ {
+     setMinimumWidth(16);
+     setMinimumHeight(16);
+@@ -239,12 +239,12 @@
+ {
+     if (event->buttons() == Qt::LeftButton
+         && (event->pos() - m_dragStartPos).manhattanLength() > QApplication::startDragDistance()
+-         && m_webView) {
++         && m_graphicsWebView) {
+         QDrag *drag = new QDrag(this);
+         QMimeData *mimeData = new QMimeData;
+-        mimeData->setText(QString::fromUtf8(m_webView->url().toEncoded()));
++        mimeData->setText(QString::fromUtf8(m_graphicsWebView->url().toEncoded()));
+         QList<QUrl> urls;
+-        urls.append(m_webView->url());
++        urls.append(m_graphicsWebView->url());
+         mimeData->setUrls(urls);
+         drag->setMimeData(mimeData);
+         drag->exec();
+@@ -253,7 +253,7 @@
+ 
+ UrlLineEdit::UrlLineEdit(QWidget *parent)
+     : ExLineEdit(parent)
+-    , m_webView(0)
++    , m_graphicsWebView(0)
+     , m_iconLabel(0)
+ {
+     // icon
+@@ -262,33 +262,33 @@
+     setLeftWidget(m_iconLabel);
+     m_defaultBaseColor = palette().color(QPalette::Base);
+ 
+-    webViewIconChanged();
++    graphicsWebViewIconChanged();
+ }
+ 
+-void UrlLineEdit::setWebView(WebView *webView)
++void UrlLineEdit::setGraphicsWebView(GraphicsWebView *graphicsWebView)
+ {
+-    Q_ASSERT(!m_webView);
+-    m_webView = webView;
+-    m_iconLabel->m_webView = webView;
+-    connect(webView, SIGNAL(urlChanged(QUrl)),
+-        this, SLOT(webViewUrlChanged(QUrl)));
+-    connect(webView, SIGNAL(loadFinished(bool)),
+-        this, SLOT(webViewIconChanged()));
+-    connect(webView, SIGNAL(iconChanged()),
+-        this, SLOT(webViewIconChanged()));
+-    connect(webView, SIGNAL(loadProgress(int)),
++    Q_ASSERT(!m_graphicsWebView);
++    m_graphicsWebView = graphicsWebView;
++    m_iconLabel->m_graphicsWebView = graphicsWebView;
++    connect(graphicsWebView, SIGNAL(urlChanged(QUrl)),
++        this, SLOT(graphicsWebViewUrlChanged(QUrl)));
++    connect(graphicsWebView, SIGNAL(loadFinished(bool)),
++        this, SLOT(graphicsWebViewIconChanged()));
++    connect(graphicsWebView, SIGNAL(iconChanged()),
++        this, SLOT(graphicsWebViewIconChanged()));
++    connect(graphicsWebView, SIGNAL(loadProgress(int)),
+         this, SLOT(update()));
+ }
+ 
+-void UrlLineEdit::webViewUrlChanged(const QUrl &url)
++void UrlLineEdit::graphicsWebViewUrlChanged(const QUrl &url)
+ {
+     m_lineEdit->setText(QString::fromUtf8(url.toEncoded()));
+     m_lineEdit->setCursorPosition(0);
+ }
+ 
+-void UrlLineEdit::webViewIconChanged()
++void UrlLineEdit::graphicsWebViewIconChanged()
+ {
+-    QUrl url = (m_webView)  ? m_webView->url() : QUrl();
++    QUrl url = (m_graphicsWebView)  ? m_graphicsWebView->url() : QUrl();
+     QIcon icon = BrowserApplication::instance()->icon(url);
+     QPixmap pixmap(icon.pixmap(16, 16));
+     m_iconLabel->setPixmap(pixmap);
+@@ -307,15 +307,15 @@
+ 
+ void UrlLineEdit::focusOutEvent(QFocusEvent *event)
+ {
+-    if (m_lineEdit->text().isEmpty() && m_webView)
+-        m_lineEdit->setText(QString::fromUtf8(m_webView->url().toEncoded()));
++    if (m_lineEdit->text().isEmpty() && m_graphicsWebView)
++        m_lineEdit->setText(QString::fromUtf8(m_graphicsWebView->url().toEncoded()));
+     ExLineEdit::focusOutEvent(event);
+ }
+ 
+ void UrlLineEdit::paintEvent(QPaintEvent *event)
+ {
+     QPalette p = palette();
+-    if (m_webView && m_webView->url().scheme() == QLatin1String("https")) {
++    if (m_graphicsWebView && m_graphicsWebView->url().scheme() == QLatin1String("https")) {
+         QColor lightYellow(248, 248, 210);
+         p.setBrush(QPalette::Base, generateGradient(lightYellow));
+     } else {
+@@ -328,8 +328,8 @@
+     QStyleOptionFrameV2 panel;
+     initStyleOption(&panel);
+     QRect backgroundRect = style()->subElementRect(QStyle::SE_LineEditContents, &panel, this);
+-    if (m_webView && !hasFocus()) {
+-        int progress = m_webView->progress();
++    if (m_graphicsWebView && !hasFocus()) {
++        int progress = m_graphicsWebView->progress();
+         QColor loadingColor = QColor(116, 192, 250);
+         painter.setBrush(generateGradient(loadingColor));
+         painter.setPen(Qt::transparent);
+Index: qt-4.8.4/src/examples/browser/urllineedit.h
+===================================================================
+--- qt-4.8.4.orig/src/examples/browser/urllineedit.h	2013-05-20 15:11:46.471092377 -0600
++++ qt-4.8.4/src/examples/browser/urllineedit.h	2013-05-21 11:07:43.754941562 -0600
+@@ -85,26 +85,26 @@
+ };
+ 
+ class UrlIconLabel;
+-class WebView;
++class GraphicsWebView;
+ class UrlLineEdit : public ExLineEdit
+ {
+     Q_OBJECT
+ 
+ public:
+     UrlLineEdit(QWidget *parent = 0);
+-    void setWebView(WebView *webView);
++    void setGraphicsWebView(GraphicsWebView *graphicsWebView);
+ 
+ protected:
+     void paintEvent(QPaintEvent *event);
+     void focusOutEvent(QFocusEvent *event);
+ 
+ private slots:
+-    void webViewUrlChanged(const QUrl &url);
+-    void webViewIconChanged();
++    void graphicsWebViewUrlChanged(const QUrl &url);
++    void graphicsWebViewIconChanged();
+ 
+ private:
+     QLinearGradient generateGradient(const QColor &color) const;
+-    WebView *m_webView;
++    GraphicsWebView *m_graphicsWebView;
+     UrlIconLabel *m_iconLabel;
+     QColor m_defaultBaseColor;
+ 
+Index: qt-4.8.4/src/examples/browser/webview.cpp
+===================================================================
+--- qt-4.8.4.orig/src/examples/browser/webview.cpp	2013-05-20 15:11:46.471092377 -0600
++++ /dev/null	1970-01-01 00:00:00.000000000 +0000
+@@ -1,316 +0,0 @@
+-/****************************************************************************
+-**
+-** Copyright (C) 2012 Digia Plc and/or its subsidiary(-ies).
+-** Contact: http://www.qt-project.org/legal
+-**
+-** This file is part of the demonstration applications of the Qt Toolkit.
+-**
+-** $QT_BEGIN_LICENSE:LGPL$
+-** Commercial License Usage
+-** Licensees holding valid commercial Qt licenses may use this file in
+-** accordance with the commercial license agreement provided with the
+-** Software or, alternatively, in accordance with the terms contained in
+-** a written agreement between you and Digia.  For licensing terms and
+-** conditions see http://qt.digia.com/licensing.  For further information
+-** use the contact form at http://qt.digia.com/contact-us.
+-**
+-** GNU Lesser General Public License Usage
+-** Alternatively, this file may be used under the terms of the GNU Lesser
+-** General Public License version 2.1 as published by the Free Software
+-** Foundation and appearing in the file LICENSE.LGPL included in the
+-** packaging of this file.  Please review the following information to
+-** ensure the GNU Lesser General Public License version 2.1 requirements
+-** will be met: http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
+-**
+-** In addition, as a special exception, Digia gives you certain additional
+-** rights.  These rights are described in the Digia Qt LGPL Exception
+-** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
+-**
+-** GNU General Public License Usage
+-** Alternatively, this file may be used under the terms of the GNU
+-** General Public License version 3.0 as published by the Free Software
+-** Foundation and appearing in the file LICENSE.GPL included in the
+-** packaging of this file.  Please review the following information to
+-** ensure the GNU General Public License version 3.0 requirements will be
+-** met: http://www.gnu.org/copyleft/gpl.html.
+-**
+-**
+-** $QT_END_LICENSE$
+-**
+-****************************************************************************/
+-
+-#include "browserapplication.h"
+-#include "browsermainwindow.h"
+-#include "cookiejar.h"
+-#include "downloadmanager.h"
+-#include "networkaccessmanager.h"
+-#include "tabwidget.h"
+-#include "webview.h"
+-
+-#include <QtGui/QClipboard>
+-#include <QtGui/QMenu>
+-#include <QtGui/QMessageBox>
+-#include <QtGui/QMouseEvent>
+-
+-#include <QtWebKit/QWebHitTestResult>
+-
+-#ifndef QT_NO_UITOOLS
+-#include <QtUiTools/QUiLoader>
+-#endif  //QT_NO_UITOOLS
+-
+-#include <QtCore/QDebug>
+-#include <QtCore/QBuffer>
+-
+-WebPage::WebPage(QObject *parent)
+-    : QWebPage(parent)
+-    , m_keyboardModifiers(Qt::NoModifier)
+-    , m_pressedButtons(Qt::NoButton)
+-    , m_openInNewTab(false)
+-{
+-    setNetworkAccessManager(BrowserApplication::networkAccessManager());
+-    connect(this, SIGNAL(unsupportedContent(QNetworkReply*)),
+-            this, SLOT(handleUnsupportedContent(QNetworkReply*)));
+-}
+-
+-BrowserMainWindow *WebPage::mainWindow()
+-{
+-    QObject *w = this->parent();
+-    while (w) {
+-        if (BrowserMainWindow *mw = qobject_cast<BrowserMainWindow*>(w))
+-            return mw;
+-        w = w->parent();
+-    }
+-    return BrowserApplication::instance()->mainWindow();
+-}
+-
+-bool WebPage::acceptNavigationRequest(QWebFrame *frame, const QNetworkRequest &request, NavigationType type)
+-{
+-    // ctrl open in new tab
+-    // ctrl-shift open in new tab and select
+-    // ctrl-alt open in new window
+-    if (type == QWebPage::NavigationTypeLinkClicked
+-        && (m_keyboardModifiers & Qt::ControlModifier
+-            || m_pressedButtons == Qt::MidButton)) {
+-        bool newWindow = (m_keyboardModifiers & Qt::AltModifier);
+-        WebView *webView;
+-        if (newWindow) {
+-            BrowserApplication::instance()->newMainWindow();
+-            BrowserMainWindow *newMainWindow = BrowserApplication::instance()->mainWindow();
+-            webView = newMainWindow->currentTab();
+-            newMainWindow->raise();
+-            newMainWindow->activateWindow();
+-            webView->setFocus();
+-        } else {
+-            bool selectNewTab = (m_keyboardModifiers & Qt::ShiftModifier);
+-            webView = mainWindow()->tabWidget()->newTab(selectNewTab);
+-        }
+-        webView->load(request);
+-        m_keyboardModifiers = Qt::NoModifier;
+-        m_pressedButtons = Qt::NoButton;
+-        return false;
+-    }
+-    if (frame == mainFrame()) {
+-        m_loadingUrl = request.url();
+-        emit loadingUrl(m_loadingUrl);
+-    }
+-    return QWebPage::acceptNavigationRequest(frame, request, type);
+-}
+-
+-QWebPage *WebPage::createWindow(QWebPage::WebWindowType type)
+-{
+-    Q_UNUSED(type);
+-    if (m_keyboardModifiers & Qt::ControlModifier || m_pressedButtons == Qt::MidButton)
+-        m_openInNewTab = true;
+-    if (m_openInNewTab) {
+-        m_openInNewTab = false;
+-        return mainWindow()->tabWidget()->newTab()->page();
+-    }
+-    BrowserApplication::instance()->newMainWindow();
+-    BrowserMainWindow *mainWindow = BrowserApplication::instance()->mainWindow();
+-    return mainWindow->currentTab()->page();
+-}
+-
+-#if !defined(QT_NO_UITOOLS)
+-QObject *WebPage::createPlugin(const QString &classId, const QUrl &url, const QStringList &paramNames, const QStringList &paramValues)
+-{
+-    Q_UNUSED(url);
+-    Q_UNUSED(paramNames);
+-    Q_UNUSED(paramValues);
+-    QUiLoader loader;
+-    return loader.createWidget(classId, view());
+-}
+-#endif // !defined(QT_NO_UITOOLS)
+-
+-void WebPage::handleUnsupportedContent(QNetworkReply *reply)
+-{
+-    QString errorString = reply->errorString();
+-
+-    if (m_loadingUrl != reply->url()) {
+-        // sub resource of this page
+-        qWarning() << "Resource" << reply->url().toEncoded() << "has unknown Content-Type, will be ignored.";
+-        reply->deleteLater();
+-        return;
+-    }
+-
+-    if (reply->error() == QNetworkReply::NoError && !reply->header(QNetworkRequest::ContentTypeHeader).isValid()) {
+-        errorString = "Unknown Content-Type";
+-    }
+-
+-    QFile file(QLatin1String(":/notfound.html"));
+-    bool isOpened = file.open(QIODevice::ReadOnly);
+-    Q_ASSERT(isOpened);
+-    Q_UNUSED(isOpened)
+-
+-    QString title = tr("Error loading page: %1").arg(reply->url().toString());
+-    QString html = QString(QLatin1String(file.readAll()))
+-                        .arg(title)
+-                        .arg(errorString)
+-                        .arg(reply->url().toString());
+-
+-    QBuffer imageBuffer;
+-    imageBuffer.open(QBuffer::ReadWrite);
+-    QIcon icon = view()->style()->standardIcon(QStyle::SP_MessageBoxWarning, 0, view());
+-    QPixmap pixmap = icon.pixmap(QSize(32,32));
+-    if (pixmap.save(&imageBuffer, "PNG")) {
+-        html.replace(QLatin1String("IMAGE_BINARY_DATA_HERE"),
+-                     QString(QLatin1String(imageBuffer.buffer().toBase64())));
+-    }
+-
+-    QList<QWebFrame*> frames;
+-    frames.append(mainFrame());
+-    while (!frames.isEmpty()) {
+-        QWebFrame *frame = frames.takeFirst();
+-        if (frame->url() == reply->url()) {
+-            frame->setHtml(html, reply->url());
+-            return;
+-        }
+-        QList<QWebFrame *> children = frame->childFrames();
+-        foreach(QWebFrame *frame, children)
+-            frames.append(frame);
+-    }
+-    if (m_loadingUrl == reply->url()) {
+-        mainFrame()->setHtml(html, reply->url());
+-    }
+-}
+-
+-
+-WebView::WebView(QWidget* parent)
+-    : QWebView(parent)
+-    , m_progress(0)
+-    , m_page(new WebPage(this))
+-{
+-    setPage(m_page);
+-    connect(page(), SIGNAL(statusBarMessage(QString)),
+-            SLOT(setStatusBarText(QString)));
+-    connect(this, SIGNAL(loadProgress(int)),
+-            this, SLOT(setProgress(int)));
+-    connect(this, SIGNAL(loadFinished(bool)),
+-            this, SLOT(loadFinished()));
+-    connect(page(), SIGNAL(loadingUrl(QUrl)),
+-            this, SIGNAL(urlChanged(QUrl)));
+-    connect(page(), SIGNAL(downloadRequested(QNetworkRequest)),
+-            this, SLOT(downloadRequested(QNetworkRequest)));
+-    page()->setForwardUnsupportedContent(true);
+-
+-}
+-
+-void WebView::contextMenuEvent(QContextMenuEvent *event)
+-{
+-    QWebHitTestResult r = page()->mainFrame()->hitTestContent(event->pos());
+-    if (!r.linkUrl().isEmpty()) {
+-        QMenu menu(this);
+-        menu.addAction(pageAction(QWebPage::OpenLinkInNewWindow));
+-        menu.addAction(tr("Open in New Tab"), this, SLOT(openLinkInNewTab()));
+-        menu.addSeparator();
+-        menu.addAction(pageAction(QWebPage::DownloadLinkToDisk));
+-        // Add link to bookmarks...
+-        menu.addSeparator();
+-        menu.addAction(pageAction(QWebPage::CopyLinkToClipboard));
+-        if (page()->settings()->testAttribute(QWebSettings::DeveloperExtrasEnabled))
+-            menu.addAction(pageAction(QWebPage::InspectElement));
+-        menu.exec(mapToGlobal(event->pos()));
+-        return;
+-    }
+-    QWebView::contextMenuEvent(event);
+-}
+-
+-void WebView::wheelEvent(QWheelEvent *event)
+-{
+-    if (QApplication::keyboardModifiers() & Qt::ControlModifier) {
+-        int numDegrees = event->delta() / 8;
+-        int numSteps = numDegrees / 15;
+-        setTextSizeMultiplier(textSizeMultiplier() + numSteps * 0.1);
+-        event->accept();
+-        return;
+-    }
+-    QWebView::wheelEvent(event);
+-}
+-
+-void WebView::openLinkInNewTab()
+-{
+-    m_page->m_openInNewTab = true;
+-    pageAction(QWebPage::OpenLinkInNewWindow)->trigger();
+-}
+-
+-void WebView::setProgress(int progress)
+-{
+-    m_progress = progress;
+-}
+-
+-void WebView::loadFinished()
+-{
+-    if (100 != m_progress) {
+-        qWarning() << "Received finished signal while progress is still:" << progress()
+-                   << "Url:" << url();
+-    }
+-    m_progress = 0;
+-}
+-
+-void WebView::loadUrl(const QUrl &url)
+-{
+-    m_initialUrl = url;
+-    load(url);
+-}
+-
+-QString WebView::lastStatusBarText() const
+-{
+-    return m_statusBarText;
+-}
+-
+-QUrl WebView::url() const
+-{
+-    QUrl url = QWebView::url();
+-    if (!url.isEmpty())
+-        return url;
+-
+-    return m_initialUrl;
+-}
+-
+-void WebView::mousePressEvent(QMouseEvent *event)
+-{
+-    m_page->m_pressedButtons = event->buttons();
+-    m_page->m_keyboardModifiers = event->modifiers();
+-    QWebView::mousePressEvent(event);
+-}
+-
+-void WebView::mouseReleaseEvent(QMouseEvent *event)
+-{
+-    QWebView::mouseReleaseEvent(event);
+-    if (!event->isAccepted() && (m_page->m_pressedButtons & Qt::MidButton)) {
+-        QUrl url(QApplication::clipboard()->text(QClipboard::Selection));
+-        if (!url.isEmpty() && url.isValid() && !url.scheme().isEmpty()) {
+-            setUrl(url);
+-        }
+-    }
+-}
+-
+-void WebView::setStatusBarText(const QString &string)
+-{
+-    m_statusBarText = string;
+-}
+-
+-void WebView::downloadRequested(const QNetworkRequest &request)
+-{
+-    BrowserApplication::downloadManager()->download(request);
+-}
+-
+Index: qt-4.8.4/src/examples/browser/webview.h
+===================================================================
+--- qt-4.8.4.orig/src/examples/browser/webview.h	2013-05-20 15:11:46.455092375 -0600
++++ /dev/null	1970-01-01 00:00:00.000000000 +0000
+@@ -1,119 +0,0 @@
+-/****************************************************************************
+-**
+-** Copyright (C) 2012 Digia Plc and/or its subsidiary(-ies).
+-** Contact: http://www.qt-project.org/legal
+-**
+-** This file is part of the demonstration applications of the Qt Toolkit.
+-**
+-** $QT_BEGIN_LICENSE:LGPL$
+-** Commercial License Usage
+-** Licensees holding valid commercial Qt licenses may use this file in
+-** accordance with the commercial license agreement provided with the
+-** Software or, alternatively, in accordance with the terms contained in
+-** a written agreement between you and Digia.  For licensing terms and
+-** conditions see http://qt.digia.com/licensing.  For further information
+-** use the contact form at http://qt.digia.com/contact-us.
+-**
+-** GNU Lesser General Public License Usage
+-** Alternatively, this file may be used under the terms of the GNU Lesser
+-** General Public License version 2.1 as published by the Free Software
+-** Foundation and appearing in the file LICENSE.LGPL included in the
+-** packaging of this file.  Please review the following information to
+-** ensure the GNU Lesser General Public License version 2.1 requirements
+-** will be met: http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
+-**
+-** In addition, as a special exception, Digia gives you certain additional
+-** rights.  These rights are described in the Digia Qt LGPL Exception
+-** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
+-**
+-** GNU General Public License Usage
+-** Alternatively, this file may be used under the terms of the GNU
+-** General Public License version 3.0 as published by the Free Software
+-** Foundation and appearing in the file LICENSE.GPL included in the
+-** packaging of this file.  Please review the following information to
+-** ensure the GNU General Public License version 3.0 requirements will be
+-** met: http://www.gnu.org/copyleft/gpl.html.
+-**
+-**
+-** $QT_END_LICENSE$
+-**
+-****************************************************************************/
+-
+-#ifndef WEBVIEW_H
+-#define WEBVIEW_H
+-
+-#include <QtWebKit/QWebView>
+-
+-QT_BEGIN_NAMESPACE
+-class QAuthenticator;
+-class QMouseEvent;
+-class QNetworkProxy;
+-class QNetworkReply;
+-class QSslError;
+-QT_END_NAMESPACE
+-
+-class BrowserMainWindow;
+-class WebPage : public QWebPage {
+-    Q_OBJECT
+-
+-signals:
+-    void loadingUrl(const QUrl &url);
+-
+-public:
+-    WebPage(QObject *parent = 0);
+-    BrowserMainWindow *mainWindow();
+-
+-protected:
+-    bool acceptNavigationRequest(QWebFrame *frame, const QNetworkRequest &request, NavigationType type);
+-    QWebPage *createWindow(QWebPage::WebWindowType type);
+-#if !defined(QT_NO_UITOOLS)
+-    QObject *createPlugin(const QString &classId, const QUrl &url, const QStringList &paramNames, const QStringList &paramValues);
+-#endif
+-
+-private slots:
+-    void handleUnsupportedContent(QNetworkReply *reply);
+-
+-private:
+-    friend class WebView;
+-
+-    // set the webview mousepressedevent
+-    Qt::KeyboardModifiers m_keyboardModifiers;
+-    Qt::MouseButtons m_pressedButtons;
+-    bool m_openInNewTab;
+-    QUrl m_loadingUrl;
+-};
+-
+-class WebView : public QWebView {
+-    Q_OBJECT
+-
+-public:
+-    WebView(QWidget *parent = 0);
+-    WebPage *webPage() const { return m_page; }
+-
+-    void loadUrl(const QUrl &url);
+-    QUrl url() const;
+-
+-    QString lastStatusBarText() const;
+-    inline int progress() const { return m_progress; }
+-
+-protected:
+-    void mousePressEvent(QMouseEvent *event);
+-    void mouseReleaseEvent(QMouseEvent *event);
+-    void contextMenuEvent(QContextMenuEvent *event);
+-    void wheelEvent(QWheelEvent *event);
+-
+-private slots:
+-    void setProgress(int progress);
+-    void loadFinished();
+-    void setStatusBarText(const QString &string);
+-    void downloadRequested(const QNetworkRequest &request);
+-    void openLinkInNewTab();
+-
+-private:
+-    QString m_statusBarText;
+-    QUrl m_initialUrl;
+-    int m_progress;
+-    WebPage *m_page;
+-};
+-
+-#endif
+Index: qt-4.8.4/src/examples/browser/graphicswebview.cpp
+===================================================================
+--- /dev/null	1970-01-01 00:00:00.000000000 +0000
++++ qt-4.8.4/src/examples/browser/graphicswebview.cpp	2013-05-22 10:30:51.690471523 -0600
+@@ -0,0 +1,319 @@
++/****************************************************************************
++**
++** Copyright (C) 2012 Digia Plc and/or its subsidiary(-ies).
++** Contact: http://www.qt-project.org/legal
++**
++** This file is part of the demonstration applications of the Qt Toolkit.
++**
++** $QT_BEGIN_LICENSE:LGPL$
++** Commercial License Usage
++** Licensees holding valid commercial Qt licenses may use this file in
++** accordance with the commercial license agreement provided with the
++** Software or, alternatively, in accordance with the terms contained in
++** a written agreement between you and Digia.  For licensing terms and
++** conditions see http://qt.digia.com/licensing.  For further information
++** use the contact form at http://qt.digia.com/contact-us.
++**
++** GNU Lesser General Public License Usage
++** Alternatively, this file may be used under the terms of the GNU Lesser
++** General Public License version 2.1 as published by the Free Software
++** Foundation and appearing in the file LICENSE.LGPL included in the
++** packaging of this file.  Please review the following information to
++** ensure the GNU Lesser General Public License version 2.1 requirements
++** will be met: http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
++**
++** In addition, as a special exception, Digia gives you certain additional
++** rights.  These rights are described in the Digia Qt LGPL Exception
++** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
++**
++** GNU General Public License Usage
++** Alternatively, this file may be used under the terms of the GNU
++** General Public License version 3.0 as published by the Free Software
++** Foundation and appearing in the file LICENSE.GPL included in the
++** packaging of this file.  Please review the following information to
++** ensure the GNU General Public License version 3.0 requirements will be
++** met: http://www.gnu.org/copyleft/gpl.html.
++**
++**
++** $QT_END_LICENSE$
++**
++****************************************************************************/
++
++#include "browserapplication.h"
++#include "browsermainwindow.h"
++#include "cookiejar.h"
++#include "downloadmanager.h"
++#include "networkaccessmanager.h"
++#include "tabwidget.h"
++#include "graphicswebview.h"
++
++#include <QtGui/QClipboard>
++#include <QtGui/QMenu>
++#include <QtGui/QMessageBox>
++#include <QtGui/QMouseEvent>
++
++#include <QtWebKit/QWebHitTestResult>
++#include <QtWebKit/QWebView>
++
++#include <QWidget>
++
++#ifndef QT_NO_UITOOLS
++#include <QtUiTools/QUiLoader>
++#endif  //QT_NO_UITOOLS
++
++#include <QtCore/QDebug>
++#include <QtCore/QBuffer>
++
++WebPage::WebPage(QObject *parent)
++    : QWebPage(parent)
++    , m_keyboardModifiers(Qt::NoModifier)
++    , m_pressedButtons(Qt::NoButton)
++    , m_openInNewTab(false)
++{
++    setNetworkAccessManager(BrowserApplication::networkAccessManager());
++    connect(this, SIGNAL(unsupportedContent(QNetworkReply*)),
++            this, SLOT(handleUnsupportedContent(QNetworkReply*)));
++}
++
++BrowserMainWindow *WebPage::mainWindow()
++{
++    QObject *w = this->parent();
++    while (w) {
++        if (BrowserMainWindow *mw = qobject_cast<BrowserMainWindow*>(w))
++            return mw;
++        w = w->parent();
++    }
++    return BrowserApplication::instance()->mainWindow();
++}
++
++bool WebPage::acceptNavigationRequest(QWebFrame *frame, const QNetworkRequest &request, NavigationType type)
++{
++    // ctrl open in new tab
++    // ctrl-shift open in new tab and select
++    // ctrl-alt open in new window
++    if (type == QWebPage::NavigationTypeLinkClicked
++        && (m_keyboardModifiers & Qt::ControlModifier
++            || m_pressedButtons == Qt::MidButton)) {
++        bool newWindow = (m_keyboardModifiers & Qt::AltModifier);
++        GraphicsWebView *graphicsWebView;
++        if (newWindow) {
++            BrowserApplication::instance()->newMainWindow();
++            BrowserMainWindow *newMainWindow = BrowserApplication::instance()->mainWindow();
++            graphicsWebView = newMainWindow->currentTab();
++            newMainWindow->raise();
++            newMainWindow->activateWindow();
++            graphicsWebView->setFocus();
++        } else {
++            bool selectNewTab = (m_keyboardModifiers & Qt::ShiftModifier);
++            graphicsWebView = mainWindow()->tabWidget()->newTab(selectNewTab);
++        }
++        graphicsWebView->load(request);
++        m_keyboardModifiers = Qt::NoModifier;
++        m_pressedButtons = Qt::NoButton;
++        return false;
++    }
++    if (frame == mainFrame()) {
++        m_loadingUrl = request.url();
++        emit loadingUrl(m_loadingUrl);
++    }
++    return QWebPage::acceptNavigationRequest(frame, request, type);
++}
++
++QWebPage *WebPage::createWindow(QWebPage::WebWindowType type)
++{
++    Q_UNUSED(type);
++    if (m_keyboardModifiers & Qt::ControlModifier || m_pressedButtons == Qt::MidButton)
++        m_openInNewTab = true;
++    if (m_openInNewTab) {
++        m_openInNewTab = false;
++        return mainWindow()->tabWidget()->newTab()->page();
++    }
++    BrowserApplication::instance()->newMainWindow();
++    BrowserMainWindow *mainWindow = BrowserApplication::instance()->mainWindow();
++    return mainWindow->currentTab()->page();
++}
++
++#if !defined(QT_NO_UITOOLS)
++QObject *WebPage::createPlugin(const QString &classId, const QUrl &url, const QStringList &paramNames, const QStringList &paramValues)
++{
++    Q_UNUSED(url);
++    Q_UNUSED(paramNames);
++    Q_UNUSED(paramValues);
++    QUiLoader loader;
++    return loader.createWidget(classId, view());
++}
++#endif // !defined(QT_NO_UITOOLS)
++
++void WebPage::handleUnsupportedContent(QNetworkReply *reply)
++{
++    QString errorString = reply->errorString();
++
++    if (m_loadingUrl != reply->url()) {
++        // sub resource of this page
++        qWarning() << "Resource" << reply->url().toEncoded() << "has unknown Content-Type, will be ignored.";
++        reply->deleteLater();
++        return;
++    }
++
++    if (reply->error() == QNetworkReply::NoError && !reply->header(QNetworkRequest::ContentTypeHeader).isValid()) {
++        errorString = "Unknown Content-Type";
++    }
++
++    QFile file(QLatin1String(":/notfound.html"));
++    bool isOpened = file.open(QIODevice::ReadOnly);
++    Q_ASSERT(isOpened);
++    Q_UNUSED(isOpened)
++
++    QString title = tr("Error loading page: %1").arg(reply->url().toString());
++    QString html = QString(QLatin1String(file.readAll()))
++                        .arg(title)
++                        .arg(errorString)
++                        .arg(reply->url().toString());
++
++    QBuffer imageBuffer;
++    imageBuffer.open(QBuffer::ReadWrite);
++    QIcon icon = view()->style()->standardIcon(QStyle::SP_MessageBoxWarning, 0, view());
++    QPixmap pixmap = icon.pixmap(QSize(32,32));
++    if (pixmap.save(&imageBuffer, "PNG")) {
++        html.replace(QLatin1String("IMAGE_BINARY_DATA_HERE"),
++                     QString(QLatin1String(imageBuffer.buffer().toBase64())));
++    }
++
++    QList<QWebFrame*> frames;
++    frames.append(mainFrame());
++    while (!frames.isEmpty()) {
++        QWebFrame *frame = frames.takeFirst();
++        if (frame->url() == reply->url()) {
++            frame->setHtml(html, reply->url());
++            return;
++        }
++        QList<QWebFrame *> children = frame->childFrames();
++        foreach(QWebFrame *frame, children)
++            frames.append(frame);
++    }
++    if (m_loadingUrl == reply->url()) {
++        mainFrame()->setHtml(html, reply->url());
++    }
++}
++
++
++GraphicsWebView::GraphicsWebView(QGraphicsWidget* parent)
++    : QGraphicsWebView(parent)
++    , m_progress(0)
++    , m_page(new WebPage(this))
++{
++    setPage(m_page);
++    connect(page(), SIGNAL(statusBarMessage(QString)),
++            SLOT(setStatusBarText(QString)));
++    connect(this, SIGNAL(loadProgress(int)),
++            this, SLOT(setProgress(int)));
++    connect(this, SIGNAL(loadFinished(bool)),
++            this, SLOT(loadFinished()));
++    connect(page(), SIGNAL(loadingUrl(QUrl)),
++            this, SIGNAL(urlChanged(QUrl)));
++    connect(page(), SIGNAL(downloadRequested(QNetworkRequest)),
++            this, SLOT(downloadRequested(QNetworkRequest)));
++    page()->setForwardUnsupportedContent(true);
++
++}
++
++void GraphicsWebView::contextMenuEvent(QGraphicsSceneContextMenuEvent *event)
++{
++  /*    QWebHitTestResult r = page()->mainFrame()->hitTestContent(event->screenPos());
++    if (!r.linkUrl().isEmpty()) {
++        QMenu menu((QWebView *) this);
++        menu.addAction(pageAction(QWebPage::OpenLinkInNewWindow));
++        menu.addAction(tr("Open in New Tab"), this, SLOT(openLinkInNewTab()));
++        menu.addSeparator();
++        menu.addAction(pageAction(QWebPage::DownloadLinkToDisk));
++        // Add link to bookmarks...
++        menu.addSeparator();
++        menu.addAction(pageAction(QWebPage::CopyLinkToClipboard));
++        if (page()->settings()->testAttribute(QWebSettings::DeveloperExtrasEnabled))
++            menu.addAction(pageAction(QWebPage::InspectElement));
++        menu.exec(mapToScene(event->pos()));
++        return;
++	}*/
++    QGraphicsWebView::contextMenuEvent(event);
++}
++
++void GraphicsWebView::wheelEvent(QGraphicsSceneWheelEvent *event)
++{
++  /*if (QApplication::keyboardModifiers() & Qt::ControlModifier) {
++        int numDegrees = event->delta() / 8;
++        int numSteps = numDegrees / 15;
++        setTextSizeMultiplier(textSizeMultiplier() + numSteps * 0.1);
++        event->accept();
++        return;
++	}*/
++    QGraphicsWebView::wheelEvent(event);
++}
++
++void GraphicsWebView::openLinkInNewTab()
++{
++    m_page->m_openInNewTab = true;
++    pageAction(QWebPage::OpenLinkInNewWindow)->trigger();
++}
++
++void GraphicsWebView::setProgress(int progress)
++{
++    m_progress = progress;
++}
++
++void GraphicsWebView::loadFinished()
++{
++    if (100 != m_progress) {
++        qWarning() << "Received finished signal while progress is still:" << progress()
++                   << "Url:" << url();
++    }
++    m_progress = 0;
++}
++
++void GraphicsWebView::loadUrl(const QUrl &url)
++{
++    m_initialUrl = url;
++    load(url);
++}
++
++QString GraphicsWebView::lastStatusBarText() const
++{
++    return m_statusBarText;
++}
++
++QUrl GraphicsWebView::url() const
++{
++    QUrl url = QGraphicsWebView::url();
++    if (!url.isEmpty())
++        return url;
++
++    return m_initialUrl;
++}
++
++void GraphicsWebView::mousePressEvent(QGraphicsSceneMouseEvent *event)
++{
++  //    m_page->m_pressedButtons = event->buttons();
++  //  m_page->m_keyboardModifiers = event->modifiers();
++    QGraphicsWebView::mousePressEvent(event);
++}
++
++void GraphicsWebView::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
++{
++    QGraphicsWebView::mouseReleaseEvent(event);
++    /*if (!event->isAccepted() && (m_page->m_pressedButtons & Qt::MidButton)) {
++        QUrl url(QApplication::clipboard()->text(QClipboard::Selection));
++        if (!url.isEmpty() && url.isValid() && !url.scheme().isEmpty()) {
++            setUrl(url);
++        }
++	}*/
++}
++
++void GraphicsWebView::setStatusBarText(const QString &string)
++{
++    m_statusBarText = string;
++}
++
++void GraphicsWebView::downloadRequested(const QNetworkRequest &request)
++{
++    BrowserApplication::downloadManager()->download(request);
++}
++
+Index: qt-4.8.4/src/examples/browser/graphicswebview.h
+===================================================================
+--- /dev/null	1970-01-01 00:00:00.000000000 +0000
++++ qt-4.8.4/src/examples/browser/graphicswebview.h	2013-05-22 10:04:19.558471713 -0600
+@@ -0,0 +1,119 @@
++/****************************************************************************
++**
++** Copyright (C) 2012 Digia Plc and/or its subsidiary(-ies).
++** Contact: http://www.qt-project.org/legal
++**
++** This file is part of the demonstration applications of the Qt Toolkit.
++**
++** $QT_BEGIN_LICENSE:LGPL$
++** Commercial License Usage
++** Licensees holding valid commercial Qt licenses may use this file in
++** accordance with the commercial license agreement provided with the
++** Software or, alternatively, in accordance with the terms contained in
++** a written agreement between you and Digia.  For licensing terms and
++** conditions see http://qt.digia.com/licensing.  For further information
++** use the contact form at http://qt.digia.com/contact-us.
++**
++** GNU Lesser General Public License Usage
++** Alternatively, this file may be used under the terms of the GNU Lesser
++** General Public License version 2.1 as published by the Free Software
++** Foundation and appearing in the file LICENSE.LGPL included in the
++** packaging of this file.  Please review the following information to
++** ensure the GNU Lesser General Public License version 2.1 requirements
++** will be met: http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
++**
++** In addition, as a special exception, Digia gives you certain additional
++** rights.  These rights are described in the Digia Qt LGPL Exception
++** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
++**
++** GNU General Public License Usage
++** Alternatively, this file may be used under the terms of the GNU
++** General Public License version 3.0 as published by the Free Software
++** Foundation and appearing in the file LICENSE.GPL included in the
++** packaging of this file.  Please review the following information to
++** ensure the GNU General Public License version 3.0 requirements will be
++** met: http://www.gnu.org/copyleft/gpl.html.
++**
++**
++** $QT_END_LICENSE$
++**
++****************************************************************************/
++
++#ifndef GRAPHICSWEBVIEW_H
++#define GRAPHICSWEBVIEW_H
++
++#include <QtWebKit/QGraphicsWebView>
++
++QT_BEGIN_NAMESPACE
++class QAuthenticator;
++class QGraphicsSceneMouseEvent;
++class QNetworkProxy;
++class QNetworkReply;
++class QSslError;
++QT_END_NAMESPACE
++
++class BrowserMainWindow;
++class WebPage : public QWebPage {
++    Q_OBJECT
++
++signals:
++    void loadingUrl(const QUrl &url);
++
++public:
++    WebPage(QObject *parent = 0);
++    BrowserMainWindow *mainWindow();
++
++protected:
++    bool acceptNavigationRequest(QWebFrame *frame, const QNetworkRequest &request, NavigationType type);
++    QWebPage *createWindow(QWebPage::WebWindowType type);
++#if !defined(QT_NO_UITOOLS)
++    QObject *createPlugin(const QString &classId, const QUrl &url, const QStringList &paramNames, const QStringList &paramValues);
++#endif
++
++private slots:
++    void handleUnsupportedContent(QNetworkReply *reply);
++
++private:
++    friend class GraphicsWebView;
++
++    // set the webview mousepressedevent
++    Qt::KeyboardModifiers m_keyboardModifiers;
++    Qt::MouseButtons m_pressedButtons;
++    bool m_openInNewTab;
++    QUrl m_loadingUrl;
++};
++
++class GraphicsWebView : public QGraphicsWebView {
++    Q_OBJECT
++
++public:
++    GraphicsWebView(QGraphicsWidget *parent = 0);
++    WebPage *webPage() const { return m_page; }
++
++    void loadUrl(const QUrl &url);
++    QUrl url() const;
++
++    QString lastStatusBarText() const;
++    inline int progress() const { return m_progress; }
++
++protected:
++    void mousePressEvent(QGraphicsSceneMouseEvent *event);
++    void mouseReleaseEvent(QGraphicsSceneMouseEvent *event);
++    void contextMenuEvent(QGraphicsSceneContextMenuEvent *event);
++    void wheelEvent(QGraphicsSceneWheelEvent *event);
++
++private slots:
++    void setProgress(int progress);
++    void loadFinished();
++    void setStatusBarText(const QString &string);
++    void downloadRequested(const QNetworkRequest &request);
++    void openLinkInNewTab();
++
++private:
++    QString m_statusBarText;
++    QUrl m_initialUrl;
++    int m_progress;
++    WebPage *m_page;
++};
++
++#endif
+Index: qt-4.8.4/src/examples/browser/browser.pro
+===================================================================
+--- qt-4.8.4.orig/src/examples/browser/browser.pro	2013-05-20 15:31:30.507092233 -0600
++++ qt-4.8.4/src/examples/browser/browser.pro	2013-05-21 12:04:50.378882839 -0600
+@@ -37,7 +37,7 @@
+     tabwidget.h \
+     toolbarsearch.h \
+     urllineedit.h \
+-    webview.h \
++    graphicswebview.h \
+     xbel.h
+ 
+ SOURCES += \
+@@ -59,7 +59,7 @@
+     tabwidget.cpp \
+     toolbarsearch.cpp \
+     urllineedit.cpp \
+-    webview.cpp \
++    graphicswebview.cpp \
+     xbel.cpp \
+     main.cpp
+ 

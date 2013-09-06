@@ -1,0 +1,4 @@
+config FS_APPS_PARTED
+	bool "parted-3.1"
+	help
+	    GNU partition resizing program

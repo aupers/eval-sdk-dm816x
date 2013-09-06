@@ -61,6 +61,9 @@ copy_images::
 	     cp src/u-boot.bin $(BOOTLOADERIMAGE) ; \
 	fi
 	$(V) cp src/u-boot*bin* $(IMAGES)
+ifneq ($(CONFIG_BSP_ARCH_INSTALLER_IPL_GENERATION_TARGET),)
+	$(V) make $(CONFIG_BSP_ARCH_INSTALLER_IPL_GENERATION_TARGET)
+endif
 
 uboot_built: uboot_configured
 	$(V) $(ECHO) "Building $(BOOTLOADER)..."

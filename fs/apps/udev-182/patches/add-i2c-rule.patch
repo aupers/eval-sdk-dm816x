@@ -1,0 +1,19 @@
+Index: udev-182/src/rules/85-i2c.rules
+===================================================================
+--- /dev/null	1970-01-01 00:00:00.000000000 +0000
++++ udev-182/src/rules/85-i2c.rules	2013-05-06 14:51:50.172010656 +0200
+@@ -0,0 +1,2 @@
++# i2c devices
++KERNEL=="i2c-[0-9]*",	NAME="i2c/%n", SYMLINK+="%k"
+Index: udev-182/src/Makefile.am
+===================================================================
+--- udev-182.orig/src/Makefile.am	2013-05-06 14:51:50.144010657 +0200
++++ udev-182/src/Makefile.am	2013-05-06 14:53:37.308008622 +0200
+@@ -156,6 +156,7 @@
+ 	rules/75-net-description.rules \
+ 	rules/75-tty-description.rules \
+ 	rules/78-sound-card.rules \
++	rules/85-i2c.rules \
+ 	rules/80-drivers.rules \
+ 	rules/95-udev-late.rules
+ 

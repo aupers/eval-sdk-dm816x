@@ -1,0 +1,16 @@
+config FS_APPS_UDISKS
+	bool "udisks-1.0.4"
+	select FS_APPS_DBUS
+	select FS_APPS_UDEV
+	select FS_APPS_LIBXML2
+	select FS_APPS_DBUSGLIB
+	select FS_APPS_PARTED
+	select FS_APPS_LVM2
+	select FS_APPS_LIBATASMART
+	select FS_APPS_POLKIT
+	select FS_APPS_SG3_UTILS
+	select FS_APPS_GLIB
+	help
+	    The UDisks package provides a storage daemon that implements
+	    well-defined D-Bus interfaces that can be used to query and
+	    manipulate storage devices.

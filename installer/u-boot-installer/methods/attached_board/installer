@@ -666,20 +666,6 @@ sub install_bootloader_core {
     my $SIZE;
     my $IPL_SIZE_IN_BLK;
 
-    if ($CONFIG_BSP_ARCH_INSTALLER_IPL_GENERATION_TARGET) {
-        print "  Building $PREBOOTLOADER image for flash...\n";
-        cmd_silent("make -sC $DEVDIR/bootloader/$BOOTLOADER $CONFIG_BSP_ARCH_INSTALLER_IPL_GENERATION_TARGET PAGESIZE=$NAND_PAGE_SIZE");
-    } else {
-        fatal_error("Your ARCH doesn't define IPL_GENERATION_TARGET, unable to build the IPL image for flash");
-    }
-
-    if ($CONFIG_BSP_ARCH_INSTALLER_UBOOT_FLASH_GENERATION_TARGET) {
-        print "  Building U-boot image for flash...\n";
-        cmd_silent("make -sC $DEVDIR/bootloader/$BOOTLOADER $CONFIG_BSP_ARCH_INSTALLER_UBOOT_FLASH_GENERATION_TARGET PAGESIZE=$NAND_PAGE_SIZE");
-    } else {
-        fatal_error("Your ARCH doesn't define UBOOT_FLASH_GENERATION_TARGET, unable to build the u-boot image for flash");
-    }
-
     if (($FLASH_TYPE eq "NAND") || ($FLASH_TYPE eq "ONENAND") || 
         ($FLASH_TYPE eq "SPI") || ($FLASH_TYPE eq "NOR")) {
         $INSTALL_IPL = 1;
@@ -718,6 +704,20 @@ sub install_bootloader_core {
     my $REQUIRED_MEMORY = $UBOOT_BLK_START + $UBOOT_SIZE_IN_BLK;
     if ($REQUIRED_MEMORY > $UBOOT_SIZE_IN_BLKS) {
         fatal_error("The reserved space for U-boot and $PREBOOTLOADER is smaller than required one, please reconfigure your SDK");
+    }
+
+    if ($CONFIG_BSP_ARCH_INSTALLER_IPL_GENERATION_TARGET) {
+        print "  Building $PREBOOTLOADER image for flash...\n";
+        cmd_silent("make -sC $DEVDIR/bootloader/$BOOTLOADER $CONFIG_BSP_ARCH_INSTALLER_IPL_GENERATION_TARGET PAGESIZE=$NAND_PAGE_SIZE");
+    } else {
+        fatal_error("Your ARCH doesn't define IPL_GENERATION_TARGET, unable to build the IPL image for flash");
+    }
+
+    if ($CONFIG_BSP_ARCH_INSTALLER_UBOOT_FLASH_GENERATION_TARGET) {
+        print "  Building U-boot image for flash...\n";
+        cmd_silent("make -sC $DEVDIR/bootloader/$BOOTLOADER $CONFIG_BSP_ARCH_INSTALLER_UBOOT_FLASH_GENERATION_TARGET PAGESIZE=$NAND_PAGE_SIZE BLOCKNUM=$UBOOT_BLK_START");
+    } else {
+        fatal_error("Your ARCH doesn't define UBOOT_FLASH_GENERATION_TARGET, unable to build the u-boot image for flash");
     }
 
     if ($INSTALL_IPL) {

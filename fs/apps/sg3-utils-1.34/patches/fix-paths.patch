@@ -1,0 +1,48 @@
+Index: sg3-utils-1.34/src/src/Makefile.in
+===================================================================
+--- sg3-utils-1.34.orig/src/src/Makefile.in	2012-09-11 17:11:38.000000000 +0200
++++ sg3-utils-1.34/src/src/Makefile.in	2013-03-25 09:26:31.825271366 +0100
+@@ -634,7 +634,7 @@
+ top_build_prefix = @top_build_prefix@
+ top_builddir = @top_builddir@
+ top_srcdir = @top_srcdir@
+-AM_CFLAGS = -I ../include -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64 -Wall -W
++AM_CFLAGS = -I../include -I../../src/include -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64 -Wall -W
+ # AM_CFLAGS = -I ../include -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64 -Wall -W -pedantic -std=c99
+ sg_dd_SOURCES = sg_dd.c
+ sg_dd_LDADD = ../lib/libsgutils2.la @os_libs@
+@@ -1291,7 +1291,7 @@
+ @OS_LINUX_TRUE@	rm -f sg_scan.c
+ 
+ @OS_LINUX_TRUE@sg_scan.c : sg_scan.c.linux
+-@OS_LINUX_TRUE@	cp sg_scan.c.linux sg_scan.c
++@OS_LINUX_TRUE@	cp $(VPATH)/sg_scan.c.linux sg_scan.c
+ 
+ @OS_WIN32_MINGW_TRUE@distclean-local:
+ @OS_WIN32_MINGW_TRUE@	rm -f sg_scan.c
+Index: sg3-utils-1.34/src/doc/Makefile.in
+===================================================================
+--- sg3-utils-1.34.orig/src/doc/Makefile.in	2012-09-08 05:20:30.000000000 +0200
++++ sg3-utils-1.34/src/doc/Makefile.in	2013-03-25 09:24:57.081269214 +0100
+@@ -539,7 +539,7 @@
+ @OS_LINUX_TRUE@	rm -f sg_scan.8
+ 
+ @OS_LINUX_TRUE@sg_scan.8 : sg_scan.8.linux
+-@OS_LINUX_TRUE@	cp -p sg_scan.8.linux sg_scan.8
++@OS_LINUX_TRUE@	cp -p $(VPATH)/sg_scan.8.linux sg_scan.8
+ 
+ @OS_WIN32_MINGW_TRUE@distclean-local:
+ @OS_WIN32_MINGW_TRUE@	rm -f sg_scan.8
+Index: sg3-utils-1.34/src/lib/Makefile.in
+===================================================================
+--- sg3-utils-1.34.orig/src/lib/Makefile.in	2012-09-08 05:20:30.000000000 +0200
++++ sg3-utils-1.34/src/lib/Makefile.in	2013-03-25 09:25:44.957270301 +0100
+@@ -374,7 +374,7 @@
+ @OS_WIN32_MINGW_TRUE@	sg_pt_solaris.c \
+ @OS_WIN32_MINGW_TRUE@	getopt_long.c
+ 
+-AM_CFLAGS = -I ../include -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64 -Wall -W
++AM_CFLAGS = -I../include -I../../src/include -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64 -Wall -W
+ # AM_CFLAGS = -I ../include -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64 -Wall -W -pedantic -std=c99
+ lib_LTLIBRARIES = libsgutils2.la
+ libsgutils2_la_LDFLAGS = -version-info 2:0:0

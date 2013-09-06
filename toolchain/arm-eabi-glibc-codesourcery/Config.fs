@@ -12,6 +12,12 @@ config TOOLCHAIN_INSTALL_CPP_SUPPORT
 	    Enable this option will make the toolchain to install the
 	    standard C++ library into the file system adding around 
 	    3.6MB to your target.
+
+config TOOLCHAIN_INSTALL_GCONV_MODULES
+	bool "Install GCONV Conversion modules on target file system"
+	default n
+	help
+	    Enable if using toolchain's iconv conversion support.
 	    
 comment "Toolchain provided applications"
 config TOOLCHAIN_INSTALL_GDBSERVER

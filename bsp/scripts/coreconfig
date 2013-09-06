@@ -7,7 +7,7 @@ my $lastselection;
 my $selectedmach;
 
 print "  Unpatching SDK components...";
-system "make unpatch";
+system "make -s -C $DEVDIR unpatch_noheader";
 
 print "  Select SDK Core components...\n\n";
 select_mach();
@@ -25,7 +25,7 @@ select_component("kernel","KERNEL");
 if ( $ARGV[0] eq "" || $ARGV[1] eq "" || $ARGV[2] eq "" || $ARGV[3] eq "")
 {
 	print "  Running configuration menu to select options based on new core components...\n\n";
-	system "make -s config";
+	system "make -s -C $DEVDIR config";
 	print "  SDK Core configuration completed.\n\n\n";
 }
 else
@@ -69,6 +69,11 @@ sub select_component(){
 	
 	if( $_[0] eq "bootloader")
 	{
+		#Remove flags from bootloader
+		system "find bootloader/ -iname \"uboot_built\" | xargs rm -rf {}";
+		system "find bootloader/ -iname \"uboot_configured\" | xargs rm -rf {}";
+
+
 		if ( $ARGV[2] eq "")
 		{
 			goto SELECTION;
@@ -105,7 +110,7 @@ sub select_component(){
 			}
 			else
 			{
-				print "kernel directory: $DEVDIR/kernel/$ARGV[3] NOT found! Maybe using and uncompiled SDK. Selecting: $ARGV[3]\n\n";
+				print "kernel directory: $DEVDIR/kernel/$ARGV[3] NOT found! Maybe using an uncompiled SDK. Selecting: $ARGV[3]\n\n";
 				$lastselection = $ARGV[3];
 				goto SELECTED;
 				#exit(1);
@@ -118,11 +123,13 @@ SELECTION:
 	print "  Selecting $_[0]:\n";
 	opendir(DIR, $dirname) || die "can't opendir $dirname: $!";
 	while (defined($file = readdir(DIR))) {
-		next if $file =~ /^\.\.?$/;     # skip . and ..
+		next if $file =~ /^\.\.?$/;		# skip . and ..
 		next if $file eq ".svn"; 
 		next if $file eq "patches";
 		next if $file eq ".pc";
-		next unless -d "$dirname/$file";  # skip if not a directory
+		next if $file eq "copyrights";
+		next if -l "$dirname/$file";		# skip if not a directory
+		next unless -d "$dirname/$file";	# skip if not a directory
 		$options{$i}=$file;
 		print "    $i. $options{$i}\n";
 		$i++;

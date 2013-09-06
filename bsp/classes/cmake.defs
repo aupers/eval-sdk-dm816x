@@ -15,6 +15,9 @@
 #! <li>
 #! <b>CMAKE_SRC_DIR:</b> The directory that contains the configure script.
 #! 
+#! <li>
+#! <b>CMAKE_INTERACTIVE_CONFIG:</b> If set to 'yes', ccmake will be used instead of cmake
+#! 
 #! \section p_params Private Parameters
 #! The following is a list of private parameters that are recommended not to be modified.
 #!
@@ -33,45 +36,72 @@
 
 CMAKE_BUILD_DIR?=$(ARCH)
 CMAKE_SRC_DIR?=src
-CMAKE_TOOLCHAIN_FILE?=$(DEVDIR)/fs/toolchain.cmake
-CMAKE_INSTALL_PREFIX?=$(FSDEVROOT)/usr
+ifneq ($(MAKECMDGOALS),sim)
+  CMAKE_TOOLCHAIN_FILE?=$(DEVDIR)/fs/toolchain.cmake
+  TARGET_INSTALL_PREFIX?=/usr
+  CMAKE_INSTALL_PREFIX?=$(FSDEVROOT)/$(TARGET_INSTALL_PREFIX)
+else
+  CMAKE_TOOLCHAIN_FILE?=$(DEVDIR)/fs/toolchain.sim.cmake
+  TARGET_INSTALL_PREFIX?=$(SIMROOT)/usr
+  CMAKE_INSTALL_PREFIX?=$(TARGET_INSTALL_PREFIX)
+endif
 
-cmake_build: rrfetched rrpatched cmake_built
+CMAKE_INTERACTIVE_CONFIG?=n
+ifeq ($(CMAKE_INTERACTIVE_CONFIG),yes)
+  CMAKE_BINARY:=ccmake
+else
+  CMAKE_BINARY:=cmake
+endif
 
-$(DEVDIR)/fs/toolchain.cmake:
-	$(V)$(MAKE) -C $(DEVDIR)/fs toolchain.cmake
+export KERNELDIR
 
-cmake_built: cmake_configured
+PATH:=$(shell dirname $(DEVDIR)/fs/apps/qt-*/$(ARCH)/bin/qmake):$(PATH)
+
+cmake_build: rrfetched rrpatched cmake_built$(ARCH_SUFFIX)
+
+$(CMAKE_TOOLCHAIN_FILE):
+	$(V)$(MAKE) -C $(DEVDIR)/fs `basename $@`
+
+cmake_built$(ARCH_SUFFIX): cmake_configured
 	$(V) $(MAKE) -j $(BSP_NCPU) -C $(CMAKE_BUILD_DIR) $(if $(VERBOSE:1=),,V=1) $(QOUT) $(ERRQOUT)
 	$(V) touch $@
 
 cmake_clean: clean_configure unpatch
-	$(V) rm -Rf cmake_built cmake_installed
+	$(V) rm -Rf cmake_built* cmake_installed*
 
-cmake_install: cmake_installed
+cmake_install: cmake_installed$(ARCH_SUFFIX)
 
-cmake_installed:
+cmake_installed$(ARCH_SUFFIX):
 	$(V) $(MAKE) -j $(BSP_NCPU) -C $(CMAKE_BUILD_DIR) install $(if $(VERBOSE:1=),,V=1) $(QOUT) $(ERRQOUT)
 	$(V) touch $@
 
-cmake_uninstall:
+cmake_uninstall: cmake_uninstall_$(ARCH)
+
+cmake_uninstall_$(ARCH):
 	$(V) $(MAKE) -j $(BSP_NCPU) -C $(CMAKE_BUILD_DIR) uninstall $(if $(VERBOSE:1=),,V=1) $(QOUT) $(ERRQOUT)
-	$(V) rm -f cmake_installed
+	$(V) rm -f cmake_installed$(ARCH_SUFFIX)
 
 FETCHER_EXTRACT_DIRECTORY_NAME=src
 include $(CLASSES)/fetcher.defs
 
-cmake_configured: $(CMAKE_TOOLCHAIN_FILE)
+cmake_configured: $(CMAKE_TOOLCHAIN_FILE) cmake_is_configured$(ARCH_SUFFIX)
+
+cmake_is_configured$(ARCH_SUFFIX):
 	$(V) mkdir -p $(CMAKE_BUILD_DIR) && cd $(CMAKE_BUILD_DIR) && \
-	cmake \
+	export CFLAGS="$(APPS_CFLAGS)" && \
+	export CXXFLAGS="$(APPS_CFLAGS)" && \
+	export LDFLAGS="$(APPS_LDFLAGS)" && \
+	$(CMAKE_BINARY) \
 	    -DCMAKE_TOOLCHAIN_FILE=$(CMAKE_TOOLCHAIN_FILE) \
 	    -DCMAKE_INSTALL_PREFIX=$(CMAKE_INSTALL_PREFIX) \
 	    $(CMAKE_PARAMS) \
-	    ../$(CMAKE_SRC_DIR) $(QOUT)
+	    ../$(CMAKE_SRC_DIR) $(QOUT) $(ERRQOUT)
 	$(V) touch $@
+	
+clean_configure: clean_configure_$(ARCH)
 
-clean_configure:
-	$(V)rm -f cmake_configured
+clean_configure_$(ARCH):
+	$(V)rm -f cmake_is_configured$(ARCH_SUFFIX)
 	$(V)if [ "$(CMAKE_BUILD_DIR)" != "src" ] ; then \
 	    rm -Rf $(CMAKE_BUILD_DIR); \
 	else \

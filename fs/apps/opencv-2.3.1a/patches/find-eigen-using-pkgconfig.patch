@@ -1,0 +1,20 @@
+Index: OpenCV-2.3.1a/src/CMakeLists.txt
+===================================================================
+--- OpenCV-2.3.1a.orig/src/CMakeLists.txt	2012-04-11 10:39:16.613807421 +0200
++++ OpenCV-2.3.1a/src/CMakeLists.txt	2012-04-11 10:42:30.906757518 +0200
+@@ -1047,12 +1047,9 @@
+ ############################## Eigen ##############################
+ 
+ if(WITH_EIGEN)
+-    find_path(EIGEN_INCLUDE_PATH "Eigen/Core"
+-            PATHS "/usr/local/include/eigen2" "/opt/include/eigen2" "/usr/include/eigen2"
+-            "/usr/local/include/eigen3" "/opt/include/eigen3" "/usr/include/eigen3"
+-            DOC "The path to Eigen2/Eigen3 headers")
+-    if(EIGEN_INCLUDE_PATH)
+-        include_directories(${EIGEN_INCLUDE_PATH})
++    pkg_check_modules(EIGEN eigen3)
++    if(EIGEN_INCLUDE_DIRS)
++        include_directories(${EIGEN_INCLUDE_DIRS})
+         set(HAVE_EIGEN 1)
+     endif()
+ endif()

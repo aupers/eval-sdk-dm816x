@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<component>
+	<name>zlib</name>
+	<version>1.2.5</version>
+	<releaseDate>19.04.2010</releaseDate>
+	<manufacturer>http://zlib.net/</manufacturer>
+	<summary>zlib is a general purpose data compression library.  All the code is thread safe.  The data format used by the zlib library is described by RFC (Request for Comments) 1950 to 1952 in the files http://www.ietf.org/rfc/rfc1950.txt (zlib format), rfc1951.txt (deflate format) and rfc1952.txt (gzip format). These documents are also available in other formats from ftp://ftp.uu.net/graphics/png/documents/zlib/zdoc-index.html</summary>
+	<link>http://zlib.net/</link>
+	<issues>
+		<link><![CDATA[http://mail.madler.net/pipermail/zlib-devel_madler.net/]]></link>
+		<remark>Mailing list</remark>
+	</issues>
+	<license type="Zlib">
+		<link>https://spdx.org/licenses/Zlib</link>
+		<text>
+			<![CDATA[(C) 1995-2004 Jean-loup Gailly and Mark Adler
+
+This software is provided 'as-is', without any express or impliedwarranty.  In no event will the authors be held liable for any damagesarising from the use of this software.
+
+Permission is granted to anyone to use this software for any purpose,including commercial applications, and to alter it and redistribute itfreely, subject to the following restrictions:
+
+1. The origin of this software must not be misrepresented; you must notclaim that you wrote the original software. If you use this softwarein a product, an acknowledgment in the product documentation would beappreciated but is not required.
+
+2. Altered source versions must be plainly marked as such, and must not bemisrepresented as being the original software.
+
+3. This notice may not be removed or altered from any source distribution.
+
+Jean-loup Gailly        Mark Adlerjloup@gzip.org          madler@alumni.caltech.edu
+
+If you use the zlib library in a product, we would appreciate *not*receiving lengthy legal documents to sign. The sources are providedfor free but without warranty of any kind.  The library has beenentirely written by Jean-loup Gailly and Mark Adler; it does notinclude third-party code.
+
+If you redistribute modified sources, we would appreciate that you includein the file ChangeLog history information documenting your changes. Pleaseread the FAQ for more information on the distribution of modified sourceversions.]]>
+		</text>
+	</license>
+</component>
+

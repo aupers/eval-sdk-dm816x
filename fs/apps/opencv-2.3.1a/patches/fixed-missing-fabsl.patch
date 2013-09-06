@@ -1,0 +1,20 @@
+Index: opencv-2.3.1a/src/modules/flann/include/opencv2/flann/dist.h
+===================================================================
+--- opencv-2.3.1a.orig/src/modules/flann/include/opencv2/flann/dist.h	2012-05-24 20:03:31.867110401 +0200
++++ opencv-2.3.1a/src/modules/flann/include/opencv2/flann/dist.h	2012-05-24 20:14:36.090358474 +0200
+@@ -54,13 +54,13 @@
+ inline int abs<int>(int x) { return ::abs(x); }
+ 
+ template<>
+-inline float abs<float>(float x) { return fabsf(x); }
++inline float abs<float>(float x) { return ::fabsf(x); }
+ 
+ template<>
+ inline double abs<double>(double x) { return fabs(x); }
+ 
+ template<>
+-inline long double abs<long double>(long double x) { return fabsl(x); }
++inline long double abs<long double>(long double x) { return (x<0) ? -x : x; }
+ 
+ 
+ template<typename T>

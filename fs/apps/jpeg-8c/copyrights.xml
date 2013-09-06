@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<component>
+	<name>libjpeg</name>
+	<version>8c</version>
+	<releaseDate>16.01.2011</releaseDate>
+	<manufacturer>Independent JPEG Group</manufacturer>
+	<summary>libjpeg is a library which contains a widely-used implementation of a JPEG decoder, JPEG encoder and other JPEG utilities.</summary>
+	<link>http://www.ijg.org/</link>
+	<issues>
+		<remark>See /change.log/ file in src directory. Please send bug reports, offers of help, etc. to jpeg-info@uc.ag</remark>
+	</issues>
+	<license type="Proprietary">
+		<link></link>
+		<text>
+			<![CDATA[The authors make NO WARRANTY or representation, either express or implied,with respect to this software, its quality, accuracy, merchantability, orfitness for a particular purpose.  This software is provided "AS IS", and you,its user, assume the entire risk as to its quality and accuracy.
+
+This software is copyright (C) 1991-2011, Thomas G. Lane, Guido Vollbeding.All Rights Reserved except as specified below.
+
+Permission is hereby granted to use, copy, modify, and distribute thissoftware (or portions thereof) for any purpose, without fee, subject to theseconditions:(1) If any part of the source code for this software is distributed, then thisREADME file must be included, with this copyright and no-warranty noticeunaltered; and any additions, deletions, or changes to the original filesmust be clearly indicated in accompanying documentation.(2) If only executable code is distributed, then the accompanyingdocumentation must state that "this software is based in part on the work ofthe Independent JPEG Group".(3) Permission for use of this software is granted only if the user acceptsfull responsibility for any undesirable consequences; the authors acceptNO LIABILITY for damages of any kind.
+
+These conditions apply to any software derived from or based on the IJG code,not just to the unmodified library.  If you use our work, you ought toacknowledge us.
+
+Permission is NOT granted for the use of any IJG author's name or company namein advertising or publicity relating to this software or products derived fromit.  This software may be referred to only as "the Independent JPEG Group'ssoftware".
+
+We specifically permit and encourage the use of this software as the basis ofcommercial products, provided that all warranty or liability claims areassumed by the product vendor.
+
+ansi2knr.c is included in this distribution by permission of L. Peter Deutsch,sole proprietor of its copyright holder, Aladdin Enterprises of Menlo Park, CA.ansi2knr.c is NOT covered by the above copyright and conditions, but insteadby the usual distribution terms of the Free Software Foundation; principally,that you must include source code if you redistribute it.  (See the fileansi2knr.c for full details.)  However, since ansi2knr.c is not needed as partof any program generated from the IJG code, this does not limit you more thanthe foregoing paragraphs do.
+
+The Unix configuration script "configure" was produced with GNU Autoconf.It is copyright by the Free Software Foundation but is freely distributable.The same holds for its supporting scripts (config.guess, config.sub,ltmain.sh).  Another support script, install-sh, is copyright by X Consortiumbut is also freely distributable.
+
+The IJG distribution formerly included code to read and write GIF files.To avoid entanglement with the Unisys LZW patent, GIF reading support hasbeen removed altogether, and the GIF writer has been simplified to produce"uncompressed GIFs".  This technique does not use the LZW algorithm; theresulting GIF files are larger than usual, but are readable by all standardGIF decoders.
+
+We are required to state that"The Graphics Interchange Format(c) is the Copyright property ofCompuServe Incorporated.  GIF(sm) is a Service Mark property ofCompuServe Incorporated."]]>
+		</text>
+	</license>
+</component>
+

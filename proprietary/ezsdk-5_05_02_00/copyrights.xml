@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<component>
+	<name>EZSDK</name>
+	<version>5.05.02.00</version>
+	<releaseDate></releaseDate>
+	<manufacturer>Texas Instruments</manufacturer>
+	<summary>The Linux EZ Software Development Kit (EZ SDK) allows customers to evaluate their devices in minutes and begin development in less than an hour.</summary>
+	<link>http://www.ti.com/</link>
+	<issues>
+		<link><![CDATA[]]></link>
+	</issues>
+	<license type="NO">
+		<link></link>
+		<text>
+			<![CDATA[]]>
+		</text>
+	</license>
+</component>
+

@@ -1,0 +1,21 @@
+#!/bin/sh -e
+
+case "$1" in
+start)
+	echo "Starting udisks daeamon"
+	/usr/libexec/udisks-daemon --system &
+	;;
+
+stop)
+	echo "Stopping udisks daemon"
+	killall udisks-daemon
+	;;
+
+*)
+	echo "Usage: /etc/init.d/udisks {start|stop}"
+	exit 1
+	;;
+esac
+
+exit 0
+

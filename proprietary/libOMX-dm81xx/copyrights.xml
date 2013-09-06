@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<component>
+	<name>libOMX-dm81xx</name>
+	<version/>
+	<manufacturer>RidgeRun</manufacturer>
+	<summary>This library takes the components from the EZSDK and creates and easy to use library with Linux standards. </summary>
+	<link>https://github.com/RidgeRun/libOMX_Core-DM81xx</link>
+	<issues>
+		<link><![CDATA[]]></link>
+	</issues>
+	<license type="NO">
+		<link></link>
+		<text>
+			<![CDATA[]]>
+		</text>
+	</license>
+</component>
+

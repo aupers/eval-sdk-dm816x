@@ -1,0 +1,5 @@
+config FS_APPS_LVM2
+	bool "lvm2-2.02.79"
+	help
+	    Provides logical volume management facilities.
+

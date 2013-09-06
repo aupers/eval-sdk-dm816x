@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<component>
+	<name>TCLAP</name>
+	<version>1.2.1</version>
+	<releaseDate>16.04.2011</releaseDate>
+	<manufacturer>http://tclap.sourceforge.net</manufacturer>
+	<summary>TCLAP is a small, flexible library that provides a simple interface for defining and accessing command line arguments. It was intially inspired by the user friendly CLAP libary. The difference is that this library is templatized, so the argument class is type independent. Type independence avoids identical-except-for-type objects, such as IntArg, FloatArg, and StringArg. While the library is not strictly compliant with the GNU or POSIX standards, it is close.</summary>
+	<link>http://tclap.sourceforge.net/</link>
+	<issues>
+		<link><![CDATA[http://sourceforge.net/tracker/?group_id=76645&atid=547806&source=navbar]]></link>
+	</issues>
+	<license type="MIT">
+		<link>https://spdx.org/licenses/MIT</link>
+		<text>
+			Copyright (c) 2003 Michael E. Smoot
+
+Permission is hereby granted, free of charge, to any personobtaining a copy of this software and associated documentationfiles (the "Software"), to deal in the Software without restriction,including without limitation the rights to use, copy, modify, merge,publish, distribute, sublicense, and/or sell copies of the Software,and to permit persons to whom the Software is furnished to do so,subject to the following conditions:
+
+The above copyright notice and this permission notice shall beincluded in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIESOF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE ANDNONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERSBE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER INAN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF ORIN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS INTHE SOFTWARE.
+		</text>
+	</license>
+</component>
+

@@ -1,1 +1,0 @@
-TARGET_REQUIRED="dbus freetype glib libpng jpeg sqlite tslib zlib"

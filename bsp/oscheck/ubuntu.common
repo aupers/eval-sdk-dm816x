@@ -14,7 +14,6 @@ flex?flex
 fakeroot?fakeroot
 icu?libicu-dev
 mkfs.cramfs?util-linux
-libusb?libusb-dev
 perl?perl
 quilt?quilt
 cramfsswap?cramfsswap
@@ -46,3 +45,9 @@ crypt-ssleay?libcrypt-ssleay-perl
 arm-gcc?gcc-4.6-arm-linux-gnueabi
 arm-g++?g++-4.6-arm-linux-gnueabi
 ccache?ccache
+python-numpy?python-numpy
+uuid-dev?uuid-dev
+liblzo2?liblzo2-dev
+intltool?intltool
+xsltproc?xsltproc
+libusb?libusb-1.0-0-dev

@@ -34,6 +34,9 @@
 ifeq ($(DEVDIR),)
 $(error ====== DEVDIR variable is empty, invoke this Makefile from the BSP root, or provide the path to it =====)
 endif
+
+export USE_BOOTLOADER_TOOLCHAIN=y
+
 include $(DEVDIR)/bsp/mach/Make.conf
 
 build:

@@ -1,0 +1,2 @@
+TARGET_REQUIRED="dbus freetype glib libpng jpeg sqlite tslib zlib"
+HOST_REQUIRED="xkeyboard-config"

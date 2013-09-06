@@ -1,0 +1,33 @@
+Index: cmake-2.8.10.2/src/Modules/FindBoost.cmake
+===================================================================
+--- cmake-2.8.10.2.orig/src/Modules/FindBoost.cmake	2012-11-27 14:26:32.000000000 +0100
++++ cmake-2.8.10.2/src/Modules/FindBoost.cmake	2013-02-06 14:46:26.915076848 +0100
+@@ -942,11 +942,11 @@
+     # Find RELEASE libraries
+     #
+     set(_boost_RELEASE_NAMES
++      ${Boost_LIB_PREFIX}boost_${COMPONENT}
+       ${Boost_LIB_PREFIX}boost_${COMPONENT}${_boost_COMPILER}${_boost_MULTITHREADED}${_boost_RELEASE_ABI_TAG}-${Boost_LIB_VERSION}
+       ${Boost_LIB_PREFIX}boost_${COMPONENT}${_boost_COMPILER}${_boost_MULTITHREADED}${_boost_RELEASE_ABI_TAG}
+       ${Boost_LIB_PREFIX}boost_${COMPONENT}${_boost_MULTITHREADED}${_boost_RELEASE_ABI_TAG}-${Boost_LIB_VERSION}
+-      ${Boost_LIB_PREFIX}boost_${COMPONENT}${_boost_MULTITHREADED}${_boost_RELEASE_ABI_TAG}
+-      ${Boost_LIB_PREFIX}boost_${COMPONENT} )
++      ${Boost_LIB_PREFIX}boost_${COMPONENT}${_boost_MULTITHREADED}${_boost_RELEASE_ABI_TAG} )
+     if(_boost_STATIC_RUNTIME_WORKAROUND)
+       set(_boost_RELEASE_STATIC_ABI_TAG "-s${_boost_RELEASE_ABI_TAG}")
+       list(APPEND _boost_RELEASE_NAMES
+@@ -973,12 +973,12 @@
+     # Find DEBUG libraries
+     #
+     set(_boost_DEBUG_NAMES
++      ${Boost_LIB_PREFIX}boost_${COMPONENT}
+       ${Boost_LIB_PREFIX}boost_${COMPONENT}${_boost_COMPILER}${_boost_MULTITHREADED}${_boost_DEBUG_ABI_TAG}-${Boost_LIB_VERSION}
+       ${Boost_LIB_PREFIX}boost_${COMPONENT}${_boost_COMPILER}${_boost_MULTITHREADED}${_boost_DEBUG_ABI_TAG}
+       ${Boost_LIB_PREFIX}boost_${COMPONENT}${_boost_MULTITHREADED}${_boost_DEBUG_ABI_TAG}-${Boost_LIB_VERSION}
+       ${Boost_LIB_PREFIX}boost_${COMPONENT}${_boost_MULTITHREADED}${_boost_DEBUG_ABI_TAG}
+-      ${Boost_LIB_PREFIX}boost_${COMPONENT}${_boost_MULTITHREADED}
+-      ${Boost_LIB_PREFIX}boost_${COMPONENT} )
++      ${Boost_LIB_PREFIX}boost_${COMPONENT}${_boost_MULTITHREADED} )
+     if(_boost_STATIC_RUNTIME_WORKAROUND)
+       set(_boost_DEBUG_STATIC_ABI_TAG "-s${_boost_DEBUG_ABI_TAG}")
+       list(APPEND _boost_DEBUG_NAMES

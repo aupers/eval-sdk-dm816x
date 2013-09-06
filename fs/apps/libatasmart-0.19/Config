@@ -1,0 +1,6 @@
+config FS_APPS_LIBATASMART
+	bool "libatasmart-0.19"
+	select FS_APPS_UDEV
+	help
+	    Disk reporting library.
+

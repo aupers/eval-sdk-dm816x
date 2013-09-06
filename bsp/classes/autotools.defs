@@ -112,7 +112,7 @@ $(CONFIG_SITE):
 
 $(BUILT_FLAG)$(ARCH_SUFFIX):
 	$(V) $(MAKE) -j $(BSP_NCPU) -C $(AUTOTOOLS_BUILD_DIR) $(if $(VERBOSE:1=),,V=1) $(QOUT) $(ERRQOUT)
-	$(V) touch $(BUILT_FLAG)
+	$(V) touch $(BUILT_FLAG)$(ARCH_SUFFIX)
 
 force_build_execute: autotools_build
 
@@ -133,11 +133,11 @@ ifneq ($(CORRECT_LA),)
 	done
 endif
 	$(V) $(MAKE) -j $(BSP_NCPU) -C $(AUTOTOOLS_BUILD_DIR) install DESTDIR=$(DESTDIR) $(if $(VERBOSE:1=),V=1) $(QOUT) $(ERRQOUT)
-	$(V) touch $(INSTALLED_FLAG)
+	$(V) touch $(INSTALLED_FLAG)$(ARCH_SUFFIX)
 
 autotools_uninstall:
 	$(V) $(MAKE) -j $(BSP_NCPU) -C $(AUTOTOOLS_BUILD_DIR) uninstall DESTDIR=$(DESTDIR) $(QOUT) $(ERRQOUT)
-	$(V) rm -f $(INSTALLED_FLAG)
+	$(V) rm -f $(INSTALLED_FLAG)$(ARCH_SUFFIX)
 
 FETCHER_EXTRACT_DIRECTORY_NAME=src
 include $(CLASSES)/fetcher.defs
@@ -151,17 +151,31 @@ update_flags:
 	fi
 	$(V)rm -f autotools_extra_flags.t$(ARCH_SUFFIX)
 
-configured$(ARCH_SUFFIX): $(CONFIG_SITE) autotools_extra_flags$(ARCH_SUFFIX) $(AUTOTOOLS_SRC_DIR)/configure
-ifeq ($(AUTOTOOLS_CLONE_SOURCE),yes)
-	$(V)cp -Rp $(AUTOTOOLS_SRC_DIR) $(AUTOTOOLS_BUILD_DIR)
+ifneq ($(MAKECMDGOALS),sim)
+  ROOTDIR=$(SIMROOT)
+else
+  ROOTDIR=$(FSDEVROOT)
 endif
-	$(V)mkdir -p $(AUTOTOOLS_BUILD_DIR) ; cd $(AUTOTOOLS_BUILD_DIR) && \
-	if [ -f ../$(AUTOTOOLS_SRC_DIR)/configure ] ; then \
-	../$(AUTOTOOLS_SRC_DIR)/configure $(AUTOTOOLS_HOST) \
-	$(AUTOTOOLS_PARAMS) $(QOUT) $(ERRQOUT) ; \
+
+configured$(ARCH_SUFFIX): $(CONFIG_SITE) autotools_extra_flags$(ARCH_SUFFIX) $(AUTOTOOLS_SRC_DIR)/configure
+	$(V)mkdir -p $(AUTOTOOLS_BUILD_DIR)
+ifeq ($(AUTOTOOLS_CLONE_SOURCE),yes)
+	$(V)cd $(AUTOTOOLS_SRC_DIR) && \
+	    find -print0 | \
+	    tar --exclude=.svn --exclude=\*~ --null -T - -cf - | \
+	    tar -C $(CURDIR)/$(AUTOTOOLS_BUILD_DIR) -xpf -
+	$(V)cd $(AUTOTOOLS_BUILD_DIR) && \
+	if [ -f ./configure ] ; then \
+	    ./configure $(AUTOTOOLS_HOST) $(AUTOTOOLS_PARAMS) $(QOUT) $(ERRQOUT) ; \
 	fi;
+else
+	$(V)cd $(AUTOTOOLS_BUILD_DIR) && \
+	if [ -f ../$(AUTOTOOLS_SRC_DIR)/configure ] ; then \
+	    ../$(AUTOTOOLS_SRC_DIR)/configure $(AUTOTOOLS_HOST) $(AUTOTOOLS_PARAMS) $(QOUT) $(ERRQOUT) ; \
+	fi;
+endif
 	$(V) if [ -f $(AUTOTOOLS_BUILD_DIR)/libtool ] ; then \
-	sed -e "s?sys_lib_dlsearch_path_spec=.*?sys_lib_dlsearch_path_spec=\"$(FSDEVROOT)/lib $(FSDEVROOT)/usr/lib\"?g" \
+	sed -e "s?sys_lib_dlsearch_path_spec=.*?sys_lib_dlsearch_path_spec=\"$(ROOTDIR)/lib $(ROOTDIR)/usr/lib\"?g" \
 	  -e "s?link_all_deplibs=.*?link_all_deplibs=yes?g" \
 	$(AUTOTOOLS_BUILD_DIR)/libtool >$(AUTOTOOLS_BUILD_DIR)/libtool.new ; \
 	    mv $(AUTOTOOLS_BUILD_DIR)/libtool $(AUTOTOOLS_BUILD_DIR)/libtool.orig ; \

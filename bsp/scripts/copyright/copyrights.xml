@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<component>
+	<name>copyright</name>
+	<version>1.0</version>
+	<manufacturer>RidgeRun</manufacturer>
+	<summary>  A tool collection which creates xml based copyright overview pages for software libraries.</summary>
+	<link>http://www.ridgerun.com/</link>
+	<license type="RR">
+		<text>
+			<![CDATA[Copyright (C) 2013 Ridgerun (http://www.ridgerun.com). ]]>
+		</text>
+	</license>
+</component>
+

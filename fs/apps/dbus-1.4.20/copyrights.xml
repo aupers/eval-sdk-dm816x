@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<component>
+	<name>D-Bus</name>
+	<version>1.4.20</version>
+	<releaseDate>27.03.2012</releaseDate>
+	<manufacturer>http://www.freedesktop.org/wiki/Software/dbus</manufacturer>
+	<summary>D-Bus is a message bus system, a simple way for applications to talk to one another. In addition to interprocess communication, D-Bus helps coordinate process lifecycle; it makes it simple and reliable to code a "single instance" application or daemon, and to launch applications and daemons on demand when their services are needed.</summary>
+	<link>http://www.freedesktop.org/wiki/Software/dbus</link>
+	<issues>
+		<link><![CDATA[https://bugs.freedesktop.org/buglist.cgi?query_format=specific&order=relevance+desc&bug_status=__all__&product=dbus&content=]]></link>
+	</issues>
+	<license type="AFL-2.1">
+		<link>https://spdx.org/licenses/AFL-2.1</link>
+		<text>
+			<![CDATA[Licensed under the Academic Free License version 2.1
+
+1) Grant of Copyright License. Licensor hereby grants You aworld-wide, royalty-free, non-exclusive, perpetual, sublicenseablelicense to do the following:
+
+a) to reproduce the Original Work in copies;
+
+b) to prepare derivative works ("Derivative Works") based upon the Original Work;
+
+c) to distribute copies of the Original Work and Derivative Works to the public;
+
+d) to perform the Original Work publicly; and
+
+e) to display the Original Work publicly.
+
+2) Grant of Patent License. Licensor hereby grants You a world-wide,royalty-free, non-exclusive, perpetual, sublicenseable license, underpatent claims owned or controlled by the Licensor that are embodied inthe Original Work as furnished by the Licensor, to make, use, sell andoffer for sale the Original Work and Derivative Works.
+
+3) Grant of Source Code License. The term "Source Code" means thepreferred form of the Original Work for making modifications to it andall available documentation describing how to modify the OriginalWork. Licensor hereby agrees to provide a machine-readable copy of theSource Code of the Original Work along with each copy of the OriginalWork that Licensor distributes. Licensor reserves the right to satisfythis obligation by placing a machine-readable copy of the Source Codein an information repository reasonably calculated to permitinexpensive and convenient access by You for as long as Licensorcontinues to distribute the Original Work, and by publishing theaddress of that information repository in a notice immediatelyfollowing the copyright notice that applies to the Original Work.
+
+4) Exclusions From License Grant. Neither the names of Licensor, northe names of any contributors to the Original Work, nor any of theirtrademarks or service marks, may be used to endorse or promoteproducts derived from this Original Work without express prior writtenpermission of the Licensor. Nothing in this License shall be deemed togrant any rights to trademarks, copyrights, patents, trade secrets orany other intellectual property of Licensor except as expressly statedherein. No patent license is granted to make, use, sell or offer tosell embodiments of any patent claims other than the licensed claimsdefined in Section 2. No right is granted to the trademarks ofLicensor even if such marks are included in the Original Work. Nothingin this License shall be interpreted to prohibit Licensor fromlicensing under different terms from this License any Original Workthat Licensor otherwise would have a right to license.
+
+5) This section intentionally omitted.
+
+6) Attribution Rights. You must retain, in the Source Code of anyDerivative Works that You create, all copyright, patent or trademarknotices from the Source Code of the Original Work, as well as anynotices of licensing and any descriptive text identified therein as an"Attribution Notice." You must cause the Source Code for anyDerivative Works that You create to carry a prominent AttributionNotice reasonably calculated to inform recipients that You havemodified the Original Work.
+
+7) Warranty of Provenance and Disclaimer of Warranty. Licensorwarrants that the copyright in and to the Original Work and the patentrights granted herein by Licensor are owned by the Licensor or aresublicensed to You under the terms of this License with the permissionof the contributor(s) of those copyrights and patent rights. Except asexpressly stated in the immediately proceeding sentence, the OriginalWork is provided under this License on an "AS IS" BASIS and WITHOUTWARRANTY, either express or implied, including, without limitation,the warranties of NON-INFRINGEMENT, MERCHANTABILITY or FITNESS FOR APARTICULAR PURPOSE. THE ENTIRE RISK AS TO THE QUALITY OF THE ORIGINALWORK IS WITH YOU. This DISCLAIMER OF WARRANTY constitutes an essentialpart of this License. No license to Original Work is granted hereunderexcept under this disclaimer.
+
+8) Limitation of Liability. Under no circumstances and under no legaltheory, whether in tort (including negligence), contract, orotherwise, shall the Licensor be liable to any person for any direct,indirect, special, incidental, or consequential damages of anycharacter arising as a result of this License or the use of theOriginal Work including, without limitation, damages for loss ofgoodwill, work stoppage, computer failure or malfunction, or any andall other commercial damages or losses. This limitation of liabilityshall not apply to liability for death or personal injury resultingfrom Licensor's negligence to the extent applicable law prohibits suchlimitation. Some jurisdictions do not allow the exclusion orlimitation of incidental or consequential damages, so this exclusionand limitation may not apply to You.
+
+9) Acceptance and Termination. If You distribute copies of theOriginal Work or a Derivative Work, You must make a reasonable effortunder the circumstances to obtain the express assent of recipients tothe terms of this License. Nothing else but this License (or anotherwritten agreement between Licensor and You) grants You permission tocreate Derivative Works based upon the Original Work or to exerciseany of the rights granted in Section 1 herein, and any attempt to doso except under the terms of this License (or another writtenagreement between Licensor and You) is expressly prohibited byU.S. copyright law, the equivalent laws of other countries, and byinternational treaty. Therefore, by exercising any of the rightsgranted to You in Section 1 herein, You indicate Your acceptance ofthis License and all of its terms and conditions.
+
+10) Termination for Patent Action. This License shall terminateautomatically and You may no longer exercise any of the rights grantedto You by this License as of the date You commence an action,including a cross-claim or counterclaim, against Licensor or anylicensee alleging that the Original Work infringes a patent. Thistermination provision shall not apply for an action alleging patentinfringement by combinations of the Original Work with other softwareor hardware.
+
+11) Jurisdiction, Venue and Governing Law. Any action or suit relatingto this License may be brought only in the courts of a jurisdictionwherein the Licensor resides or in which Licensor conducts its primarybusiness, and under the laws of that jurisdiction excluding itsconflict-of-law provisions. The application of the United NationsConvention on Contracts for the International Sale of Goods isexpressly excluded. Any use of the Original Work outside the scope ofthis License or after its termination shall be subject to therequirements and penalties of the U.S. Copyright Act, 17 U.S.C. Â§ 101et seq., the equivalent laws of other countries, and internationaltreaty. This section shall survive the termination of this License.
+
+12) Attorneys Fees. In any action to enforce the terms of this Licenseor seeking damages relating thereto, the prevailing party shall beentitled to recover its costs and expenses, including, withoutlimitation, reasonable attorneys' fees and costs incurred inconnection with such action, including any appeal of such action. Thissection shall survive the termination of this License.
+
+13) Miscellaneous. This License represents the complete agreementconcerning the subject matter hereof. If any provision of this Licenseis held to be unenforceable, such provision shall be reformed only tothe extent necessary to make it enforceable.
+
+14) Definition of "You" in This License. "You" throughout thisLicense, whether in upper or lower case, means an individual or alegal entity exercising rights under, and complying with all of theterms of, this License. For legal entities, "You" includes any entitythat controls, is controlled by, or is under common control withyou. For purposes of this definition, "control" means (i) the power,direct or indirect, to cause the direction or management of suchentity, whether by contract or otherwise, or (ii) ownership of fiftypercent (50%) or more of the outstanding shares, or (iii) beneficialownership of such entity.
+
+15) Right to Use. You may use the Original Work in all ways nototherwise restricted or conditioned by this License or by law, andLicensor promises not to interfere with or be responsible for suchuses by You.
+
+This license is Copyright (C) 2003-2004 Lawrence E. Rosen. All rightsreserved. Permission is hereby granted to copy and distribute thislicense without modification. This license may not be modified withoutthe express written permission of its copyright owner.]]>
+		</text>
+	</license>
+</component>
+

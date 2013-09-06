@@ -110,10 +110,21 @@ define rrsdk_install_dir
 	    tar -C $(2) -xpf -
 endef
 
-CORRECT_LA_SED_EXPRESSION?=s?libdir='/usr?libdir='$(FSDEVROOT)/usr?g;\
+ifneq ($(MAKECMDGOALS),sim)
+  CORRECT_LA_SED_EXPRESSION?=s?libdir='/usr?libdir='$(FSDEVROOT)/usr?g;\
         s?\ /usr/lib?\ $(FSDEVROOT)/usr/lib?g
-CORRECT_PKGCONFIG_SED_EXPRESSION?=s?prefix=/usr?prefix=$(FSDEVROOT)/usr?g
-CORRECT_DBUS_SERVICE_SED_EXPRESSION?=s?$(FSDEVROOT)/usr?/usr?g
+  CORRECT_PKGCONFIG_SED_EXPRESSION?=s?prefix=/usr?prefix=$(FSDEVROOT)/usr?g;\
+        s?includedir=/usr/include?includedir=$(FSDEVROOT)/usr/include?g; \
+        s?libdir=/usr/lib?libdir=$(FSDEVROOT)/usr/lib?g;
+  CORRECT_DBUS_SERVICE_SED_EXPRESSION?=s?$(FSDEVROOT)/usr?/usr?g
+else
+  CORRECT_LA_SED_EXPRESSION?=s?libdir='/usr?libdir='$(SIMROOT)/usr?g;\
+        s?\ /usr/lib?\ $(SIMROOT)/usr/lib?g
+  CORRECT_PKGCONFIG_SED_EXPRESSION?=s?prefix=/usr?prefix=$(SIMROOT)/usr?g;\
+        s?includedir=/usr/include?includedir=$(SIMROOT)/usr/include?g; \
+        s?libdir=/usr/lib?libdir=$(SIMROOT)/usr/lib?g;
+  CORRECT_DBUS_SERVICE_SED_EXPRESSION?=s?$(SIMROOT)/usr?/usr?g
+endif
 
 rrsdk_install:
 ifneq ($(MAKECMDGOALS),sim)
@@ -187,6 +198,18 @@ ifneq ($(MAKECMDGOALS),sim)
 
 	$(V) for dbus_file in $(CORRECT_DBUS_SERVICE) ; do \
 	    sed -i -e "$(CORRECT_DBUS_SERVICE_SED_EXPRESSION)" $(FSDEVROOT)/$$dbus_file ; \
+	done
+else
+	$(V) for la_file in $(CORRECT_LA) ; do \
+	    sed -i -e "$(CORRECT_LA_SED_EXPRESSION)" $(SIMROOT)/$$la_file ; \
+	done
+
+	$(V) for pc_file in $(CORRECT_PKGCONFIG) ; do \
+	    sed -i -e "$(CORRECT_PKGCONFIG_SED_EXPRESSION)" $(SIMROOT)/$$pc_file ; \
+	done
+
+	$(V) for dbus_file in $(CORRECT_DBUS_SERVICE) ; do \
+	    sed -i -e "$(CORRECT_DBUS_SERVICE_SED_EXPRESSION)" $(SIMROOT)/$$dbus_file ; \
 	done
 endif
 ifneq ($(DO_NOT_RUN_LDCONFIG_ON_INSTALL),yes)

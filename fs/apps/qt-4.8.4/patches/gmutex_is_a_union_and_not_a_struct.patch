@@ -1,0 +1,13 @@
+Index: qt-4.8.1/src/src/3rdparty/webkit/Source/JavaScriptCore/wtf/gobject/GTypedefs.h
+===================================================================
+--- qt-4.8.1.orig/src/src/3rdparty/webkit/Source/JavaScriptCore/wtf/gobject/GTypedefs.h	2012-04-12 12:25:31.797521820 +0200
++++ qt-4.8.1/src/src/3rdparty/webkit/Source/JavaScriptCore/wtf/gobject/GTypedefs.h	2012-04-12 12:25:41.789570695 +0200
+@@ -52,7 +52,7 @@
+ typedef struct _GHashTable GHashTable;
+ typedef struct _GInputStream GInputStream;
+ typedef struct _GList GList;
+-typedef struct _GMutex GMutex;
++typedef union _GMutex GMutex;
+ typedef struct _GPatternSpec GPatternSpec;
+ typedef struct _GPollableOutputStream GPollableOutputStream;
+ typedef struct _GSocketClient GSocketClient;

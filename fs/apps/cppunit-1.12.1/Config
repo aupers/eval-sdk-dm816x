@@ -1,0 +1,7 @@
+config FS_APPS_CPPUNIT
+	bool "CppUnit 1.12.1"
+	default n
+	help
+	   C++ unit testing framework
+
+

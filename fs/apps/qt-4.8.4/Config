@@ -1,0 +1,111 @@
+config FS_APPS_QT
+	bool "qt-4.8.4"
+	default n
+	select TOOLCHAIN_INSTALL_CPP_SUPPORT
+	select FS_APPS_DEJAVU_FONTS
+	select FS_APPS_FREETYPE
+	select FS_APPS_ZLIB
+	select FS_APPS_LIBPNG
+	select FS_APPS_JPEG
+	help
+
+config FS_APPS_QT_CUPS
+	bool "cups"
+	depends on FS_APPS_QT
+	select FS_APPS_CUPS
+	default n
+
+config FS_APPS_QT_DBUS
+	bool "dbus"
+	depends on FS_APPS_QT
+	select FS_APPS_DBUS
+	default n
+
+config FS_APPS_QT_DEBUG
+	bool "debug"
+	depends on FS_APPS_QT
+	default n
+
+config FS_APPS_QT_EXCEPTIONS
+	bool "exceptions"
+	depends on FS_APPS_QT
+	default n
+
+config FS_APPS_QT_GLIB
+	bool "glib"
+	depends on FS_APPS_QT
+	select FS_APPS_GLIB
+	default n
+
+config FS_APPS_QT_MULTIPROCESS
+	bool "support Multi-process UI architecture"
+	depends on FS_APPS_QT
+	default n
+
+config FS_APPS_QT_NO_QWS_MOUSE_CURSOR
+	bool "disable QWS mouse cursor"
+	depends on FS_APPS_QT
+	default n
+
+config FS_APPS_QT_SCRIPT
+	bool "script"
+	depends on FS_APPS_QT
+	default n
+
+config FS_APPS_QT_STATIC
+	bool "static NOTE: DON'T ENABLE IN A RELEASE VERSION AS YOU MAY VIOLATE THE LGPL LICENSE."
+	depends on FS_APPS_QT
+	default n
+
+config FS_APPS_QT_STL
+	bool "stl"
+	depends on FS_APPS_QT
+	default n
+
+config FS_APPS_QT_SVG
+	bool "svg"
+	depends on FS_APPS_QT
+	default n
+
+config FS_APPS_QT_SQLITE
+	bool "Enable sqlite support for QT"
+	depends on FS_APPS_QT
+	select FS_APPS_SQLITE
+	default n
+
+config FS_APPS_QT_TSLIB
+	bool "Enable tslib support for QT"
+	depends on FS_APPS_QT
+	select FS_APPS_TSLIB
+	default n
+
+config FS_APPS_QT_VNC
+	bool "vnc"
+	depends on FS_APPS_QT
+	default n
+
+config FS_APPS_QT_WEBKIT
+	bool "webkit"
+	depends on FS_APPS_QT
+	select FS_APPS_QT_SCRIPT
+	default n
+
+config FS_APPS_QT_OPENGL
+	bool "openGL support"
+	depends on FS_APPS_QT
+	select PROPRIETARY_TI_GRAPHICS_SDK_DM816X
+	select PROPRIETARY_TI_GRAPHICS_SDK
+	default n
+
+config FS_APPS_QT_EXAMPLES_AND_WEBKIT
+	bool "Build QT examples and webkit"
+	depends on FS_APPS_QT
+	select FS_APPS_QT_WEBKIT
+	select FS_APPS_QT_OPENGL
+	select FS_APPS_QT_EXAMPLES
+	default n
+
+config FS_APPS_QT_EXAMPLES
+	bool "build QT examples"
+	depends on FS_APPS_QT
+	default n

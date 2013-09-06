@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<component>
+	<name>FreeType</name>
+	<version>2.4.4</version>
+	<releaseDate>28.11.2010</releaseDate>
+	<manufacturer>http://www.freetype.org</manufacturer>
+	<summary>FreeType is a software library that implements a font rasterization engine. It is used to render text on to bitmaps and provides support for other font-related operations.</summary>
+	<link>http://www.freetype.org/</link>
+	<issues>
+		<link><![CDATA[https://savannah.nongnu.org/bugs/?group=freetype]]></link>
+	</issues>
+	<license type="FTL">
+		<link>https://spdx.org/licenses/FTL</link>
+		<text>
+			<![CDATA[Legal Terms
+
+0. Definitions
+
+Throughout this license, the terms `package', `FreeType Project',and `FreeType archive' refer to the set of files originallydistributed by the authors (David Turner, Robert Wilhelm, andWerner Lemberg) as the `FreeType Project', be they named as alpha,beta or final release.
+
+`You' refers to the licensee, or person using the project, where`using' is a generic term including compiling the project's sourcecode as well as linking it to form a `program' or `executable'.This program is referred to as `a program using the FreeTypeengine'.
+
+This license applies to all files distributed in the originalFreeType Project, including all source code, binaries anddocumentation, unless otherwise stated in the file in itsoriginal, unmodified form as distributed in the original archive.If you are unsure whether or not a particular file is covered bythis license, you must contact us to verify this.
+
+The FreeType Project is copyright (C) 1996-2000 by David Turner,Robert Wilhelm, and Werner Lemberg. All rights reserved except asspecified below.
+
+1. No Warranty
+
+THE FREETYPE PROJECT IS PROVIDED `AS IS' WITHOUT WARRANTY OF ANYKIND, EITHER EXPRESS OR IMPLIED, INCLUDING, BUT NOT LIMITED TO,WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULARPURPOSE. IN NO EVENT WILL ANY OF THE AUTHORS OR COPYRIGHT HOLDERSBE LIABLE FOR ANY DAMAGES CAUSED BY THE USE OR THE INABILITY TOUSE, OF THE FREETYPE PROJECT.
+
+2. Redistribution
+
+This license grants a worldwide, royalty-free, perpetual andirrevocable right and license to use, execute, perform, compile,display, copy, create derivative works of, distribute andsublicense the FreeType Project (in both source and object codeforms) and derivative works thereof for any purpose; and toauthorize others to exercise some or all of the rights grantedherein, subject to the following conditions:
+
+o Redistribution of source code must retain this license file(`FTL.TXT') unaltered; any additions, deletions or changes tothe original files must be clearly indicated in accompanyingdocumentation. The copyright notices of the unaltered,original files must be preserved in all copies of sourcefiles.
+
+o Redistribution in binary form must provide a disclaimer thatstates that the software is based in part of the work of theFreeType Team, in the distribution documentation. We alsoencourage you to put an URL to the FreeType web page in yourdocumentation, though this isn't mandatory.
+
+These conditions apply to any software derived from or based onthe FreeType Project, not just the unmodified files. If you useour work, you must acknowledge us. However, no fee need be paidto us.
+
+3. Advertising
+
+Neither the FreeType authors and contributors nor you shall usethe name of the other for commercial, advertising, or promotionalpurposes without specific prior written permission.
+
+We suggest, but do not require, that you use one or more of thefollowing phrases to refer to this software in your documentationor advertising materials: `FreeType Project', `FreeType Engine',`FreeType library', or `FreeType Distribution'.
+
+As you have not signed this license, you are not required toaccept it. However, as the FreeType Project is copyrightedmaterial, only this license, or another one contracted with theauthors, grants you the right to use, distribute, and modify it.Therefore, by using, distributing, or modifying the FreeTypeProject, you indicate that you understand and accept all the termsof this license.
+
+4. Contacts
+
+There are two mailing lists related to FreeType:
+
+o freetype@nongnu.org
+
+Discusses general use and applications of FreeType, as well asfuture and wanted additions to the library and distribution.If you are looking for support, start in this list if youhaven't found anything to help you in the documentation.
+
+o freetype-devel@nongnu.org
+
+Discusses bugs, as well as engine internals, design issues,specific licenses, porting, etc.
+
+Our home page can be found at
+
+http://www.freetype.org]]>
+		</text>
+	</license>
+</component>
+

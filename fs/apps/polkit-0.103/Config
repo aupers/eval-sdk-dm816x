@@ -1,0 +1,4 @@
+config FS_APPS_POLKIT
+	bool "polkit-0.103"
+	help
+	    PolicyKit is a toolkit for defining and handling authorizations.

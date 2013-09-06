@@ -1,0 +1,6 @@
+config FS_APPS_OPENCV
+	bool "OpenCV-2.3.1a"
+	select FS_APPS_LIBPNG
+	default n
+	help
+	  Library for ComputerVision

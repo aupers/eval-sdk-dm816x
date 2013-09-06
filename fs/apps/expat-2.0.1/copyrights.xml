@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<component>
+	<name>Expat</name>
+	<version>2.0.1</version>
+	<releaseDate>07.06.2007</releaseDate>
+	<manufacturer>http://expat.sourceforge.net</manufacturer>
+	<summary>Expat is a library, written in C, for parsing XML documents. It's the underlying XML parser for the open source Mozilla project, perl's XML::Parser, and other open-source XML parsers. As demonstrated in my benchmark article, it's very fast. It also sets a high standard for reliability, robustness and correctness.</summary>
+	<link>http://expat.sourceforge.net/</link>
+	<issues>
+		<link><![CDATA[http://sourceforge.net/tracker/?atid=110127&group_id=10127&func=browse]]></link>
+	</issues>
+	<license type="MIT">
+		<link>https://spdx.org/licenses/MIT</link>
+		<text>
+	<![CDATA[Permission is hereby granted, free of charge, to any person obtaininga copy of this software and associated documentation files (the"Software"), to deal in the Software without restriction, includingwithout limitation the rights to use, copy, modify, merge, publish,distribute, sublicense, and/or sell copies of the Software, and topermit persons to whom the Software is furnished to do so, subject tothe following conditions:
+
+The above copyright notice and this permission notice shall be includedin all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OFMERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANYCLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THESOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.]]>
+		</text>
+	</license>
+</component>
+

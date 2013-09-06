@@ -2,6 +2,8 @@
 # Copyright (C) 2010 Ridgerun (http://www.ridgerun.com). 
 ##$L$
 
+export USE_KERNEL_TOOLCHAIN=y
+
 include ../bsp/classes/rrsdk.class
 include $(CLASSES)/fetcher.defs
 include $(CLASSES)/flags.defs
@@ -15,7 +17,7 @@ build: real_build headers_install
 real_build: $(KERNEL) preconfig patch
 	$(V) ln -sf $(DEVDIR)/bsp/mach/bspconfig $(KERNEL)/.config
 	$(V) cat /dev/zero | $(MAKE) -C $(KERNEL) $(KFLAGS) oldconfig $(QOUT) 2>/dev/null
-	$(V) $(MAKE) -C $(KERNEL) $(KFLAGS)
+	$(V) $(MAKE) -j $(BSP_NCPU) -C $(KERNEL) $(KFLAGS)
 	$(V) if [ -d $(FSROOT) ] ; then \
 	    $(MAKE) -j $(BSP_NCPU) -C $(KERNEL) modules_install $(KFLAGS) INSTALL_MOD_PATH="$(FSROOT)" $(QOUT) ; \
 	fi
@@ -68,7 +70,8 @@ buildfs:
 headers_install: $(KERNEL)
 	$(V) $(MAKE) -C $(DEVDIR)/fs $(FSDEVROOT) $(QOUT)
 	$(V) $(MAKE) -C $(KERNEL) $@ $(KFLAGS) $(QOUT)
-	$(V) cp -R $(KERNEL)/usr/include/* $(FSDEVROOT)/usr/include
+	$(V) mkdir -p $(KERNEL_INCLUDE)
+	$(V) cp -R $(KERNEL)/usr/include/* $(KERNEL_INCLUDE)
 
 soft_clean: unpatch
 	$(V) if [ -d $(KERNEL) ] ; then \

@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<component>
+	<name>libxml2</name>
+	<version>2.7.8</version>
+	<releaseDate>04.11.2010</releaseDate>
+	<manufacturer>http://xmlsoft.org/</manufacturer>
+	<summary>Vorbis is a general purpose perceptual audio CODEC intended to allow maximum encoder flexibility, thus allowing it to scale competitively over an exceptionally wide range of bitrates. At the high quality/bitrate end of the scale (CD or DAT rate stereo, 16/24 bits) it is in the same league as MPEG-2 and MPC. Similarly, the 1.0 encoder can encode high-quality CD and DAT rate stereo at below 48kbps without resampling to a lower rate. Vorbis is also intended for lower and higher sample rates (from 8kHz telephony to 192kHz digital masters) and a range of channel representations (monaural, polyphonic, stereo, quadraphonic, 5.1, ambisonic, or up to 255 discrete channels).</summary>
+	<link>http://xmlsoft.org/</link>
+	<issues>
+		<link><![CDATA[https://bugzilla.gnome.org/buglist.cgi?product=libxml2]]></link>
+	</issues>
+	<license type="MIT">
+		<link>https://spdx.org/licenses/MIT</link>
+		<text>
+			<![CDATA[Except where otherwise noted in the source code (e.g. the files hash.c,list.c and the trio files, which are covered by a similar licence butwith different Copyright notices) all the files are:
+
+Copyright (C) 1998-2003 Daniel Veillard.  All Rights Reserved.
+
+Permission is hereby granted, free of charge, to any person obtaining a copyof this software and associated documentation files (the "Software"), to dealin the Software without restriction, including without limitation the rightsto use, copy, modify, merge, publish, distribute, sublicense, and/or sellcopies of the Software, and to permit persons to whom the Software is fur-nished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included inall copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS ORIMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FIT-NESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THEDANIEL VEILLARD BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHERIN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CON-NECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+Except as contained in this notice, the name of Daniel Veillard shall notbe used in advertising or otherwise to promote the sale, use or other deal-ings in this Software without prior written authorization from him.]]>
+		</text>
+	</license>
+</component>
+

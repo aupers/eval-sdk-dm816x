@@ -1,0 +1,47 @@
+Index: lvm2-2.02.79/src/Makefile.in
+===================================================================
+--- lvm2-2.02.79.orig/src/Makefile.in	2010-11-22 22:39:47.000000000 +0100
++++ lvm2-2.02.79/src/Makefile.in	2013-04-04 10:40:28.359453600 +0200
+@@ -81,13 +81,13 @@
+ 	$(MAKE) -C test $(@)
+ 
+ install_system_dirs:
+-	$(INSTALL_DIR) $(DESTDIR)$(DEFAULT_SYS_DIR)
+-	$(INSTALL_ROOT_DIR) $(DESTDIR)$(DEFAULT_ARCHIVE_DIR)
+-	$(INSTALL_ROOT_DIR) $(DESTDIR)$(DEFAULT_BACKUP_DIR)
+-	$(INSTALL_ROOT_DIR) $(DESTDIR)$(DEFAULT_CACHE_DIR)
+-	$(INSTALL_ROOT_DIR) $(DESTDIR)$(DEFAULT_LOCK_DIR)
+-	$(INSTALL_ROOT_DIR) $(DESTDIR)$(DEFAULT_RUN_DIR)
+-	$(INSTALL_ROOT_DATA) /dev/null $(DESTDIR)$(DEFAULT_CACHE_DIR)/.cache
++	$(INSTALL_DIR) $(DEFAULT_SYS_DIR)
++	$(INSTALL_ROOT_DIR) $(DEFAULT_ARCHIVE_DIR)
++	$(INSTALL_ROOT_DIR) $(DEFAULT_BACKUP_DIR)
++	$(INSTALL_ROOT_DIR) $(DEFAULT_CACHE_DIR)
++	$(INSTALL_ROOT_DIR) $(DEFAULT_LOCK_DIR)
++	$(INSTALL_ROOT_DIR) $(DEFAULT_RUN_DIR)
++	$(INSTALL_ROOT_DATA) /dev/null $(DEFAULT_CACHE_DIR)/.cache
+ 
+ install_initscripts: 
+ 	$(MAKE) -C scripts install_initscripts
+Index: lvm2-2.02.79/src/make.tmpl.in
+===================================================================
+--- lvm2-2.02.79.orig/src/make.tmpl.in	2010-11-05 17:18:38.000000000 +0100
++++ lvm2-2.02.79/src/make.tmpl.in	2013-04-04 10:40:28.359453600 +0200
+@@ -50,12 +50,12 @@
+ prefix = @prefix@
+ exec_prefix = @exec_prefix@
+ udev_prefix = @udev_prefix@
+-bindir = $(DESTDIR)@bindir@
++bindir = @bindir@
+ confdir = $(DESTDIR)@CONFDIR@/lvm
+-includedir = $(DESTDIR)@includedir@
+-libdir = $(DESTDIR)@libdir@
+-usrlibdir = $(DESTDIR)@usrlibdir@
+-sbindir = $(DESTDIR)@sbindir@
++includedir = @includedir@
++libdir = @libdir@
++usrlibdir = @usrlibdir@
++sbindir = @sbindir@
+ usrsbindir = $(DESTDIR)@usrsbindir@
+ datarootdir = $(DESTDIR)@datarootdir@
+ infodir = $(datarootdir)/info

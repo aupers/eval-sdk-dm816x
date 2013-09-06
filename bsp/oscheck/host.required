@@ -15,3 +15,8 @@ autoconf
 crypt-ssleay
 xz
 ccache
+uuid-dev
+liblzo2
+intltool
+xsltproc
+usb_loader

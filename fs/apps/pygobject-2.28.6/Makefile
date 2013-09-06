@@ -10,7 +10,7 @@ include ../../../bsp/classes/rrsdk.class
 
 DESTDIR=$(FSDEVROOT)
 
-build: rrfetched rrpatched configuration autotools_build$(ARCH_SUFFIX) 
+build:: rrfetched rrpatched configuration autotools_build$(ARCH_SUFFIX) 
 
 AUTOTOOLS_PARAMS=--disable-introspection --enable-shared --enable-thread --prefix=/usr \
 		 PYTHON_INCLUDES=-I$(FSDEVROOT)/usr/include/python${PYTHON_VERSION} 
@@ -19,15 +19,15 @@ OTHERS=/usr/include/pygtk-2.0/{pyglib.h,pygobject.h} /usr/lib/python${PYTHON_VER
 LIBRARIES=/usr/lib/libpyglib-2.0-python.{so,so.0,so.0.0.0} /usr/lib/python${PYTHON_VERSION}/site-packages/{glib/_glib.so,gobject/_gobject.so,gtk-2.0/gio/{_gio.so,unix.so}}
 LIBRARIES_OPTIONAL=$(shell find $(FSDEVROOT)/usr/lib/python${PYTHON_VERSION}/site-packages -name *.pyo -type f | sed 's!.*fsdev!!')
 
+AUTOTOOLS_AUTOGEN_GENERATION_RULE=rrreconf
 
-AUTOTOOLS_AUTOGEN_GENERATION_RULE=force_reconf
-
-force_reconf:
+$(AUTOTOOLS_AUTOGEN_GENERATION_RULE):
 	@$(ECHO) "Forcing autogen.sh"
-	@chmod 544 src/autogen.sh
+	$(V)chmod 544 src/autogen.sh
+	$(V)touch $@
 
 clean:: 
-	$(V)rm -f autogen_patch
+	$(V)rm -f autogen_patch $(AUTOTOOLS_AUTOGEN_GENERATION_RULE)
 
 
 include $(CLASSES)/autotools.class

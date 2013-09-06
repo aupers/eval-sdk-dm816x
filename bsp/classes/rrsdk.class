@@ -3,5 +3,7 @@ $(error ====== DEVDIR variable is empty, invoke this Makefile from the BSP root,
 endif
 include $(DEVDIR)/bsp/mach/Make.conf
 
+ifneq ($(MAKECMDGOALS),sim)
 export CROSS_COMPILE=$(TOOLCHAIN_PREFIX)-
+endif
 include $(CLASSES)/_rrsdk.defs

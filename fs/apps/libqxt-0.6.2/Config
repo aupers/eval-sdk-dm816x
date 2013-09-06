@@ -1,0 +1,15 @@
+config FS_APPS_LIBQXT
+	bool "libqxt-0.6.2"
+	default n
+	select TOOLCHAIN_INSTALL_CPP_SUPPORT
+	select FS_APPS_QT
+	help
+	   LibQxt is an extension library for Qt providing a suite of
+	   cross-platform utility classes to add functionality not readily 
+	   available in the Qt toolkit.
+
+config FS_APPS_LIBQXT_DEBUG
+	bool "debug"
+	depends on FS_APPS_LIBQXT
+	default n
+

@@ -1,0 +1,13 @@
+Index: udisks-1.0.4/src/src/device.c
+===================================================================
+--- udisks-1.0.4.orig/src/src/device.c	2013-04-05 13:43:26.478355261 +0200
++++ udisks-1.0.4/src/src/device.c	2013-04-05 13:51:10.050350034 +0200
+@@ -6480,7 +6480,7 @@
+   options = prepend_default_mount_options (device, fsmo, caller_uid, given_options);
+ 
+   /* validate mount options and check for authorizations */
+-  s = g_string_new ("uhelper=udisks,nodev,nosuid");
++  s = g_string_new ("nodev,nosuid");
+   for (n = 0; options[n] != NULL; n++)
+     {
+       const char *option = options[n];

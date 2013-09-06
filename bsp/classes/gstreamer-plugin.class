@@ -1,6 +1,7 @@
 include $(CLASSES)/autotools.class
 include $(CLASSES)/flags.defs
 
+ifneq ($(MAKECMDGOALS),sim)
 GSTREAMER_VERSION?=gstreamer-0.10
 
 install:: gstplugin_install
@@ -23,3 +24,4 @@ gstplugin_install: $(INSTALLED_FLAGS)
 
 clean::
 	$(V) rm -Rf gstplugin_install
+endif

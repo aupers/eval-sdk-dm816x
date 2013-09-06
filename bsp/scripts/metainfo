@@ -96,7 +96,7 @@ function hostpkg_out {
  HOSTPARTS=`grep ^HOST_REQUIRED= $PKG/metainfo | sed -e "s/HOST_REQUIRED=//" -e "s/\"//g"`
  for i in $HOSTPARTS
   do
-   if ! grep $i $DEVDIR/fs/hostreqs > /dev/null 
+   if ! grep -x $i $DEVDIR/fs/hostreqs > /dev/null 
     then echo $i
    fi
   done

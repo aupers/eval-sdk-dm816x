@@ -30,6 +30,9 @@
 #! <b>PKG_TYPE:</b> The type of download to be made. This value can be set manually to either http, ftp, git or svn. If this value is not set, it will try to infer the package type through the provided URL.
 #!
 #! <li>
+#! <b>PKG_BRANCH:</b> Specifies the branch containing the source code. Valid when PKG_TYPE is git or svn.
+#!
+#! <li>
 #! <b>PKG_SHA1SUM:</b> Optional value that may be set for package integrity checking through its SHA1SUM value.
 #!
 #! <li>
@@ -90,6 +93,7 @@ export PKG_URL
 export PKG_INTERNAL_URL
 # Valid if PKG_TYPE is svn or git
 export PKG_REVISION
+export PKG_BRANCH
 # Valid if the PKGT_TYPE is http or ftp
 export PKG_SHA1SUM
 export PKG_ZIP_STRIP_DIR

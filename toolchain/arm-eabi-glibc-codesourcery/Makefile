@@ -101,6 +101,12 @@ ifeq ($(CONFIG_TOOLCHAIN_INSTALL_CPP_SUPPORT),y)
 	    $(FSROOT)/lib/libstdc++.so.6.0.10
 endif
 
+ifeq ($(CONFIG_TOOLCHAIN_INSTALL_GCONV_MODULES),y)
+	# Installing GCONV conversion tables required to use iconv utility
+	$(V) mkdir -p $(FSROOT)/usr/lib/gconv
+	$(V) install -D --mode=755 $(TOOLCHAIN_LIB)/../usr/lib/gconv/* $(FSROOT)/usr/lib/gconv/
+endif
+
 ifeq ($(CONFIG_TOOLCHAIN_INSTALL_GDBSERVER),y)
 	# Installing gdbserver
 	$(V)install -D --mode=755 $(TOOLCHAIN_BIN)/gdbserver $(FSROOT)/usr/bin/gdbserver

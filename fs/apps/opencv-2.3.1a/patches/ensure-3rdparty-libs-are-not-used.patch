@@ -1,0 +1,13 @@
+Index: OpenCV-2.3.1a/src/CMakeLists.txt
+===================================================================
+--- OpenCV-2.3.1a.orig/src/CMakeLists.txt	2012-04-11 10:37:17.529225095 +0200
++++ OpenCV-2.3.1a/src/CMakeLists.txt	2012-04-11 10:37:17.537225128 +0200
+@@ -1544,7 +1544,7 @@
+ add_subdirectory(modules)
+ add_subdirectory(doc)
+ add_subdirectory(data)
+-add_subdirectory(3rdparty)
++#add_subdirectory(3rdparty)
+ 
+ if(BUILD_EXAMPLES OR BUILD_ANDROID_EXAMPLES OR INSTALL_PYTHON_EXAMPLES)
+     add_subdirectory(samples)

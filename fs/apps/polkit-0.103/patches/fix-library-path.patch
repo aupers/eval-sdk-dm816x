@@ -1,0 +1,13 @@
+Index: polkit-0.110/src/src/polkitd/gposixsignal.c
+===================================================================
+--- polkit-0.110.orig/src/src/polkitd/gposixsignal.c	2011-08-01 15:42:02.000000000 +0200
++++ polkit-0.110/src/src/polkitd/gposixsignal.c	2013-03-25 10:10:45.961331639 +0100
+@@ -26,7 +26,7 @@
+ 
+ #if defined(__linux__)
+ #include <unistd.h>
+-#include <sys/signalfd.h>
++#include <linux/signalfd.h>
+ #include <signal.h>
+ 
+ typedef struct

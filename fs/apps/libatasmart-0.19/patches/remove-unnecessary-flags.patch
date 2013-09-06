@@ -1,0 +1,27 @@
+Index: libatasmart-0.19/src/strpool/Makefile.in
+===================================================================
+--- libatasmart-0.19.orig/src/strpool/Makefile.in	2012-05-21 00:05:54.359405230 +0200
++++ libatasmart-0.19/src/strpool/Makefile.in	2013-03-26 08:54:46.335190165 +0100
+@@ -313,18 +313,18 @@
+ @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LTCOMPILE) -c -o $@ $<
+ 
+ strpool.o: ../strpool.c
+-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT strpool.o -MD -MP -MF $(DEPDIR)/strpool.Tpo -c -o strpool.o `test -f '../strpool.c' || echo '$(srcdir)/'`../strpool.c
++@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) -MT strpool.o -MD -MP -MF $(DEPDIR)/strpool.Tpo -c -o strpool.o `test -f '../strpool.c' || echo '$(srcdir)/'`../strpool.c
+ @am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/strpool.Tpo $(DEPDIR)/strpool.Po
+ @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='../strpool.c' object='strpool.o' libtool=no @AMDEPBACKSLASH@
+ @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o strpool.o `test -f '../strpool.c' || echo '$(srcdir)/'`../strpool.c
++@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) -c -o strpool.o `test -f '../strpool.c' || echo '$(srcdir)/'`../strpool.c
+ 
+ strpool.obj: ../strpool.c
+-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT strpool.obj -MD -MP -MF $(DEPDIR)/strpool.Tpo -c -o strpool.obj `if test -f '../strpool.c'; then $(CYGPATH_W) '../strpool.c'; else $(CYGPATH_W) '$(srcdir)/../strpool.c'; fi`
++@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) -MT strpool.obj -MD -MP -MF $(DEPDIR)/strpool.Tpo -c -o strpool.obj `if test -f '../strpool.c'; then $(CYGPATH_W) '../strpool.c'; else $(CYGPATH_W) '$(srcdir)/../strpool.c'; fi`
+ @am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/strpool.Tpo $(DEPDIR)/strpool.Po
+ @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='../strpool.c' object='strpool.obj' libtool=no @AMDEPBACKSLASH@
+ @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o strpool.obj `if test -f '../strpool.c'; then $(CYGPATH_W) '../strpool.c'; else $(CYGPATH_W) '$(srcdir)/../strpool.c'; fi`
++@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) -c -o strpool.obj `if test -f '../strpool.c'; then $(CYGPATH_W) '../strpool.c'; else $(CYGPATH_W) '$(srcdir)/../strpool.c'; fi`
+ 
+ mostlyclean-libtool:
+ 	-rm -f *.lo

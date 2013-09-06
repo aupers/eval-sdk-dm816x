@@ -1,0 +1,2 @@
+HOST_REQUIRED="cmake python-numpy"
+TARGET_REQUIRED="eigen libpng jpeg"

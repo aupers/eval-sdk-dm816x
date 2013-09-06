@@ -8,6 +8,8 @@
 #! <ul>
 #! <li> <b>SHELL</b>: Shell's executable location. Use when a make target needs to run a host shell script.  Typical use would be with autotools based packages. <br>Value: "/bin/bash."</li> 
 #!
+#! <li> <b>SCRIPT_VERBOSE</b>: Verbose value. 0 by default.
+#!
 #! <li> <b>ECHO</b>: Variable storing the echo command for console printing with automatic indentation.  Intended to provide the user with brief status on the progress of the build.  <br>Value: "echo -e "$(TABINDEX)""</li> 
 #!
 #! <li> <b>MAKE</b>: Make command for the rest of the RidgeRun SDK.  Enables verbose output.  <br>Value: "$(MAKE) $(if $(VERBOSE:1=),-s)"</li> 
@@ -19,6 +21,8 @@
 #! <li> <b>QOUT</b>: Variable to control if the output from a command in a make target is sent to the log file.  <br>Value: "$(if $(VERBOSE:1=), >> $(LOGFILE) )"
 #!
 #! <li> <b>ERRQOUT</b>: Variable to control if the error output from a command in a make target is sent to the log file.  <br>Value: "$(if $(VERBOSE:1=), 2>> $(LOGFILE) )"</li> 
+#!
+#! <li> <b>SCRIPT_DEBUG</b>: "$(if $(SCRIPT_VERBOSE:1=),,-d)"
 #!
 #! <li> <b>HOST_ARCH</b>: Identifier value for the host machine's architecture.  Only used when the built steps vary based on develop workstation machine architecture.  <br>Value: "${shell uname -m}"</li> 
 #!
@@ -56,7 +60,7 @@
 #!
 #! <li> <b>KFLAGS</b>: Parameters passed to on the kernel make invocation command line.  <br>Value: "$(if $(VERBOSE:2=),KBUILD_VERBOSE=1) CROSS_COMPILE=$(TOOLCHAIN_PREFIX)-"</li> 
 #!
-#! <li> <b>KERNEL_INCLUDE</b>: Path to kernel header files needed by some applications and libraries.  Typical use would be APPS_CFLAGS+=-I$(KINCLUDE) to allow applications and libraries to access the public kernel header files.  <br>Value: "$(FSDEVROOT)/usr/include"</li>
+#! <li> <b>KERNEL_INCLUDE</b>: Path to kernel header files needed by some applications and libraries.  Typical use would be "APPS_CFLAGS+=-I$(KERNEL_INCLUDE)" to allow applications and libraries to access the public kernel header files.  <br>Value: "$(FSDEVROOT)/usr/$(KERNEL)/include"</li>
 #!
 #! \section readwrite_params Public Read-Write Variables
 #! The following is a list of read-write parameters for use in Makefiles.  If you modify the value, do so before including any other files.
@@ -82,6 +86,7 @@ ifeq (,$(findstring $(DEVDIR),$(PWD)))
 endif
 
 -include $(DEVDIR)/bsp/mach/bspconfig
+SCRIPT_VERBOSE?=0
 
 SHELL = /bin/bash
 ECHO = echo -e "$(TABINDEX)"
@@ -91,6 +96,7 @@ LOGFILE?=/dev/null
 V       = $(if $(VERBOSE:1=),@)
 QOUT    = $(if $(VERBOSE:1=), >> $(LOGFILE) )
 ERRQOUT = $(if $(VERBOSE:1=), 2>> $(LOGFILE) )
+SCRIPT_DEBUG = $(if $(SCRIPT_VERBOSE:1=),,-d)
 
 # In some platforms we cannot use the host ldconfig tool, 
 # so the arch definitions can replace it by a custom written 
@@ -131,8 +137,8 @@ BSPCONFIGFILE = $(IMAGEDIR)/bspconfig
 TFTPIMGSUFFIX=.$(USER).${shell basename $(DEVDIR)}.${shell basename `readlink $(DEVDIR)/bsp/mach | cut -d'-' -f2`}
 
 # Kernel flags
-KFLAGS = $(if $(VERBOSE:2=),KBUILD_VERBOSE=1) CROSS_COMPILE="$(CCACHE) $(TOOLCHAIN_PREFIX)"-
-KERNEL_INCLUDE=$(FSDEVROOT)/usr/include
+KFLAGS = $(if $(VERBOSE:2=),KBUILD_VERBOSE=1) CROSS_COMPILE="$(CCACHE) $(TOOLCHAIN_PATH)/bin/$(TOOLCHAIN_PREFIX)"-
+KERNEL_INCLUDE=$(FSDEVROOT)/usr/$(KERNEL)/include
 
 # APPS flags
 APPS_CFLAGS?=$(CFLAGS) -I$(FSDEVROOT)/usr/include -I$(FSDEVROOT)/include

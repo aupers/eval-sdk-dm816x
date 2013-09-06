@@ -1,0 +1,18 @@
+Index: OpenCV-2.3.1a/src/CMakeLists.txt
+===================================================================
+--- OpenCV-2.3.1a.orig/src/CMakeLists.txt	2012-03-12 08:19:58.583301281 +0100
++++ OpenCV-2.3.1a/src/CMakeLists.txt	2012-03-12 08:21:32.443760243 +0100
+@@ -833,6 +833,13 @@
+     SET(BUILD_ANDROID_EXAMPLES TRUE CACHE BOOL "Build examples for Android platform")
+ endif()
+ 
++############################### ZLIB ##############################
++
++if (ZLIB_FOUND)
++	get_filename_component(ZLIB_LIBRARY_DIR ${ZLIB_LIBRARIES} PATH)
++	link_directories(/${ZLIB_LIBRARY_DIR})
++endif()
++
+ #YV
+ ############################### QT ################################
+ 

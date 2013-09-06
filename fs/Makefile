@@ -4,7 +4,7 @@
 #
 #$L$
 
-.PHONY:	default build preconfig patch buildfs unpatch clean toolchain.cmake \
+.PHONY:	default build preconfig patch buildfs unpatch clean config.site config.site.sim toolchain.cmake toolchain.sim.cmake \
 	build_start defs cmdline
 
 ifeq ($(DEVDIR),)
@@ -176,7 +176,7 @@ host_packages:
 	$(V) rm -f $(DEVDIR)/fs/hostreqs $(QOUT)
 	$(SHELL) $(DEVDIR)/bsp/oscheck/pkg -o
 
-build_start: defs host_packages config.site toolchain.cmake
+build_start: defs host_packages config.site toolchain.cmake toolchain.sim.cmake
 	$(V) echo -n "" > $(CMDLINEFILE)
 
 CREATEDEV=$(SUDO) mknod $(FSROOT)/dev
@@ -200,7 +200,7 @@ $(FSROOT):
 
 $(FSDEVROOT):
 	$(V) $(ECHO) "Creating development $(FSDEVROOT) directory"
-	$(V) mkdir -p $(FSDEVROOT)/usr/{lib,bin,sbin,share,include,man,etc}
+	$(V) mkdir -p $(FSDEVROOT)/usr/{lib,bin,sbin,share,include,man,etc,$(KERNEL)}
 
 config.site: $(DEVDIR)/bsp/mach/bspconfig
 	@$(ECHO) "Building SDK specific application build parameters"
@@ -258,9 +258,17 @@ config.site.sim:
 toolchain.cmake: toolchain.cmake.in
 	$(V) cp $< $@
 	$(V) sed -i -e "s/@CMAKE_SYSTEM_NAME@/$(shell uname)/" \
-	    -e "s?@CC@?$(CONFIG_TOOLCHAIN_PATH)/bin/$(CC)?" \
-	    -e "s?@CXX@?$(CONFIG_TOOLCHAIN_PATH)/bin/$(CXX)?" \
+	    -e "s?@CC@?\"$(TOOLCHAIN_PREFIX)-gcc\"?" \
+	    -e "s?@CXX@?\"$(TOOLCHAIN_PREFIX)-g++\"?" \
 	    -e "s?@FSDEV@?$(FSDEVROOT)?g" \
+	$@
+
+toolchain.sim.cmake: toolchain.sim.cmake.in
+	$(V) cp $< $@
+	$(V) sed -i -e "s/@CMAKE_SYSTEM_NAME@/$(shell uname)/" \
+	    -e "s?@CC@?gcc?" \
+	    -e "s?@CXX@?g++?" \
+	    -e "s?@SIMROOT@?$(SIMROOT)?g" \
 	$@
 
 
@@ -299,3 +307,4 @@ force_build_execute:
 	$(V)$(MAKE) build
 
 include $(CLASSES)/force_build.defs
+

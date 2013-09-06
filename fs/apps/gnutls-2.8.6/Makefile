@@ -18,7 +18,7 @@ BINARIES = /usr/bin/{certtool,gnutls-cli,gnutls-cli-debug,gnutls-serv,psktool,sr
 LIBRARIES = /usr/lib/{libgnutls-extra.so.26.14.12,libgnutls-openssl.so.26.14.12}\
 	    /usr/lib/{libgnutlsxx.so.26.14.12,libgnutls.so.26.14.12}
 
-build: built autotools_build
+build:: built autotools_build
 
 built: rrfetched rrpatched configuration
 	$(V) cp arm/lib/includes/gnutls/gnutls.h src/lib/includes/gnutls/gnutls.h

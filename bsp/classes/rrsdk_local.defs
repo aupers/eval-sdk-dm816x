@@ -1,17 +1,7 @@
-#! \defgroup rrsdk_class RidgeRun SDK Class
+#! \defgroup rrsdk_local_class RidgeRun SDK Local Class
 #! \ingroup classes
 #! \section intro Introduction
-#! Provides the unified logic framework for a package's installation procedure by the SDK. For most applications, no further action or customization should be required other than adding this file as an include on the package's Makefile file.
-#!
-#! \section public_params Public Parameters
-#! The following is a list of parameters that may be set according to an application's specific requirements.
-#! <ul>
-#!
-#! <li>
-#! <b>NONCOMPILED_DESTDIR:</b> The directory (absolute path) where non-compiled files (NONCOMPILED_FILES) will be placed.
-#!
-#! <li>
-#! <b>NONCOMPILED_FILES:</b> A list of files, relative to the application's path (i.e. src/script.py), that will be placed in directory NONCOMPILED_DESTDIR.
+#! Provides the unified logic framework for a host package's installation procedure by the SDK. For most applications, no further action or customization should be required other than adding this file as an include on the package's Makefile file.
 #!
 
 include $(CLASSES)/flags.defs

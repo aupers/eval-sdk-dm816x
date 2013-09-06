@@ -1,0 +1,21 @@
+#!/bin/sh -e
+
+case "$1" in
+start)
+	echo "Starting polkit daeamon"
+	/usr/lib/polkit-1/polkitd &
+	;;
+
+stop)
+	echo "Stopping polkit daemon"
+	killall polkitd
+	;;
+
+*)
+	echo "Usage: /etc/init.d/polkit {start|stop}"
+	exit 1
+	;;
+esac
+
+exit 0
+

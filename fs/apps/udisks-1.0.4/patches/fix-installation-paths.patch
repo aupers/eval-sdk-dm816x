@@ -1,0 +1,78 @@
+Index: udisks-1.0.4/src/data/Makefile.in
+===================================================================
+--- udisks-1.0.4.orig/src/data/Makefile.in	2011-08-26 17:08:42.000000000 +0200
++++ udisks-1.0.4/src/data/Makefile.in	2013-04-04 13:39:54.343332170 +0200
+@@ -347,15 +347,15 @@
+ 	cd "$(DESTDIR)$(avahiservicedir)" && rm -f $$files
+ install-dbusconfDATA: $(dbusconf_DATA)
+ 	@$(NORMAL_INSTALL)
+-	test -z "$(dbusconfdir)" || $(MKDIR_P) "$(DESTDIR)$(dbusconfdir)"
++	test -z "$(dbusconfdir)" || $(MKDIR_P) "$(dbusconfdir)"
+ 	@list='$(dbusconf_DATA)'; test -n "$(dbusconfdir)" || list=; \
+ 	for p in $$list; do \
+ 	  if test -f "$$p"; then d=; else d="$(srcdir)/"; fi; \
+ 	  echo "$$d$$p"; \
+ 	done | $(am__base_list) | \
+ 	while read files; do \
+-	  echo " $(INSTALL_DATA) $$files '$(DESTDIR)$(dbusconfdir)'"; \
+-	  $(INSTALL_DATA) $$files "$(DESTDIR)$(dbusconfdir)" || exit $$?; \
++	  echo " $(INSTALL_DATA) $$files '$(dbusconfdir)'"; \
++	  $(INSTALL_DATA) $$files "$(dbusconfdir)" || exit $$?; \
+ 	done
+ 
+ uninstall-dbusconfDATA:
+@@ -363,8 +363,8 @@
+ 	@list='$(dbusconf_DATA)'; test -n "$(dbusconfdir)" || list=; \
+ 	files=`for p in $$list; do echo $$p; done | sed -e 's|^.*/||'`; \
+ 	test -n "$$files" || exit 0; \
+-	echo " ( cd '$(DESTDIR)$(dbusconfdir)' && rm -f" $$files ")"; \
+-	cd "$(DESTDIR)$(dbusconfdir)" && rm -f $$files
++	echo " ( cd '$(dbusconfdir)' && rm -f" $$files ")"; \
++	cd "$(dbusconfdir)" && rm -f $$files
+ install-dbusifDATA: $(dbusif_DATA)
+ 	@$(NORMAL_INSTALL)
+ 	test -z "$(dbusifdir)" || $(MKDIR_P) "$(DESTDIR)$(dbusifdir)"
+Index: udisks-1.0.4/src/tools/Makefile.in
+===================================================================
+--- udisks-1.0.4.orig/src/tools/Makefile.in	2011-08-26 17:08:43.000000000 +0200
++++ udisks-1.0.4/src/tools/Makefile.in	2013-04-04 13:39:54.347332170 +0200
+@@ -25,7 +25,7 @@
+ install_sh_DATA = $(install_sh) -c -m 644
+ install_sh_PROGRAM = $(install_sh) -c
+ install_sh_SCRIPT = $(install_sh) -c
+-INSTALL_HEADER = $(INSTALL_DATA)
++INSTALL_HEADER = $(INSTALL_DATA)dbusifdir
+ transform = $(program_transform_name)
+ NORMAL_INSTALL = :
+ PRE_INSTALL = :
+@@ -478,7 +478,7 @@
+ 	$(AM_V_CCLD)$(LINK) $(umount_udisks_OBJECTS) $(umount_udisks_LDADD) $(LIBS)
+ install-profileSCRIPTS: $(profile_SCRIPTS)
+ 	@$(NORMAL_INSTALL)
+-	test -z "$(profiledir)" || $(MKDIR_P) "$(DESTDIR)$(profiledir)"
++	test -z "$(profiledir)" || $(MKDIR_P) "$(profiledir)"
+ 	@list='$(profile_SCRIPTS)'; test -n "$(profiledir)" || list=; \
+ 	for p in $$list; do \
+ 	  if test -f "$$p"; then d=; else d="$(srcdir)/"; fi; \
+@@ -497,8 +497,8 @@
+ 	while read type dir files; do \
+ 	     if test "$$dir" = .; then dir=; else dir=/$$dir; fi; \
+ 	     test -z "$$files" || { \
+-	       echo " $(INSTALL_SCRIPT) $$files '$(DESTDIR)$(profiledir)$$dir'"; \
+-	       $(INSTALL_SCRIPT) $$files "$(DESTDIR)$(profiledir)$$dir" || exit $$?; \
++	       echo " $(INSTALL_SCRIPT) $$files '$(profiledir)$$dir'"; \
++	       $(INSTALL_SCRIPT) $$files "$(profiledir)$$dir" || exit $$?; \
+ 	     } \
+ 	; done
+ 
+@@ -508,8 +508,8 @@
+ 	files=`for p in $$list; do echo "$$p"; done | \
+ 	       sed -e 's,.*/,,;$(transform)'`; \
+ 	test -n "$$list" || exit 0; \
+-	echo " ( cd '$(DESTDIR)$(profiledir)' && rm -f" $$files ")"; \
+-	cd "$(DESTDIR)$(profiledir)" && rm -f $$files
++	echo " ( cd '$(profiledir)' && rm -f" $$files ")"; \
++	cd "$(profiledir)" && rm -f $$files
+ 
+ mostlyclean-compile:
+ 	-rm -f *.$(OBJEXT)

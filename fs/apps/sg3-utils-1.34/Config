@@ -1,0 +1,6 @@
+config FS_APPS_SG3_UTILS
+	bool "sg3-utils-1.34"
+	help
+	    sg3_utils is a package of utilities that send SCSI commands to the
+	    given DEVICE via a SCSI pass through interface provided by the host
+	    operating system.	

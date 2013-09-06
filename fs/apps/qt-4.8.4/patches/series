@@ -1,0 +1,7 @@
+001_wsegl2.patch
+002_pvrqwswsegl.c.patch
+#gmutex_is_a_union_and_not_a_struct.patch
+dont_compile_webkit_tests_as_they_dont_link.patch
+add-openGL-support.patch
+opengl-accelerated-browser.patch
+

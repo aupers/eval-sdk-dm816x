@@ -1,0 +1,11 @@
+Index: OpenCV-2.3.1a/src/modules/core/CMakeLists.txt
+===================================================================
+--- OpenCV-2.3.1a.orig/src/modules/core/CMakeLists.txt	2012-03-09 13:30:02.840169022 +0100
++++ OpenCV-2.3.1a/src/modules/core/CMakeLists.txt	2012-03-09 13:30:11.448211110 +0100
+@@ -1,5 +1,5 @@
+ if(ZLIB_FOUND)
+-    include_directories(${ZLIB_INCUDE_DIR})
++    include_directories(${ZLIB_INCLUDE_DIR})
+     set(deps ${ZLIB_LIBRARIES})
+ else()
+     include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../../3rdparty/zlib")

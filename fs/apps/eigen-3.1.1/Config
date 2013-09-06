@@ -1,0 +1,5 @@
+config FS_APPS_EIGEN
+	bool "Eigen-3.1.1"
+	default n
+	help
+	  Eigen is a C++ template library for linear algebra: matrices, vectors, numerical solvers, and related algorithms.

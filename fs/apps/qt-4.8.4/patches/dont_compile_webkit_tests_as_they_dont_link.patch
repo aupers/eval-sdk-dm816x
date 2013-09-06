@@ -1,0 +1,13 @@
+Index: qt-4.8.0/src/src/3rdparty/webkit/Source/WebKit.pro
+===================================================================
+--- qt-4.8.0.orig/src/src/3rdparty/webkit/Source/WebKit.pro	2012-03-21 12:03:36.880228942 +0100
++++ qt-4.8.0/src/src/3rdparty/webkit/Source/WebKit.pro	2012-03-21 12:03:41.828253138 +0100
+@@ -22,7 +22,7 @@
+     exists($$PWD/WebKit/qt/declarative): SUBDIRS += WebKit/qt/declarative
+ }
+ 
+-exists($$PWD/WebKit/qt/tests): SUBDIRS += WebKit/qt/tests
++#exists($$PWD/WebKit/qt/tests): SUBDIRS += WebKit/qt/tests
+ 
+ build-qtscript {
+     SUBDIRS += \

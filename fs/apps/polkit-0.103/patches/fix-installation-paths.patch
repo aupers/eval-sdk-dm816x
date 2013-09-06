@@ -1,0 +1,124 @@
+Index: polkit-0.103/src/data/Makefile.in
+===================================================================
+--- polkit-0.103.orig/src/data/Makefile.in	2013-04-04 16:51:44.679202343 +0200
++++ polkit-0.103/src/data/Makefile.in	2013-04-04 16:52:11.307202042 +0200
+@@ -317,15 +317,15 @@
+ 	-rm -rf .libs _libs
+ install-dbusconfDATA: $(dbusconf_DATA)
+ 	@$(NORMAL_INSTALL)
+-	test -z "$(dbusconfdir)" || $(MKDIR_P) "$(DESTDIR)$(dbusconfdir)"
++	test -z "$(dbusconfdir)" || $(MKDIR_P) "$(dbusconfdir)"
+ 	@list='$(dbusconf_DATA)'; test -n "$(dbusconfdir)" || list=; \
+ 	for p in $$list; do \
+ 	  if test -f "$$p"; then d=; else d="$(srcdir)/"; fi; \
+ 	  echo "$$d$$p"; \
+ 	done | $(am__base_list) | \
+ 	while read files; do \
+-	  echo " $(INSTALL_DATA) $$files '$(DESTDIR)$(dbusconfdir)'"; \
+-	  $(INSTALL_DATA) $$files "$(DESTDIR)$(dbusconfdir)" || exit $$?; \
++	  echo " $(INSTALL_DATA) $$files '$(dbusconfdir)'"; \
++	  $(INSTALL_DATA) $$files "$(dbusconfdir)" || exit $$?; \
+ 	done
+ 
+ uninstall-dbusconfDATA:
+@@ -333,8 +333,8 @@
+ 	@list='$(dbusconf_DATA)'; test -n "$(dbusconfdir)" || list=; \
+ 	files=`for p in $$list; do echo $$p; done | sed -e 's|^.*/||'`; \
+ 	test -n "$$files" || exit 0; \
+-	echo " ( cd '$(DESTDIR)$(dbusconfdir)' && rm -f" $$files ")"; \
+-	cd "$(DESTDIR)$(dbusconfdir)" && rm -f $$files
++	echo " ( cd '$(dbusconfdir)' && rm -f" $$files ")"; \
++	cd "$(dbusconfdir)" && rm -f $$files
+ install-pamDATA: $(pam_DATA)
+ 	@$(NORMAL_INSTALL)
+ 	test -z "$(pamdir)" || $(MKDIR_P) "$(DESTDIR)$(pamdir)"
+Index: polkit-0.103/src/src/polkitbackend/Makefile.in
+===================================================================
+--- polkit-0.103.orig/src/src/polkitbackend/Makefile.in	2013-04-04 16:51:44.711202342 +0200
++++ polkit-0.103/src/src/polkitbackend/Makefile.in	2013-04-04 16:52:11.307202042 +0200
+@@ -538,15 +538,15 @@
+ 	-rm -rf .libs _libs
+ install-localauthorityconfigDATA: $(localauthorityconfig_DATA)
+ 	@$(NORMAL_INSTALL)
+-	test -z "$(localauthorityconfigdir)" || $(MKDIR_P) "$(DESTDIR)$(localauthorityconfigdir)"
++	test -z "$(localauthorityconfigdir)" || $(MKDIR_P) "$(localauthorityconfigdir)"
+ 	@list='$(localauthorityconfig_DATA)'; test -n "$(localauthorityconfigdir)" || list=; \
+ 	for p in $$list; do \
+ 	  if test -f "$$p"; then d=; else d="$(srcdir)/"; fi; \
+ 	  echo "$$d$$p"; \
+ 	done | $(am__base_list) | \
+ 	while read files; do \
+-	  echo " $(INSTALL_DATA) $$files '$(DESTDIR)$(localauthorityconfigdir)'"; \
+-	  $(INSTALL_DATA) $$files "$(DESTDIR)$(localauthorityconfigdir)" || exit $$?; \
++	  echo " $(INSTALL_DATA) $$files '$(localauthorityconfigdir)'"; \
++	  $(INSTALL_DATA) $$files "$(localauthorityconfigdir)" || exit $$?; \
+ 	done
+ 
+ uninstall-localauthorityconfigDATA:
+@@ -554,8 +554,8 @@
+ 	@list='$(localauthorityconfig_DATA)'; test -n "$(localauthorityconfigdir)" || list=; \
+ 	files=`for p in $$list; do echo $$p; done | sed -e 's|^.*/||'`; \
+ 	test -n "$$files" || exit 0; \
+-	echo " ( cd '$(DESTDIR)$(localauthorityconfigdir)' && rm -f" $$files ")"; \
+-	cd "$(DESTDIR)$(localauthorityconfigdir)" && rm -f $$files
++	echo " ( cd '$(localauthorityconfigdir)' && rm -f" $$files ")"; \
++	cd "$(localauthorityconfigdir)" && rm -f $$files
+ install-libpolkit_backend_1includeHEADERS: $(libpolkit_backend_1include_HEADERS)
+ 	@$(NORMAL_INSTALL)
+ 	test -z "$(libpolkit_backend_1includedir)" || $(MKDIR_P) "$(DESTDIR)$(libpolkit_backend_1includedir)"
+@@ -801,9 +801,9 @@
+ 	mkdir -p $(DESTDIR)$(localstatedir)/lib/polkit-1
+ 	mkdir -p $(DESTDIR)$(localstatedir)/lib/polkit-1/localauthority/{10-vendor.d,20-org.d,30-site.d,50-local.d,90-mandatory.d}
+ 	-chmod 700 $(DESTDIR)$(localstatedir)/lib/polkit-1
+-	mkdir -p $(DESTDIR)$(sysconfdir)/polkit-1
+-	mkdir -p $(DESTDIR)$(sysconfdir)/polkit-1/localauthority/{10-vendor.d,20-org.d,30-site.d,50-local.d,90-mandatory.d}
+-	-chmod 700 $(DESTDIR)$(sysconfdir)/polkit-1/localauthority
++	mkdir -p $(sysconfdir)/polkit-1
++	mkdir -p $(sysconfdir)/polkit-1/localauthority/{10-vendor.d,20-org.d,30-site.d,50-local.d,90-mandatory.d}
++	-chmod 700 $(sysconfdir)/polkit-1/localauthority
+ 	mkdir -p $(DESTDIR)$(libdir)/polkit-1/extensions
+ 
+ # Tell versions [3.59,3.63) of GNU make to not export all variables.
+Index: polkit-0.103/src/src/nullbackend/Makefile.in
+===================================================================
+--- polkit-0.103.orig/src/src/nullbackend/Makefile.in	2013-04-04 16:51:44.691202342 +0200
++++ polkit-0.103/src/src/nullbackend/Makefile.in	2013-04-04 16:53:25.211201210 +0200
+@@ -376,7 +376,7 @@
+ 
+ uninstall-polkitmodulesLTLIBRARIES:
+ 	@$(NORMAL_UNINSTALL)
+-	@list='$(polkitmodules_LTLIBRARIES)'; test -n "$(polkitmodulesdir)" || list=; \
++	@list='$(polkitmodules_LTLIBRARIES)'; test -n "$(DESTDIR)$(polkitmodulesdir)" || list=; \
+ 	for p in $$list; do \
+ 	  $(am__strip_dir) \
+ 	  echo " $(LIBTOOL) $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=uninstall rm -f '$(DESTDIR)$(polkitmodulesdir)/$$f'"; \
+@@ -450,15 +450,15 @@
+ 	-rm -rf .libs _libs
+ install-nullconfigDATA: $(nullconfig_DATA)
+ 	@$(NORMAL_INSTALL)
+-	test -z "$(nullconfigdir)" || $(MKDIR_P) "$(DESTDIR)$(nullconfigdir)"
++	test -z "$(nullconfigdir)" || $(MKDIR_P) "$(nullconfigdir)"
+ 	@list='$(nullconfig_DATA)'; test -n "$(nullconfigdir)" || list=; \
+ 	for p in $$list; do \
+ 	  if test -f "$$p"; then d=; else d="$(srcdir)/"; fi; \
+ 	  echo "$$d$$p"; \
+ 	done | $(am__base_list) | \
+ 	while read files; do \
+-	  echo " $(INSTALL_DATA) $$files '$(DESTDIR)$(nullconfigdir)'"; \
+-	  $(INSTALL_DATA) $$files "$(DESTDIR)$(nullconfigdir)" || exit $$?; \
++	  echo " $(INSTALL_DATA) $$files '$(nullconfigdir)'"; \
++	  $(INSTALL_DATA) $$files "$(nullconfigdir)" || exit $$?; \
+ 	done
+ 
+ uninstall-nullconfigDATA:
+@@ -466,8 +466,8 @@
+ 	@list='$(nullconfig_DATA)'; test -n "$(nullconfigdir)" || list=; \
+ 	files=`for p in $$list; do echo $$p; done | sed -e 's|^.*/||'`; \
+ 	test -n "$$files" || exit 0; \
+-	echo " ( cd '$(DESTDIR)$(nullconfigdir)' && rm -f" $$files ")"; \
+-	cd "$(DESTDIR)$(nullconfigdir)" && rm -f $$files
++	echo " ( cd '$(nullconfigdir)' && rm -f" $$files ")"; \
++	cd "$(nullconfigdir)" && rm -f $$files
+ 
+ ID: $(HEADERS) $(SOURCES) $(LISP) $(TAGS_FILES)
+ 	list='$(SOURCES) $(HEADERS) $(LISP) $(TAGS_FILES)'; \

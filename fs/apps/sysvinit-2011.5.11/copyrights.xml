@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<component>
+	<name>SysVinit</name>
+	<version></version>
+	<releaseDate>11.05.2011</releaseDate>
+	<manufacturer></manufacturer>
+	<summary>On systems based on SysVinit, init is the first process that is executed once the Linux kernel loads.</summary>
+	<link></link>
+	<issues>
+		<link><![CDATA[]]></link>
+	</issues>
+	<license type="NO">
+		<link></link>
+		<text>
+			<![CDATA[]]>
+		</text>
+	</license>
+</component>
+

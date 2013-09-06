@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<component>
+	<name>libogg</name>
+	<version>1.2.2</version>
+	<releaseDate>07.12.2010</releaseDate>
+	<manufacturer>http://www.xiph.org/</manufacturer>
+	<summary>
+		Ogg is a free, open standard container format maintained by the Xiph.Org Foundation. libogg is the Xiph.Org Foundation's reference implementation.
+		The creators of the Ogg format state that it is unrestricted by software patents and is designed to provide for efficient streaming and manipulation of high quality digital multimedia.
+		The Ogg container format can multiplex a number of independent streams for audio, video, text (such as subtitles), and metadata.
+	</summary>
+	<link>http://www.xiph.org/ogg/</link>
+	<issues>
+		<link><![CDATA[https://trac.xiph.org/query?status=assigned&status=closed&status=new&status=reopened&component=Ogg+Core+-+libogg&order=priority]]></link>
+	</issues>
+	<license type="BSD-3-Clause">
+		<link>https://spdx.org/licenses/BSD-3-Clause</link>
+		<text>
+			<![CDATA[Copyright (c) 2002, Xiph.org Foundation
+
+Redistribution and use in source and binary forms, with or withoutmodification, are permitted provided that the following conditionsare met:
+
+- Redistributions of source code must retain the above copyrightnotice, this list of conditions and the following disclaimer.
+
+- Redistributions in binary form must reproduce the above copyrightnotice, this list of conditions and the following disclaimer in thedocumentation and/or other materials provided with the distribution.
+
+- Neither the name of the Xiph.org Foundation nor the names of itscontributors may be used to endorse or promote products derived fromthis software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOTLIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FORA PARTICULAR PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL THE FOUNDATIONOR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOTLIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANYTHEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USEOF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.]]>
+		</text>
+	</license>
+</component>
+

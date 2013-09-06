@@ -2,7 +2,7 @@ include $(CLASSES)/autotools.defs
 
 .PHONY: src patch build clean install uninstall distclean
  
-build: autotools_build
+build:: autotools_build
 
 clean:: autotools_clean
 
