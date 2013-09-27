@@ -48,3 +48,5 @@ preconfig:
 		echo -e "source fs/mach/$$i/Config \n\n" >>ConfigExtra ; \
 	    fi ; \
 	done
+
+unpatch: dependency_unpatch

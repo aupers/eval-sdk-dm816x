@@ -285,7 +285,7 @@ unpatch: $(RRSDK_POSTUNPATCH_TARGETS)
 	    $(ECHO) ; \
 	    rm -Rf .pc ;\
 	fi
-	$(V) rm -f $(PATCHED_FLAG) series
+	$(V) rm -f $(PATCHED_FLAG) series $(BUILT_FLAG) $(INSTALLED_FLAG) gstplugin_install
 
 patch_refresh:
 	$(V) $(DEVDIR)/bsp/scripts/merge_patches.sh
